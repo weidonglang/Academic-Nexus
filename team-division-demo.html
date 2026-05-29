@@ -1,0 +1,1053 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>教学综合信息服务平台项目分工说明</title>
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --panel: #ffffff;
+      --ink: #182235;
+      --muted: #657186;
+      --line: #dbe2ee;
+      --primary: #176b87;
+      --primary-dark: #0f4d63;
+      --accent: #d98a2b;
+      --green: #1e8a63;
+      --red: #b94a48;
+      --shadow: 0 18px 50px rgba(24, 34, 53, 0.12);
+      --radius: 8px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 14% 12%, rgba(23, 107, 135, 0.12), transparent 28%),
+        linear-gradient(180deg, #eef4f8 0%, var(--bg) 46%, #eef2f7 100%);
+      min-height: 100vh;
+    }
+
+    button {
+      font: inherit;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 14px 6vw;
+      border-bottom: 1px solid rgba(219, 226, 238, 0.82);
+      background: rgba(255, 255, 255, 0.88);
+      backdrop-filter: blur(14px);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .brand-mark {
+      width: 38px;
+      height: 38px;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      box-shadow: 0 10px 24px rgba(23, 107, 135, 0.2);
+    }
+
+    .brand strong,
+    .brand span {
+      display: block;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .brand strong {
+      font-size: 15px;
+    }
+
+    .brand span {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 2px;
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .ghost-button {
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--primary-dark);
+      border-radius: 999px;
+      padding: 8px 14px;
+      cursor: pointer;
+      transition: 0.2s ease;
+    }
+
+    .ghost-button:hover {
+      border-color: var(--primary);
+      transform: translateY(-1px);
+      box-shadow: 0 10px 22px rgba(23, 107, 135, 0.12);
+    }
+
+    .page {
+      width: min(1180px, 92vw);
+      margin: 0 auto;
+      padding: 30px 0 46px;
+    }
+
+    .hero {
+      position: relative;
+      overflow: hidden;
+      border-radius: 12px;
+      background:
+        linear-gradient(120deg, rgba(16, 69, 91, 0.96), rgba(23, 107, 135, 0.9)),
+        linear-gradient(45deg, rgba(217, 138, 43, 0.35), transparent);
+      color: #fff;
+      padding: 42px;
+      min-height: 420px;
+      display: grid;
+      grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr);
+      gap: 34px;
+      align-items: center;
+      box-shadow: var(--shadow);
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      inset: auto -80px -150px auto;
+      width: 420px;
+      height: 420px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 50%;
+      animation: slowSpin 18s linear infinite;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 12px;
+      border: 1px solid rgba(255, 255, 255, 0.26);
+      border-radius: 999px;
+      color: rgba(255, 255, 255, 0.88);
+      background: rgba(255, 255, 255, 0.08);
+      font-size: 13px;
+    }
+
+    h1 {
+      font-size: clamp(34px, 5vw, 62px);
+      line-height: 1.06;
+      letter-spacing: 0;
+      margin: 24px 0 18px;
+      max-width: 760px;
+    }
+
+    .slogan {
+      font-size: clamp(18px, 2.4vw, 27px);
+      line-height: 1.45;
+      margin: 0 0 16px;
+      font-weight: 700;
+      color: #fff5df;
+    }
+
+    .lead {
+      max-width: 760px;
+      color: rgba(255, 255, 255, 0.78);
+      line-height: 1.75;
+      font-size: 16px;
+      margin: 0;
+    }
+
+    .hero-panel {
+      position: relative;
+      z-index: 1;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 10px;
+      padding: 20px;
+      backdrop-filter: blur(12px);
+    }
+
+    .hero-panel h2 {
+      margin: 0 0 18px;
+      font-size: 18px;
+    }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .stat {
+      border-radius: 8px;
+      padding: 16px;
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+    }
+
+    .stat strong {
+      display: block;
+      font-size: 30px;
+      line-height: 1;
+      color: #fff5df;
+      margin-bottom: 8px;
+    }
+
+    .stat span {
+      color: rgba(255, 255, 255, 0.78);
+      font-size: 13px;
+    }
+
+    .pager-wrap {
+      margin: 22px 0;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.84);
+      border-radius: 10px;
+      padding: 8px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      box-shadow: 0 10px 30px rgba(24, 34, 53, 0.06);
+    }
+
+    .page-tab {
+      border: 0;
+      border-radius: 8px;
+      padding: 13px 14px;
+      color: var(--muted);
+      background: transparent;
+      cursor: pointer;
+      transition: 0.2s ease;
+      font-weight: 700;
+    }
+
+    .page-tab:hover {
+      background: #eef5f8;
+      color: var(--primary-dark);
+    }
+
+    .page-tab.active {
+      color: #fff;
+      background: var(--primary);
+      box-shadow: 0 12px 26px rgba(23, 107, 135, 0.2);
+    }
+
+    .page-section {
+      display: none;
+      animation: sectionIn 0.32s ease both;
+    }
+
+    .page-section.active {
+      display: block;
+    }
+
+    .section-title {
+      margin: 34px 0 16px;
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 18px;
+    }
+
+    .section-title h2 {
+      margin: 0;
+      font-size: 25px;
+    }
+
+    .section-title p {
+      margin: 6px 0 0;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    .chip {
+      white-space: nowrap;
+      color: var(--primary-dark);
+      background: #e7f2f5;
+      border: 1px solid #c7e0e8;
+      border-radius: 999px;
+      padding: 7px 12px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: 0 12px 34px rgba(24, 34, 53, 0.08);
+    }
+
+    .philosophy {
+      padding: 28px;
+      display: grid;
+      grid-template-columns: 0.85fr 1.15fr;
+      gap: 24px;
+      align-items: stretch;
+    }
+
+    .quote-box {
+      border-radius: 8px;
+      padding: 24px;
+      background: #102f3e;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 20px;
+    }
+
+    .quote-box strong {
+      font-size: 27px;
+      line-height: 1.38;
+      color: #fff5df;
+    }
+
+    .quote-box span {
+      color: rgba(255, 255, 255, 0.72);
+      line-height: 1.7;
+    }
+
+    .philosophy-text {
+      display: grid;
+      gap: 14px;
+    }
+
+    .philosophy-text p {
+      margin: 0;
+      line-height: 1.9;
+      color: #39465a;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 18px;
+    }
+
+    .member-card {
+      overflow: hidden;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .member-card:hover {
+      transform: translateY(-5px);
+      box-shadow: var(--shadow);
+    }
+
+    .member-head {
+      padding: 22px;
+      background: linear-gradient(135deg, #f7fbfd, #eef5f8);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .member-head small {
+      display: inline-block;
+      color: #fff;
+      background: var(--accent);
+      border-radius: 999px;
+      padding: 5px 10px;
+      font-weight: 700;
+      margin-bottom: 14px;
+    }
+
+    .member-head h3 {
+      margin: 0 0 8px;
+      font-size: 24px;
+    }
+
+    .member-head p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .task-list {
+      padding: 20px 22px 6px;
+      margin: 0;
+      list-style: none;
+    }
+
+    .task-list li {
+      position: relative;
+      padding: 0 0 13px 18px;
+      color: #3d4b5f;
+      line-height: 1.65;
+    }
+
+    .task-list li::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 10px;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--primary);
+    }
+
+    .redis-box {
+      margin: 0 22px 22px;
+      padding: 15px;
+      border-radius: 8px;
+      border: 1px solid #cfe5da;
+      background: #f1faf5;
+    }
+
+    .redis-box strong {
+      display: block;
+      color: var(--green);
+      margin-bottom: 8px;
+    }
+
+    .redis-box p {
+      margin: 0 0 12px;
+      line-height: 1.65;
+      color: #466055;
+    }
+
+    .detail-button {
+      border: 1px solid var(--green);
+      background: #fff;
+      color: var(--green);
+      border-radius: 8px;
+      padding: 8px 12px;
+      cursor: pointer;
+      font-weight: 700;
+      transition: 0.2s ease;
+    }
+
+    .detail-button:hover {
+      color: #fff;
+      background: var(--green);
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+    }
+
+    .summary-panel {
+      padding: 22px;
+    }
+
+    .summary-panel h3 {
+      margin: 0 0 14px;
+      font-size: 20px;
+    }
+
+    .summary-panel p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.8;
+    }
+
+    .table-wrap {
+      overflow: auto;
+      margin-top: 18px;
+    }
+
+    table {
+      width: 100%;
+      min-width: 720px;
+      border-collapse: collapse;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    th,
+    td {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+      line-height: 1.65;
+    }
+
+    th {
+      color: var(--primary-dark);
+      background: #eef5f8;
+      white-space: nowrap;
+    }
+
+    tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 18px;
+    }
+
+    .flow-step {
+      padding: 18px;
+      border-left: 4px solid var(--primary);
+      background: #fff;
+      border-radius: 8px;
+      border-top: 1px solid var(--line);
+      border-right: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .flow-step strong {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--primary-dark);
+    }
+
+    .flow-step span {
+      color: var(--muted);
+      line-height: 1.65;
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 80;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 22px;
+      background: rgba(15, 26, 39, 0.52);
+      backdrop-filter: blur(8px);
+    }
+
+    .modal-backdrop.open {
+      display: flex;
+      animation: fadeIn 0.2s ease both;
+    }
+
+    .modal {
+      width: min(620px, 100%);
+      border-radius: 10px;
+      background: #fff;
+      box-shadow: 0 28px 80px rgba(0, 0, 0, 0.28);
+      overflow: hidden;
+      animation: modalIn 0.22s ease both;
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 18px 22px;
+      background: #102f3e;
+      color: #fff;
+    }
+
+    .modal-header h3 {
+      margin: 0;
+      font-size: 19px;
+    }
+
+    .modal-close {
+      width: 34px;
+      height: 34px;
+      border: 1px solid rgba(255, 255, 255, 0.36);
+      border-radius: 8px;
+      color: #fff;
+      background: transparent;
+      cursor: pointer;
+      font-size: 20px;
+      line-height: 1;
+    }
+
+    .modal-body {
+      padding: 22px;
+    }
+
+    .modal-body p {
+      margin: 0 0 14px;
+      line-height: 1.8;
+      color: #3d4b5f;
+    }
+
+    .modal-body code {
+      display: block;
+      padding: 12px 14px;
+      border-radius: 8px;
+      background: #f4f6f9;
+      color: var(--primary-dark);
+      white-space: normal;
+      line-height: 1.7;
+    }
+
+    .footer {
+      margin-top: 34px;
+      padding: 18px 0 0;
+      color: var(--muted);
+      text-align: center;
+      font-size: 13px;
+      border-top: 1px solid var(--line);
+    }
+
+    .reveal {
+      opacity: 0;
+      transform: translateY(18px);
+      transition: opacity 0.55s ease, transform 0.55s ease;
+    }
+
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    @keyframes slowSpin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    @keyframes sectionIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+
+    @keyframes modalIn {
+      from {
+        opacity: 0;
+        transform: translateY(14px) scale(0.98);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    @media (max-width: 920px) {
+      .hero,
+      .philosophy {
+        grid-template-columns: 1fr;
+      }
+
+      .cards,
+      .summary-grid,
+      .flow {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .topbar {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .hero {
+        padding: 28px 22px;
+        min-height: auto;
+      }
+
+      .pager-wrap {
+        grid-template-columns: 1fr;
+      }
+
+      .section-title {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .stat-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">教</div>
+      <div>
+        <strong>天津天狮学院教学综合信息服务平台</strong>
+        <span>Spring Boot + SSM + Vue 3 + Element Plus + Redis</span>
+      </div>
+    </div>
+    <div class="top-actions">
+      <button class="ghost-button" data-jump="division">查看分工</button>
+      <button class="ghost-button" data-jump="summary">项目总览</button>
+    </div>
+  </header>
+
+  <main class="page">
+    <section class="hero">
+      <div>
+        <span class="eyebrow">项目分工演示页 · 独立静态 HTML</span>
+        <h1>不做 AI 代码的搬运工，要做能驾驭 AI 的工程师。</h1>
+        <p class="slogan">用最基础的技术，完成最真实的系统；让 AI 提速，但不让 AI 替我们思考。</p>
+        <p class="lead">
+          这个页面用于说明教学综合信息服务平台的开发理念、三人成员分工、Redis 使用点和协作流程。
+          项目不追求堆砌复杂概念，而是用课堂上真正掌握过的 Spring、SSM、Vue、Element Plus 和 Redis，
+          复刻一个能登录、能管理、能选课、能查课表、能处理成绩考试和通知公告的教学系统。
+        </p>
+      </div>
+
+      <aside class="hero-panel">
+        <h2>项目指标</h2>
+        <div class="stat-grid">
+          <div class="stat">
+            <strong data-count="3">0</strong>
+            <span>开发成员</span>
+          </div>
+          <div class="stat">
+            <strong data-count="9">0</strong>
+            <span>核心业务模块</span>
+          </div>
+          <div class="stat">
+            <strong data-count="3">0</strong>
+            <span>Redis 责任场景</span>
+          </div>
+          <div class="stat">
+            <strong data-count="2026">0</strong>
+            <span>版本年份</span>
+          </div>
+        </div>
+      </aside>
+    </section>
+
+    <nav class="pager-wrap" aria-label="页面分页">
+      <button class="page-tab active" data-page="idea">01 开发理念</button>
+      <button class="page-tab" data-page="division">02 成员分工</button>
+      <button class="page-tab" data-page="summary">03 总览流程</button>
+    </nav>
+
+    <section id="idea" class="page-section active">
+      <div class="section-title reveal">
+        <div>
+          <h2>开发理念</h2>
+          <p>技术选择越朴素，越能看出系统设计是否扎实。</p>
+        </div>
+        <span class="chip">理念先于工具</span>
+      </div>
+
+      <div class="panel philosophy reveal">
+        <div class="quote-box">
+          <strong>AI 可以把速度拉满，但方向必须由人决定。</strong>
+          <span>我们不把复杂当高级，也不把炫技当能力。能解释、能维护、能交付，才是这个项目的标准。</span>
+        </div>
+        <div class="philosophy-text">
+          <p>
+            在今天，AI 编程能力进化得非常快。普通人学习编程的速度，很难追上 AI 生成代码能力提升的速度。
+            AI 可能用五分钟完成过去一天的代码工作量，这是现实，也是每个学习者必须面对的变化。
+          </p>
+          <p>
+            但我们也越来越清楚地看到，AI 生成的代码经常倾向于使用华丽、先进、抽象程度很高的方式完成任务。
+            这些写法看起来强大，却不一定适合课堂项目，也不一定方便团队成员理解、讲解和维护。
+          </p>
+          <p>
+            所以这个项目故意回到基础：后端使用 Spring Boot、SSM 思路和 Redis，前端使用 Vue 3 与 Element Plus。
+            我们不用技术堆砌证明先进，而是用已经学过、能讲清楚、能调试的技术，复刻学校教学综合信息服务平台。
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section id="division" class="page-section">
+      <div class="section-title reveal">
+        <div>
+          <h2>三人成员分工</h2>
+          <p>每个人都承担明确业务边界，并至少负责一个 Redis 落地点。</p>
+        </div>
+        <span class="chip">责任清晰 · 可独立讲解</span>
+      </div>
+
+      <div class="cards">
+        <article class="panel member-card reveal">
+          <div class="member-head">
+            <small>组长</small>
+            <h3>魏语石</h3>
+            <p>负责整体架构、权限体系、后台管理、接口规范和最终集成。</p>
+          </div>
+          <ul class="task-list">
+            <li>搭建 Spring Boot 后端结构，统一 Controller、Service、Mapper 分层。</li>
+            <li>负责登录认证、角色菜单权限、管理员端用户管理和审计日志。</li>
+            <li>统一 Vue 3 页面布局、路由守卫、Axios 请求封装和视觉风格。</li>
+            <li>负责抢课库存缓存设计，保证高并发下不超卖。</li>
+          </ul>
+          <div class="redis-box">
+            <strong>Redis 功能：抢课库存与并发扣减</strong>
+            <p>使用 <code>selection:offering:{offeringId}:remaining</code> 缓存教学班剩余名额，抢课时先扣 Redis 库存，数据库写入失败时回滚库存，防止超卖。</p>
+            <button class="detail-button" data-modal="wei">查看 Redis 细节</button>
+          </div>
+        </article>
+
+        <article class="panel member-card reveal">
+          <div class="member-head">
+            <small>成员</small>
+            <h3>郭凤圣</h3>
+            <p>负责课程、选课、抢课、课表和学生端核心业务。</p>
+          </div>
+          <ul class="task-list">
+            <li>实现课程列表、课程筛选、选课退课、容量校验和学生课表。</li>
+            <li>实现选课页面分页展示，避免课程和已选记录多时页面卡顿。</li>
+            <li>配合抢课接口携带 requestId，避免重复点击造成重复提交。</li>
+            <li>维护学院、专业、班级、学生和课程之间的模拟数据关系。</li>
+          </ul>
+          <div class="redis-box">
+            <strong>Redis 功能：请求幂等与重复提交控制</strong>
+            <p>使用 <code>selection:request:{requestId}</code> 记录抢课请求处理结果，同一个 requestId 再次提交时直接拦截，不重复写入数据库。</p>
+            <button class="detail-button" data-modal="guo">查看 Redis 细节</button>
+          </div>
+        </article>
+
+        <article class="panel member-card reveal">
+          <div class="member-head">
+            <small>成员</small>
+            <h3>敖东磊</h3>
+            <p>负责教师端、成绩管理、考试管理、通知公告和文件能力。</p>
+          </div>
+          <ul class="task-list">
+            <li>完成教师登录身份、任课课程、成绩录入修改和教学评价查看。</li>
+            <li>实现成绩发布锁定、补考重修缓考状态、考试安排和考场座位信息。</li>
+            <li>补充公告已读未读、文件管理、导入导出和学籍材料上传说明。</li>
+            <li>维护 Redis 监控页、压测历史报告和 Python 可视化压测面板。</li>
+          </ul>
+          <div class="redis-box">
+            <strong>Redis 功能：短锁与运行状态检测</strong>
+            <p>使用 <code>selection:grab:lock:{offeringId}:{username}</code> 控制同一学生短时间重复抢同一课程，并展示 Redis PING、TTL、key 列表和缓存清理。</p>
+            <button class="detail-button" data-modal="ao">查看 Redis 细节</button>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section id="summary" class="page-section">
+      <div class="section-title reveal">
+        <div>
+          <h2>项目总览与协作流程</h2>
+          <p>从业务复刻到接口联调，保证每个模块既能独立开发，也能统一集成。</p>
+        </div>
+        <span class="chip">先可用 · 再完善</span>
+      </div>
+
+      <div class="summary-grid">
+        <div class="panel summary-panel reveal">
+          <h3>已覆盖功能</h3>
+          <p>
+            登录认证、角色菜单、首页公告、个人信息、学生课表、课程查询、选课抢课、教师端课程、
+            成绩录入、成绩后台、考试后台、通知公告、权限控制、分页筛选、操作日志和文件导入导出。
+          </p>
+        </div>
+        <div class="panel summary-panel reveal">
+          <h3>技术边界</h3>
+          <p>
+            后端采用 Spring Boot 承载接口与业务逻辑，按 SSM 思路拆分 Mapper、Service、Controller。
+            前端采用 Vue 3、Pinia、Vue Router、Element Plus。Redis 用在抢课库存、请求幂等、短锁、缓存查看和压测对比。
+          </p>
+        </div>
+      </div>
+
+      <div class="table-wrap reveal">
+        <table>
+          <thead>
+            <tr>
+              <th>成员</th>
+              <th>主责模块</th>
+              <th>Redis 责任点</th>
+              <th>交付标准</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>魏语石</td>
+              <td>架构、认证、权限、后台管理、审计、页面规范</td>
+              <td>抢课库存缓存、并发扣减、防超卖、库存回滚</td>
+              <td>接口统一、页面统一、Redis 库存链路能演示、能讲清楚</td>
+            </tr>
+            <tr>
+              <td>郭凤圣</td>
+              <td>课程、选课、抢课、学生课表、基础数据</td>
+              <td>请求幂等 key、requestId、防重复提交、选课分页</td>
+              <td>流程闭环、重复点击不重复写库、学生侧可完整操作</td>
+            </tr>
+            <tr>
+              <td>敖东磊</td>
+              <td>教师端、成绩、考试、通知、文件导入导出</td>
+              <td>短锁、Redis PING、TTL、key 查看、缓存清理、压测报告</td>
+              <td>教师后台可维护，Redis 运行状态和压测结果可展示</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="flow reveal">
+        <div class="flow-step">
+          <strong>1. 需求拆解</strong>
+          <span>先按学生、教师、管理员三类角色拆分业务入口。</span>
+        </div>
+        <div class="flow-step">
+          <strong>2. 接口优先</strong>
+          <span>后端先定义接口返回结构，前端按统一格式联调。</span>
+        </div>
+        <div class="flow-step">
+          <strong>3. 数据驱动</strong>
+          <span>用学院、专业、班级、课程、成绩、考试数据串起页面。</span>
+        </div>
+        <div class="flow-step">
+          <strong>4. 统一验收</strong>
+          <span>最后集中测试登录、权限、查询、维护、导入导出和缓存。</span>
+        </div>
+      </div>
+    </section>
+
+    <footer class="footer">
+      版权所有 Copyright 2004-2026 魏语石　天津天狮学院教学综合信息服务平台　版本 V-9.0
+    </footer>
+  </main>
+
+  <div class="modal-backdrop" id="modalBackdrop" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modalTitle">Redis 功能说明</h3>
+        <button class="modal-close" id="modalClose" aria-label="关闭">×</button>
+      </div>
+      <div class="modal-body">
+        <p id="modalText"></p>
+        <code id="modalCode"></code>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const tabs = document.querySelectorAll(".page-tab");
+    const sections = document.querySelectorAll(".page-section");
+    const jumpButtons = document.querySelectorAll("[data-jump]");
+    const modalBackdrop = document.getElementById("modalBackdrop");
+    const modalClose = document.getElementById("modalClose");
+    const modalTitle = document.getElementById("modalTitle");
+    const modalText = document.getElementById("modalText");
+    const modalCode = document.getElementById("modalCode");
+
+    const modalMap = {
+      wei: {
+        title: "魏语石：Redis 抢课库存与并发扣减",
+        text: "魏语石负责 Redis 在抢课库存控制中的使用。每个教学班在 Redis 中都有一个库存 key，高并发抢课时系统先扣 Redis 库存，库存不足直接返回 FULL；如果数据库写入失败，再把 Redis 库存补回来，避免缓存和数据库不一致。",
+        code: "selection:offering:{offeringId}:remaining -> remaining seats / LocalCourseGrabService#reserveStock / rollback Redis stock when DB insert fails"
+      },
+      guo: {
+        title: "郭凤圣：Redis 请求幂等与重复提交控制",
+        text: "郭凤圣负责 Redis 请求幂等控制。前端每次抢课生成唯一 requestId，后端收到后写入 Redis；如果同一个 requestId 再次提交，系统直接拦截或返回已缓存结果，不会重复执行抢课逻辑，也不会重复写入数据库。",
+        code: "selection:request:{requestId} -> processing/result / SelectionView.vue creates requestId / LocalCourseGrabService caches request result"
+      },
+      ao: {
+        title: "敖东磊：Redis 短锁与运行状态检测",
+        text: "敖东磊负责 Redis 短锁和运行状态检测。短锁用于限制同一个学生短时间内重复抢同一门课；Redis 监控页负责展示连接状态、PING 结果、key 列表、TTL、缓存值、缓存清理和压测历史报告。",
+        code: "selection:grab:lock:{offeringId}:{username} -> short ttl lock / RedisMonitorView.vue / SystemMonitorController / course_grab_panel.py"
+      }
+    };
+
+    function activatePage(pageId) {
+      tabs.forEach((tab) => tab.classList.toggle("active", tab.dataset.page === pageId));
+      sections.forEach((section) => section.classList.toggle("active", section.id === pageId));
+      document.querySelector(".pager-wrap").scrollIntoView({ behavior: "smooth", block: "start" });
+      revealVisible();
+    }
+
+    tabs.forEach((tab) => {
+      tab.addEventListener("click", () => activatePage(tab.dataset.page));
+    });
+
+    jumpButtons.forEach((button) => {
+      button.addEventListener("click", () => activatePage(button.dataset.jump));
+    });
+
+    document.querySelectorAll("[data-modal]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const detail = modalMap[button.dataset.modal];
+        modalTitle.textContent = detail.title;
+        modalText.textContent = detail.text;
+        modalCode.textContent = detail.code;
+        modalBackdrop.classList.add("open");
+      });
+    });
+
+    function closeModal() {
+      modalBackdrop.classList.remove("open");
+    }
+
+    modalClose.addEventListener("click", closeModal);
+    modalBackdrop.addEventListener("click", (event) => {
+      if (event.target === modalBackdrop) closeModal();
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") closeModal();
+    });
+
+    function countUp() {
+      document.querySelectorAll("[data-count]").forEach((item) => {
+        const target = Number(item.dataset.count);
+        const duration = target > 100 ? 900 : 600;
+        const start = performance.now();
+
+        function tick(now) {
+          const progress = Math.min((now - start) / duration, 1);
+          const eased = 1 - Math.pow(1 - progress, 3);
+          item.textContent = Math.floor(target * eased).toString();
+          if (progress < 1) requestAnimationFrame(tick);
+          else item.textContent = String(target);
+        }
+
+        requestAnimationFrame(tick);
+      });
+    }
+
+    function revealVisible() {
+      document.querySelectorAll(".reveal").forEach((item) => {
+        const rect = item.getBoundingClientRect();
+        if (rect.top < window.innerHeight - 80) item.classList.add("visible");
+      });
+    }
+
+    window.addEventListener("scroll", revealVisible, { passive: true });
+    window.addEventListener("load", () => {
+      countUp();
+      revealVisible();
+    });
+  </script>
+</body>
+</html>

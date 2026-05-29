@@ -1,0 +1,3096 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>教学综合信息服务平台｜成员分工与技术实现展示页</title>
+  <style>
+    :root {
+      --bg: #f6f8ff;
+      --bg2: #eef4ff;
+      --paper: rgba(255,255,255,.86);
+      --solid: #ffffff;
+      --ink: #172033;
+      --muted: #667085;
+      --line: #e5e7eb;
+      --line2: rgba(148,163,184,.35);
+      --primary: #2563eb;
+      --primary2: #1d4ed8;
+      --primary-soft: #dbeafe;
+      --purple: #7c3aed;
+      --purple-soft: #ede9fe;
+      --green: #16a34a;
+      --green-soft: #dcfce7;
+      --orange: #ea580c;
+      --orange-soft: #ffedd5;
+      --red: #dc2626;
+      --red-soft: #fee2e2;
+      --cyan: #0891b2;
+      --cyan-soft: #cffafe;
+      --shadow: 0 24px 70px rgba(15,23,42,.12);
+      --shadow2: 0 14px 36px rgba(15,23,42,.08);
+      --radius-xl: 30px;
+      --radius-lg: 22px;
+      --radius-md: 16px;
+      --radius-sm: 11px;
+      --max: 1280px;
+      --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+      --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    }
+
+    [data-theme="dark"] {
+      --bg: #07111f;
+      --bg2: #0b1730;
+      --paper: rgba(15,23,42,.78);
+      --solid: #111827;
+      --ink: #e5e7eb;
+      --muted: #a8b3c7;
+      --line: rgba(148,163,184,.24);
+      --line2: rgba(148,163,184,.22);
+      --primary-soft: rgba(37,99,235,.18);
+      --purple-soft: rgba(124,58,237,.18);
+      --green-soft: rgba(22,163,74,.18);
+      --orange-soft: rgba(234,88,12,.18);
+      --red-soft: rgba(220,38,38,.18);
+      --cyan-soft: rgba(8,145,178,.18);
+      --shadow: 0 24px 70px rgba(0,0,0,.28);
+      --shadow2: 0 14px 36px rgba(0,0,0,.18);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: var(--sans);
+      color: var(--ink);
+      line-height: 1.72;
+      background:
+        radial-gradient(circle at 12% 6%, rgba(37,99,235,.18), transparent 30%),
+        radial-gradient(circle at 88% 9%, rgba(124,58,237,.16), transparent 26%),
+        radial-gradient(circle at 78% 56%, rgba(22,163,74,.10), transparent 28%),
+        linear-gradient(180deg, var(--bg2) 0%, var(--bg) 42%, var(--bg) 100%);
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: -2;
+      opacity: .45;
+      background-image:
+        linear-gradient(rgba(37,99,235,.08) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(37,99,235,.08) 1px, transparent 1px);
+      background-size: 42px 42px;
+      mask-image: linear-gradient(180deg, black, transparent 78%);
+    }
+
+    a { color: inherit; text-decoration: none; }
+    button, input { font: inherit; }
+    code {
+      font-family: var(--mono);
+      font-size: .9em;
+      color: var(--ink);
+      background: rgba(148,163,184,.13);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: .12rem .36rem;
+      word-break: break-word;
+    }
+    .no-wrap { white-space: nowrap; }
+
+    .progress-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 3px;
+      width: 0%;
+      z-index: 200;
+      background: linear-gradient(90deg, var(--primary), var(--purple), var(--green));
+      box-shadow: 0 0 18px rgba(37,99,235,.45);
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(18px);
+      background: color-mix(in srgb, var(--solid) 78%, transparent);
+      border-bottom: 1px solid var(--line);
+    }
+    .topbar-inner {
+      max-width: var(--max);
+      margin: 0 auto;
+      padding: .68rem 1.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: .72rem;
+      font-weight: 900;
+      letter-spacing: -.02em;
+      min-width: max-content;
+    }
+    .brand-mark {
+      width: 40px;
+      height: 40px;
+      border-radius: 15px;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      background: linear-gradient(135deg, var(--primary), var(--purple));
+      box-shadow: 0 12px 26px rgba(37,99,235,.26);
+    }
+    .nav {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: .35rem;
+      flex-wrap: wrap;
+    }
+    .nav a, .icon-btn, .print-btn {
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--muted);
+      border-radius: 999px;
+      padding: .46rem .72rem;
+      cursor: pointer;
+      font-weight: 800;
+      transition: .18s ease;
+    }
+    .nav a:hover, .icon-btn:hover, .print-btn:hover,
+    .nav a.active {
+      color: var(--primary2);
+      background: var(--primary-soft);
+      border-color: rgba(37,99,235,.12);
+    }
+    [data-theme="dark"] .nav a:hover,
+    [data-theme="dark"] .icon-btn:hover,
+    [data-theme="dark"] .print-btn:hover,
+    [data-theme="dark"] .nav a.active { color: #93c5fd; }
+
+    .hero {
+      max-width: var(--max);
+      margin: 0 auto;
+      padding: 4.2rem 1.25rem 1.4rem;
+    }
+    .hero-grid {
+      position: relative;
+      display: grid;
+      grid-template-columns: 1.35fr .65fr;
+      gap: 1.2rem;
+      align-items: stretch;
+    }
+    .hero-card, .side-card, .section-card {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-xl);
+      background: var(--paper);
+      box-shadow: var(--shadow);
+    }
+    .hero-card {
+      padding: clamp(2rem, 4.6vw, 4rem);
+      min-height: 470px;
+    }
+    .hero-card::after {
+      content: "";
+      position: absolute;
+      width: 420px;
+      height: 420px;
+      right: -120px;
+      top: -90px;
+      border-radius: 999px;
+      background: radial-gradient(circle, rgba(37,99,235,.20), transparent 67%);
+      pointer-events: none;
+      animation: float 6s ease-in-out infinite;
+    }
+    .side-card {
+      padding: 1.2rem;
+      display: flex;
+      flex-direction: column;
+      gap: .9rem;
+    }
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: .45rem;
+      padding: .36rem .72rem;
+      border-radius: 999px;
+      font-weight: 900;
+      color: var(--primary2);
+      background: var(--primary-soft);
+      border: 1px solid rgba(37,99,235,.18);
+    }
+    [data-theme="dark"] .eyebrow { color: #93c5fd; }
+    h1 {
+      margin: 1rem 0 .75rem;
+      max-width: 900px;
+      font-size: clamp(2.2rem, 5.2vw, 4.8rem);
+      line-height: 1.05;
+      letter-spacing: -.06em;
+    }
+    .gradient-text {
+      background: linear-gradient(135deg, var(--primary), var(--purple));
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    .hero-lead {
+      position: relative;
+      z-index: 2;
+      max-width: 880px;
+      margin: 0;
+      color: var(--muted);
+      font-size: clamp(1.04rem, 1.55vw, 1.22rem);
+    }
+    .hero-actions {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      gap: .8rem;
+      flex-wrap: wrap;
+      margin-top: 1.5rem;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: .48rem;
+      padding: .82rem 1.02rem;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--solid);
+      color: var(--ink);
+      font-weight: 900;
+      cursor: pointer;
+      transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
+    }
+    .btn.primary {
+      border-color: transparent;
+      color: #fff;
+      background: linear-gradient(135deg, var(--primary), var(--purple));
+      box-shadow: 0 18px 34px rgba(37,99,235,.23);
+    }
+    .btn.soft { background: var(--primary-soft); border-color: rgba(37,99,235,.12); color: var(--primary2); }
+    [data-theme="dark"] .btn.soft { color: #bfdbfe; }
+    .btn:hover { transform: translateY(-2px); box-shadow: var(--shadow2); }
+
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: .8rem;
+    }
+    .metric {
+      padding: 1rem;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--line);
+      background: color-mix(in srgb, var(--solid) 82%, transparent);
+      min-height: 118px;
+    }
+    .metric strong {
+      display: block;
+      font-size: 2.05rem;
+      line-height: 1;
+      letter-spacing: -.05em;
+    }
+    .metric span { display: block; margin-top: .45rem; color: var(--muted); font-weight: 800; }
+    .mini-map {
+      padding: 1rem;
+      border-radius: var(--radius-lg);
+      background: linear-gradient(135deg, var(--primary-soft), color-mix(in srgb, var(--purple-soft) 75%, transparent));
+      border: 1px solid var(--line);
+    }
+    .mini-map h3 { margin: 0 0 .5rem; }
+    .mini-line {
+      display: flex;
+      align-items: center;
+      gap: .45rem;
+      margin: .38rem 0;
+      color: var(--muted);
+      font-weight: 800;
+    }
+    .mini-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--primary);
+      box-shadow: 0 0 0 4px rgba(37,99,235,.12);
+    }
+    .mini-dot.green { background: var(--green); box-shadow: 0 0 0 4px rgba(22,163,74,.12); }
+    .mini-dot.orange { background: var(--orange); box-shadow: 0 0 0 4px rgba(234,88,12,.12); }
+
+    main { max-width: var(--max); margin: 0 auto; padding: 0 1.25rem 4rem; }
+    .section-card { padding: clamp(1.2rem, 3vw, 2.2rem); margin: 1.25rem 0; }
+    .section-head {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 1rem;
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 1rem;
+      margin-bottom: 1.25rem;
+    }
+    .section-kicker {
+      color: var(--primary);
+      font-size: .78rem;
+      font-weight: 950;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+    h2 { margin: .12rem 0 0; font-size: clamp(1.58rem, 3vw, 2.42rem); line-height: 1.18; letter-spacing: -.045em; }
+    h3 { margin: 1.05rem 0 .55rem; font-size: 1.25rem; line-height: 1.3; }
+    h4 { margin: .8rem 0 .35rem; }
+    p { margin: .5rem 0; }
+    .lead { max-width: 1000px; color: var(--muted); font-size: 1.05rem; }
+    .muted { color: var(--muted); }
+
+    .tab-shell {
+      display: grid;
+      grid-template-columns: 260px minmax(0, 1fr);
+      gap: 1.1rem;
+      align-items: start;
+    }
+    .chapter-tabs {
+      position: sticky;
+      top: 78px;
+      display: grid;
+      gap: .55rem;
+      padding: .75rem;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-xl);
+      background: var(--paper);
+      box-shadow: var(--shadow2);
+    }
+    .chapter-tab {
+      width: 100%;
+      text-align: left;
+      cursor: pointer;
+      border: 1px solid transparent;
+      border-radius: 16px;
+      background: transparent;
+      color: var(--muted);
+      padding: .85rem .9rem;
+      font-weight: 900;
+      transition: .18s ease;
+    }
+    .chapter-tab small { display: block; margin-top: .15rem; font-weight: 750; opacity: .82; }
+    .chapter-tab.active, .chapter-tab:hover {
+      background: var(--primary-soft);
+      border-color: rgba(37,99,235,.14);
+      color: var(--primary2);
+      transform: translateX(2px);
+    }
+    [data-theme="dark"] .chapter-tab.active,
+    [data-theme="dark"] .chapter-tab:hover { color: #bfdbfe; }
+    .chapter-panel { display: none; animation: panelIn .28s ease both; }
+    .chapter-panel.active { display: block; }
+
+    .grid { display: grid; gap: 1rem; }
+    .grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .grid.four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .grid.auto { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+
+    .card {
+      position: relative;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      background: color-mix(in srgb, var(--solid) 82%, transparent);
+      padding: 1.05rem;
+      box-shadow: 0 8px 22px rgba(15,23,42,.035);
+      transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+    }
+    .card:hover { transform: translateY(-2px); box-shadow: var(--shadow2); border-color: rgba(37,99,235,.25); }
+    .plain-card:hover { transform: none; box-shadow: 0 8px 22px rgba(15,23,42,.035); }
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      gap: .25rem;
+      border-radius: 999px;
+      padding: .22rem .58rem;
+      margin: .15rem .18rem .15rem 0;
+      background: var(--primary-soft);
+      color: var(--primary2);
+      font-size: .82rem;
+      font-weight: 900;
+    }
+    .tag.green { background: var(--green-soft); color: #166534; }
+    .tag.purple { background: var(--purple-soft); color: #5b21b6; }
+    .tag.orange { background: var(--orange-soft); color: #9a3412; }
+    .tag.red { background: var(--red-soft); color: #991b1b; }
+    .tag.cyan { background: var(--cyan-soft); color: #155e75; }
+    [data-theme="dark"] .tag.green { color: #bbf7d0; }
+    [data-theme="dark"] .tag.purple { color: #ddd6fe; }
+    [data-theme="dark"] .tag.orange { color: #fed7aa; }
+    [data-theme="dark"] .tag.red { color: #fecaca; }
+    [data-theme="dark"] .tag.cyan { color: #a5f3fc; }
+    [data-theme="dark"] .tag { color: #bfdbfe; }
+
+    .member-card {
+      overflow: hidden;
+      min-height: 100%;
+    }
+    .member-card::after {
+      content: "";
+      position: absolute;
+      width: 160px;
+      height: 160px;
+      right: -54px;
+      bottom: -64px;
+      border-radius: 999px;
+      background: rgba(37,99,235,.09);
+      pointer-events: none;
+    }
+    .avatar {
+      width: 58px;
+      height: 58px;
+      border-radius: 18px;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      font-size: 1.25rem;
+      font-weight: 950;
+      background: linear-gradient(135deg, var(--primary), var(--purple));
+      box-shadow: 0 14px 30px rgba(37,99,235,.24);
+    }
+    .avatar.green { background: linear-gradient(135deg, #16a34a, #0f766e); box-shadow: 0 14px 30px rgba(22,163,74,.20); }
+    .avatar.orange { background: linear-gradient(135deg, #ea580c, #c2410c); box-shadow: 0 14px 30px rgba(234,88,12,.20); }
+    .member-actions { display: flex; gap: .55rem; flex-wrap: wrap; margin-top: .85rem; position: relative; z-index: 2; }
+
+    ul.clean { list-style: none; padding: 0; margin: .55rem 0 0; }
+    ul.clean li {
+      position: relative;
+      padding-left: 1.18rem;
+      margin: .35rem 0;
+      color: var(--muted);
+    }
+    ul.clean li::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: .72em;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--primary);
+    }
+
+    .timeline { position: relative; padding-left: 1.12rem; }
+    .timeline::before { content: ""; position: absolute; left: 5px; top: .5rem; bottom: .5rem; width: 2px; background: color-mix(in srgb, var(--primary) 34%, var(--line)); }
+    .step { position: relative; padding-left: 1rem; margin: .7rem 0; color: var(--muted); }
+    .step::before { content: ""; position: absolute; left: -1.12rem; top: .45rem; width: 12px; height: 12px; border-radius: 50%; background: var(--primary); box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 14%, transparent); }
+    .step strong { color: var(--ink); display: block; }
+
+    details {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      background: color-mix(in srgb, var(--solid) 78%, transparent);
+      overflow: hidden;
+      margin: .75rem 0;
+    }
+    summary {
+      cursor: pointer;
+      list-style: none;
+      padding: .85rem 1rem;
+      font-weight: 950;
+      background: color-mix(in srgb, var(--primary-soft) 40%, transparent);
+    }
+    summary::-webkit-details-marker { display: none; }
+    details[open] summary { border-bottom: 1px solid var(--line); }
+    .details-body { padding: 1rem; }
+
+    .code-list, .code-atlas { display: grid; gap: .48rem; }
+    .file {
+      font-family: var(--mono);
+      font-size: .86rem;
+      padding: .58rem .68rem;
+      border-radius: 11px;
+      background: #0f172a;
+      color: #e5e7eb;
+      border: 1px solid #1e293b;
+      word-break: break-all;
+    }
+    .file mark { background: #fef08a; color: #111827; border-radius: 3px; padding: 0 .1rem; }
+    .file {
+      cursor: pointer;
+      position: relative;
+      transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, background .18s ease;
+    }
+    .file:hover {
+      transform: translateY(-2px);
+      border-color: rgba(96,165,250,.72);
+      box-shadow: 0 12px 26px rgba(15,23,42,.16);
+    }
+    button.file {
+      width: 100%;
+      text-align: left;
+      appearance: none;
+      border: 1px solid #1e293b;
+    }
+    .file::after {
+      content: "同页分析";
+      position: absolute;
+      right: .55rem;
+      top: .45rem;
+      font-family: var(--sans);
+      font-size: .66rem;
+      font-weight: 950;
+      color: #bfdbfe;
+      opacity: 0;
+      transform: translateY(-2px);
+      transition: opacity .18s ease, transform .18s ease;
+    }
+    .file:hover::after,
+    .file:focus-visible::after { opacity: 1; transform: translateY(0); }
+    .file small {
+      display: block;
+      margin-top: .2rem;
+      font-family: var(--sans);
+      font-size: .72rem;
+      color: #93c5fd;
+      font-weight: 800;
+    }
+    .file.is-highlighted {
+      background: linear-gradient(135deg, #1e3a8a, #0f172a);
+      border-color: #60a5fa;
+      box-shadow: 0 0 0 4px rgba(37,99,235,.14), 0 16px 32px rgba(15,23,42,.2);
+      animation: filePulse .95s ease both;
+    }
+    @keyframes filePulse {
+      0% { transform: scale(.985); }
+      45% { transform: scale(1.015); }
+      100% { transform: scale(1); }
+    }
+
+    .architecture-flow {
+      display: grid;
+      gap: 1rem;
+      padding: .35rem 0;
+    }
+    .arch-layer {
+      display: grid;
+      grid-template-columns: 150px 1fr;
+      gap: 1rem;
+      align-items: stretch;
+      padding: 1rem;
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      background: color-mix(in srgb, var(--solid) 82%, transparent);
+      box-shadow: 0 12px 28px rgba(15,23,42,.055);
+      position: relative;
+      overflow: hidden;
+    }
+    .arch-layer::before {
+      content: "";
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 6px;
+      background: var(--primary);
+      opacity: .65;
+    }
+    .arch-layer.front::before { background: var(--primary); }
+    .arch-layer.backend::before { background: var(--purple); }
+    .arch-layer.data::before { background: var(--green); }
+    .arch-title {
+      display: grid;
+      place-items: center;
+      min-height: 118px;
+      border-radius: 20px;
+      background: color-mix(in srgb, var(--primary-soft) 64%, transparent);
+      color: var(--primary2);
+      font-size: 1.02rem;
+      font-weight: 950;
+      text-align: center;
+      padding: .75rem;
+    }
+    .arch-layer.backend .arch-title { background: color-mix(in srgb, var(--purple-soft) 68%, transparent); color: #5b21b6; }
+    .arch-layer.data .arch-title { background: color-mix(in srgb, var(--green-soft) 72%, transparent); color: #166534; }
+    [data-theme="dark"] .arch-layer.backend .arch-title { color: #ddd6fe; }
+    [data-theme="dark"] .arch-layer.data .arch-title { color: #bbf7d0; }
+    .arch-nodes {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: .75rem;
+      align-items: stretch;
+    }
+    .arch-node {
+      border: 1px solid var(--line2);
+      border-radius: 18px;
+      background: var(--solid);
+      padding: .92rem;
+      min-height: 116px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      box-shadow: 0 10px 26px rgba(15,23,42,.055);
+    }
+    .arch-node b { display: block; color: var(--ink); margin-bottom: .35rem; font-size: .98rem; }
+    .arch-node span { color: var(--muted); line-height: 1.58; font-size: .88rem; }
+    .arch-connector {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      color: var(--muted);
+      font-weight: 950;
+      gap: .8rem;
+    }
+    .arch-connector::before,
+    .arch-connector::after { content: ""; height: 1px; background: var(--line); }
+    .arch-note {
+      margin-top: .3rem;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: .75rem;
+    }
+    .arch-note .mini-note {
+      border: 1px dashed color-mix(in srgb, var(--primary) 35%, var(--line));
+      border-radius: 16px;
+      padding: .75rem;
+      color: var(--muted);
+      background: color-mix(in srgb, var(--primary-soft) 26%, transparent);
+      font-weight: 750;
+    }
+
+    .responsibility-chips,
+    .inline-code-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .44rem;
+    }
+    .resp-chip,
+    .mini-code {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: .42rem .66rem;
+      background: var(--solid);
+      color: var(--ink);
+      font-weight: 900;
+      cursor: pointer;
+      transition: transform .18s ease, background .18s ease, border-color .18s ease, color .18s ease;
+    }
+    .mini-code {
+      border-radius: 11px;
+      font-family: var(--mono);
+      font-size: .78rem;
+      background: #0f172a;
+      color: #e5e7eb;
+      border-color: #1e293b;
+    }
+    .resp-chip:hover,
+    .resp-chip.active {
+      transform: translateY(-1px);
+      background: var(--primary-soft);
+      border-color: rgba(37,99,235,.24);
+      color: var(--primary2);
+    }
+    .mini-code:hover {
+      transform: translateY(-1px);
+      border-color: #60a5fa;
+      color: #bfdbfe;
+    }
+    [data-theme="dark"] .resp-chip:hover,
+    [data-theme="dark"] .resp-chip.active { color: #bfdbfe; }
+
+    .code-detail-page {
+      display: none;
+      border-color: rgba(37,99,235,.24);
+      background:
+        radial-gradient(circle at 8% 0%, rgba(37,99,235,.13), transparent 30%),
+        color-mix(in srgb, var(--solid) 86%, transparent);
+    }
+    .code-detail-page.active { display: block; animation: panelIn .24s ease both; }
+    .code-detail-shell {
+      display: grid;
+      grid-template-columns: minmax(0, 1.25fr) minmax(280px, .75fr);
+      gap: 1rem;
+      align-items: stretch;
+    }
+    .code-detail-main,
+    .code-detail-side {
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      background: color-mix(in srgb, var(--solid) 82%, transparent);
+      padding: 1.05rem;
+    }
+    .detail-path {
+      display: block;
+      margin: .75rem 0;
+      padding: .8rem .9rem;
+      border-radius: 14px;
+      background: #0f172a;
+      color: #e5e7eb;
+      font-family: var(--mono);
+      word-break: break-all;
+    }
+    .placeholder-canvas {
+      min-height: 220px;
+      border: 2px dashed color-mix(in srgb, var(--primary) 32%, var(--line));
+      border-radius: 22px;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      color: var(--muted);
+      background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--primary-soft) 34%, transparent), color-mix(in srgb, var(--primary-soft) 34%, transparent) 10px, transparent 10px, transparent 20px);
+      padding: 1.25rem;
+    }
+    .placeholder-canvas strong { display: block; color: var(--ink); font-size: 1.08rem; margin-bottom: .32rem; }
+    .path-actions { display: flex; flex-wrap: wrap; gap: .55rem; margin-top: .85rem; }
+    .detail-list { display: grid; gap: .55rem; margin-top: .75rem; }
+    .detail-list div {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: .72rem;
+      color: var(--muted);
+      background: color-mix(in srgb, var(--solid) 76%, transparent);
+    }
+    .detail-list b { color: var(--ink); }
+    .analysis-grid {
+      display: grid;
+      gap: .9rem;
+      margin-top: .95rem;
+    }
+    .analysis-block {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: color-mix(in srgb, var(--solid) 82%, transparent);
+      padding: .95rem;
+    }
+    .analysis-block h4 {
+      margin: 0 0 .55rem;
+      display: flex;
+      align-items: center;
+      gap: .45rem;
+    }
+    .analysis-list {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      gap: .42rem;
+    }
+    .analysis-list li {
+      position: relative;
+      padding-left: 1.05rem;
+      color: var(--muted);
+    }
+    .analysis-list li::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: .72em;
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: var(--primary);
+    }
+    .analysis-list button {
+      width: 100%;
+      border: 0;
+      padding: 0;
+      margin: 0;
+      color: inherit;
+      background: transparent;
+      text-align: left;
+      cursor: pointer;
+      font-weight: 800;
+    }
+    .analysis-list button:hover,
+    .analysis-list button.active {
+      color: var(--primary2);
+    }
+    .method-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .48rem;
+      margin-top: .7rem;
+    }
+    .method-chip {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: .42rem .68rem;
+      background: var(--solid);
+      color: var(--muted);
+      cursor: pointer;
+      font-weight: 900;
+      transition: .18s ease;
+    }
+    .method-chip:hover,
+    .method-chip.active {
+      color: var(--primary2);
+      background: var(--primary-soft);
+      border-color: rgba(37,99,235,.22);
+      transform: translateY(-1px);
+    }
+    [data-theme="dark"] .method-chip:hover,
+    [data-theme="dark"] .method-chip.active { color: #bfdbfe; }
+    .code-reader {
+      margin-top: .95rem;
+      overflow: auto;
+      border-radius: 18px;
+      border: 1px solid #1e293b;
+      background: #0f172a;
+      box-shadow: 0 12px 28px rgba(15,23,42,.16);
+    }
+    .code-reader-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: .7rem;
+      padding: .65rem .85rem;
+      color: #bfdbfe;
+      background: #111827;
+      border-bottom: 1px solid #1e293b;
+      font-size: .82rem;
+      font-weight: 900;
+    }
+    .code-reader-head span:last-child {
+      color: #93c5fd;
+      font-family: var(--mono);
+      font-weight: 700;
+    }
+    .code-reader pre {
+      margin: 0;
+      min-width: 640px;
+      padding: .95rem;
+      color: #dbeafe;
+      font-family: var(--mono);
+      font-size: .86rem;
+      line-height: 1.72;
+      white-space: pre;
+    }
+    .code-reader .code-line {
+      display: block;
+      padding: 0 .35rem;
+      border-radius: 6px;
+      transition: background .18s ease, color .18s ease, box-shadow .18s ease;
+    }
+    .code-reader .code-line.active {
+      color: #fff;
+      background: rgba(37,99,235,.34);
+      box-shadow: inset 3px 0 0 #60a5fa;
+    }
+    .code-line .line-no {
+      display: inline-block;
+      width: 3.2rem;
+      user-select: none;
+      color: #64748b;
+    }
+    .source-status {
+      margin-top: .65rem;
+      color: var(--muted);
+      font-size: .92rem;
+    }
+    .principle-box {
+      margin-top: .9rem;
+      border: 1px solid color-mix(in srgb, var(--primary) 22%, var(--line));
+      border-radius: 18px;
+      padding: .95rem;
+      background: color-mix(in srgb, var(--primary-soft) 38%, transparent);
+    }
+    .principle-box h4 { margin-top: 0; }
+    .principle-box p { color: var(--muted); }
+    .tech-explain-box {
+      margin-top: .9rem;
+      border: 1px solid color-mix(in srgb, var(--green) 22%, var(--line));
+      border-radius: 18px;
+      padding: .95rem;
+      background: color-mix(in srgb, var(--green-soft) 42%, transparent);
+    }
+    .tech-explain-box h4 { margin: 0 0 .45rem; }
+    .tech-explain-box p { color: var(--muted); margin: 0; }
+    .flow-mini {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .4rem;
+      margin-top: .55rem;
+    }
+    .flow-mini span {
+      display: inline-flex;
+      align-items: center;
+      gap: .38rem;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--solid);
+      color: var(--muted);
+      padding: .28rem .56rem;
+      font-size: .83rem;
+      font-weight: 850;
+    }
+
+    @media (max-width: 900px) {
+      .arch-layer { grid-template-columns: 1fr; }
+      .arch-nodes { grid-template-columns: 1fr; }
+      .arch-note { grid-template-columns: 1fr; }
+      .code-detail-shell { grid-template-columns: 1fr; }
+    }
+
+    .search-box {
+      display: flex;
+      gap: .65rem;
+      align-items: center;
+      padding: .75rem;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      background: color-mix(in srgb, var(--solid) 82%, transparent);
+      margin-bottom: 1rem;
+    }
+    .search-box input {
+      width: 100%;
+      border: 0;
+      outline: none;
+      color: var(--ink);
+      background: transparent;
+      font-weight: 700;
+    }
+
+    .redis-tabs, .flow-tabs {
+      display: flex;
+      gap: .45rem;
+      flex-wrap: wrap;
+      margin: .8rem 0 1rem;
+    }
+    .pill-tab {
+      border: 1px solid var(--line);
+      background: var(--solid);
+      color: var(--muted);
+      border-radius: 999px;
+      padding: .55rem .8rem;
+      cursor: pointer;
+      font-weight: 900;
+    }
+    .pill-tab.active, .pill-tab:hover { background: var(--primary-soft); color: var(--primary2); border-color: rgba(37,99,235,.16); }
+    [data-theme="dark"] .pill-tab.active,
+    [data-theme="dark"] .pill-tab:hover { color: #bfdbfe; }
+    .redis-panel { display: none; }
+    .redis-panel.active { display: block; animation: panelIn .22s ease both; }
+    .redis-key {
+      display: flex;
+      gap: .75rem;
+      align-items: flex-start;
+      margin: .55rem 0;
+      padding: .86rem;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--line);
+      background: color-mix(in srgb, var(--solid) 80%, transparent);
+    }
+    .redis-key b {
+      flex: 0 0 auto;
+      width: 30px;
+      height: 30px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 10px;
+      background: var(--red-soft);
+      color: #991b1b;
+    }
+    [data-theme="dark"] .redis-key b { color: #fecaca; }
+    .redis-key p { margin: 0; }
+
+    .flow-stage {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-xl);
+      background: color-mix(in srgb, var(--solid) 78%, transparent);
+      padding: 1rem;
+      min-height: 350px;
+    }
+    .flow-card { display: none; animation: panelIn .24s ease both; }
+    .flow-card.active { display: block; }
+    .flow-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: .85rem;
+    }
+    .flow-title { margin: 0; }
+    .flow-controls { display: flex; gap: .45rem; }
+    .round-btn {
+      border: 1px solid var(--line);
+      background: var(--solid);
+      color: var(--ink);
+      width: 38px;
+      height: 38px;
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      font-weight: 950;
+    }
+    .flow-diagram { overflow-x: auto; padding: .35rem 0; }
+    .flow-row {
+      display: flex;
+      align-items: stretch;
+      gap: .56rem;
+      min-width: max-content;
+    }
+    .flow-col { display: grid; gap: .55rem; min-width: 190px; }
+    .node {
+      min-width: 170px;
+      min-height: 58px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: .58rem .78rem;
+      border-radius: 15px;
+      border: 1px solid var(--line2);
+      background: var(--solid);
+      font-weight: 900;
+      box-shadow: 0 9px 22px rgba(15,23,42,.05);
+    }
+    .node.primary { background: var(--primary-soft); color: var(--primary2); }
+    .node.green { background: var(--green-soft); color: #166534; }
+    .node.orange { background: var(--orange-soft); color: #9a3412; }
+    .node.purple { background: var(--purple-soft); color: #5b21b6; }
+    .node.cyan { background: var(--cyan-soft); color: #155e75; }
+    [data-theme="dark"] .node.primary { color: #bfdbfe; }
+    [data-theme="dark"] .node.green { color: #bbf7d0; }
+    [data-theme="dark"] .node.orange { color: #fed7aa; }
+    [data-theme="dark"] .node.purple { color: #ddd6fe; }
+    [data-theme="dark"] .node.cyan { color: #a5f3fc; }
+    .arrow { min-width: 34px; display: grid; place-items: center; color: var(--muted); font-weight: 950; font-size: 1.28rem; }
+    .flow-vertical { display: grid; gap: .5rem; max-width: 740px; margin: 0 auto; }
+    .flow-vertical .node { min-width: 0; width: 100%; }
+    .down { text-align: center; color: var(--muted); font-weight: 950; }
+
+    .callout {
+      border-left: 5px solid var(--primary);
+      border-radius: var(--radius-md);
+      background: color-mix(in srgb, var(--primary-soft) 72%, transparent);
+      padding: 1rem 1.05rem;
+      margin: 1rem 0;
+      color: color-mix(in srgb, var(--ink) 88%, var(--primary));
+    }
+    .callout.good { border-left-color: var(--green); background: color-mix(in srgb, var(--green-soft) 76%, transparent); }
+    .callout.warn { border-left-color: var(--orange); background: color-mix(in srgb, var(--orange-soft) 76%, transparent); }
+    .callout.red { border-left-color: var(--red); background: color-mix(in srgb, var(--red-soft) 76%, transparent); }
+
+    .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius-lg); }
+    table { width: 100%; border-collapse: collapse; min-width: 1040px; background: color-mix(in srgb, var(--solid) 84%, transparent); }
+    th, td { padding: .86rem .9rem; border-bottom: 1px solid var(--line); vertical-align: top; text-align: left; }
+    th { background: color-mix(in srgb, var(--primary-soft) 42%, transparent); color: var(--ink); }
+    tr:last-child td { border-bottom: 0; }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 150;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      background: rgba(2,6,23,.56);
+      backdrop-filter: blur(10px);
+    }
+    .modal-backdrop.open { display: flex; animation: fadeIn .16s ease both; }
+    .modal {
+      width: min(100%, 980px);
+      max-height: min(86vh, 860px);
+      overflow: auto;
+      border-radius: 28px;
+      border: 1px solid var(--line);
+      background: var(--solid);
+      color: var(--ink);
+      box-shadow: 0 32px 110px rgba(0,0,0,.28);
+      animation: modalIn .2s ease both;
+    }
+    .modal-head {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 1.05rem 1.2rem;
+      background: color-mix(in srgb, var(--solid) 88%, transparent);
+      backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--line);
+    }
+    .modal-title { margin: 0; }
+    .modal-body { padding: 1.1rem 1.2rem 1.25rem; }
+    .close-btn {
+      border: 1px solid var(--line);
+      background: var(--solid);
+      color: var(--ink);
+      cursor: pointer;
+      width: 40px;
+      height: 40px;
+      border-radius: 999px;
+      font-weight: 950;
+    }
+
+    .floating-tools {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      z-index: 90;
+      display: grid;
+      gap: .55rem;
+    }
+    .float-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--solid);
+      color: var(--ink);
+      box-shadow: var(--shadow2);
+      cursor: pointer;
+      font-weight: 950;
+    }
+
+    .reveal { opacity: 0; transform: translateY(18px); transition: .55s ease; }
+    .reveal.in { opacity: 1; transform: translateY(0); }
+
+    footer {
+      max-width: var(--max);
+      margin: 0 auto;
+      padding: 0 1.25rem 3rem;
+      text-align: center;
+      color: var(--muted);
+    }
+
+    @keyframes float { 0%,100% { transform: translate3d(0,0,0); } 50% { transform: translate3d(-14px,16px,0); } }
+    @keyframes panelIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes modalIn { from { opacity: 0; transform: translateY(12px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    @media (max-width: 1080px) {
+      .hero-grid, .tab-shell { grid-template-columns: 1fr; }
+      .chapter-tabs { position: static; grid-template-columns: repeat(2, minmax(0,1fr)); }
+      .grid.two, .grid.three, .grid.four { grid-template-columns: repeat(2, minmax(0,1fr)); }
+      .topbar-inner { align-items: flex-start; flex-direction: column; }
+      .nav { justify-content: flex-start; }
+    }
+    @media (max-width: 680px) {
+      .hero { padding-top: 2.2rem; }
+      .topbar-inner { padding-inline: .85rem; }
+      main, .hero, footer { padding-left: .85rem; padding-right: .85rem; }
+      .nav { display: none; }
+      .chapter-tabs, .metric-grid, .grid.two, .grid.three, .grid.four { grid-template-columns: 1fr; }
+      .hero-card, .section-card { border-radius: 22px; }
+      .hero-card { min-height: auto; }
+      .flow-top { align-items: flex-start; flex-direction: column; }
+      .floating-tools { right: 12px; bottom: 12px; }
+    }
+
+    @media print {
+      body { background: #fff; color: #111827; }
+      body::before, .topbar, .floating-tools, .hero-actions, .chapter-tabs, .modal-backdrop, .flow-controls, .progress-bar { display: none !important; }
+      .hero, main, footer { max-width: none; padding-left: 0; padding-right: 0; }
+      .hero-grid, .tab-shell, .grid.two, .grid.three, .grid.four { display: block; }
+      .hero-card, .side-card, .section-card, .card, .flow-stage { box-shadow: none !important; break-inside: avoid; background: #fff; border-color: #cbd5e1; }
+      .section-card, .card, .side-card { margin: .8rem 0; }
+      .chapter-panel, .redis-panel, .flow-card { display: block !important; }
+      .btn, .member-actions, .redis-tabs, .flow-tabs, .search-box { display: none !important; }
+      details:not([open]) .details-body { display: block; }
+      code { white-space: normal; }
+    }
+  </style>
+</head>
+<body>
+  <div class="progress-bar" id="progressBar"></div>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="#top" aria-label="返回顶部">
+        <span class="brand-mark">教</span>
+        <span>教学综合信息服务平台说明页</span>
+      </a>
+      <nav class="nav" aria-label="页面导航">
+        <a href="#chapters" class="active">章节</a>
+        <a href="#members">成员</a>
+        <a href="#redis">Redis</a>
+        <a href="#flows">流程</a>
+        <a href="#summary">汇总</a>
+        <button class="icon-btn" id="themeToggle" type="button" title="切换深浅色">🌙</button>
+        <button class="print-btn" type="button" onclick="window.print()">打印/PDF</button>
+      </nav>
+    </div>
+  </header>
+
+  <div id="top" class="hero">
+    <div class="hero-grid">
+      <section class="hero-card reveal">
+        <span class="eyebrow">项目分工 · 技术实现 · 答辩展示</span>
+        <h1>把 Markdown 内容讲成一页<span class="gradient-text">可交互项目说明</span></h1>
+        <p class="hero-lead">
+          本页面根据 <code>team-responsibility-implementation.md</code> 重新组织，全面说明三位成员的职责边界、已实现功能、对应代码、Redis 使用点、公共工程结构、七类流程图和答辩表达口径。页面为单文件静态 HTML，可直接打开、演示和打印。
+        </p>
+        <div class="hero-actions">
+          <a class="btn primary" href="#chapters">开始分页阅读</a>
+          <a class="btn soft" href="#flows">查看流程轮播</a>
+          <button class="btn" type="button" data-open-modal="speech">查看答辩开场稿</button>
+        </div>
+      </section>
+
+      <aside class="side-card reveal">
+        <div class="metric-grid">
+          <div class="metric"><strong data-count="3">0</strong><span>名成员业务闭环</span></div>
+          <div class="metric"><strong data-count="7">0</strong><span>类答辩流程图</span></div>
+          <div class="metric"><strong data-count="30">0</strong><span>余个核心类/页面</span></div>
+          <div class="metric"><strong>Redis</strong><span>认证、抢课、缓存一致性</span></div>
+        </div>
+        <div class="mini-map">
+          <h3>三条主线</h3>
+          <div class="mini-line"><span class="mini-dot"></span> 魏语石：系统骨架、认证、权限、后台基础</div>
+          <div class="mini-line"><span class="mini-dot green"></span> 郭凤圣：学生选课、抢课、课表、基础数据</div>
+          <div class="mini-line"><span class="mini-dot orange"></span> 敖东磊：教师端、成绩考试、通知评价、文件</div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <main>
+    <section id="chapters" class="section-card reveal">
+      <div class="section-head">
+        <div>
+          <div class="section-kicker">Interactive Chapters</div>
+          <h2>分页式讲解结构</h2>
+        </div>
+        <button class="btn soft" type="button" id="nextChapterBtn">下一页</button>
+      </div>
+      <p class="lead">左侧是章节分页。每个分页都对应 Markdown 的一个核心部分，适合答辩时逐页讲解；打印时会自动展开全部内容。</p>
+
+      <div class="callout good">
+        <strong>最新代码适配说明：</strong>
+        当前页面已按最新项目代码重新校准展示口径。Redis 分工按三个真实 key 展示：魏语石负责
+        <code>selection:offering:{offeringId}:remaining</code> 库存扣减与防超卖，郭凤圣负责
+        <code>selection:request:{requestId}</code> 请求幂等与重复提交控制，敖东磊负责
+        <code>selection:grab:lock:{offeringId}:{username}</code> 短锁、Redis 状态检测和缓存清理。
+        新增功能已纳入代码分析清单：教师成绩录入、选课分页、后台用户分页、通知统计、Redis 监控、压测历史报告和文件管理。
+      </div>
+
+      <div class="tab-shell">
+        <div class="chapter-tabs" role="tablist" aria-label="章节分页">
+          <button class="chapter-tab active" type="button" data-chapter="overview">项目概览<small>定位、角色、技术路线</small></button>
+          <button class="chapter-tab" type="button" data-chapter="wei">魏语石<small>库存扣减、认证权限、后台骨架</small></button>
+          <button class="chapter-tab" type="button" data-chapter="guo">郭凤圣<small>请求幂等、选课、课表</small></button>
+          <button class="chapter-tab" type="button" data-chapter="ao">敖东磊<small>短锁运维、成绩考试、文件</small></button>
+          <button class="chapter-tab" type="button" data-chapter="common">公共技术<small>Flyway、前端、响应结构</small></button>
+          <button class="chapter-tab" type="button" data-chapter="defense">答辩口径<small>亮点和注意事项</small></button>
+        </div>
+
+        <div class="chapter-content">
+          <article class="chapter-panel active" data-panel="overview">
+            <h3>一、项目总体定位</h3>
+            <p>项目定位为教学综合信息服务平台，复刻学校教务系统中的核心场景。它不是单纯展示页面，而是同时包含学生、教师、管理员三类角色，以及登录认证、权限菜单、课程选课、成绩考试、通知评价、文件材料和审计日志等业务闭环。</p>
+            <div class="grid three">
+              <div class="card"><h4>学生角色</h4><p>课程查询、自主选课、抢课、退课、个人课表、空闲教室、成绩查询、考试查询、通知查看、教学评价。</p><span class="tag green">学生闭环</span><span class="tag green">课表展示</span></div>
+              <div class="card"><h4>教师角色</h4><p>任课课程、成绩查看、考试安排查看、教学评价结果查看，形成教师端教学工作台。</p><span class="tag purple">教师业务</span><span class="tag purple">结果查询</span></div>
+              <div class="card"><h4>管理员角色</h4><p>用户、角色、权限、菜单、成绩、考试、课程、通知、评价、审计日志、文件导入导出和申请材料管理。</p><span class="tag orange">后台管理</span><span class="tag orange">权限控制</span></div>
+            </div>
+            <h3>整体技术路线</h3>
+            <div class="grid four">
+              <div class="card"><h4>后端</h4><p>Spring Boot、Spring MVC、Spring Security、MyBatis、JPA、Bean Validation、Flyway、Redis、H2/MySQL。</p></div>
+              <div class="card"><h4>前端</h4><p>Vue 3、TypeScript、Vite、Vue Router、Pinia、Axios、Element Plus、ECharts、Lucide 图标。</p></div>
+              <div class="card"><h4>数据</h4><p>Flyway 建表，<code>DataInitializer</code> 初始化学院、专业、班级、学生、教师、课程、成绩、考试、菜单和权限等演示数据。</p></div>
+              <div class="card"><h4>接口</h4><p>统一使用 <code>ApiResponse&lt;T&gt;</code>；分页数据使用 <code>PageResponse&lt;T&gt;</code>。</p></div>
+            </div>
+            <div class="callout good"><strong>一句话总结：</strong>项目用 Spring Boot + Vue 3 + Redis 完成一个接近真实教务系统的综合业务复刻，核心价值在于角色清晰、流程完整、权限可控、Redis 有真实使用场景。</div>
+          </article>
+
+          <article class="chapter-panel" data-panel="wei">
+            <h3>二、魏语石：系统骨架、认证权限与后台基础</h3>
+            <p>魏语石负责项目总体架构、登录认证、权限体系、后台管理、公共响应结构、异常处理、审计日志、菜单体系和前端整体布局。他的模块让整个系统“能登录、能鉴权、能按角色展示菜单、能管理后台”。</p>
+            <div class="grid two">
+              <div class="card"><h4>登录认证</h4><p>实现账号密码登录、BCrypt 密码校验、登录失败次数限制、访问令牌、刷新令牌和退出登录。</p><div class="timeline"><div class="step"><strong>登录页提交</strong>前端调用 <code>loginApi</code>。</div><div class="step"><strong>服务端校验</strong><code>AuthService</code> 查询用户并使用 BCrypt 校验密码。</div><div class="step"><strong>生成双 token</strong>生成 access token 与 refresh token。</div><div class="step"><strong>Redis 存储</strong><code>AuthTokenStore</code> 写入 Redis，并保留本地内存 fallback。</div><div class="step"><strong>前端入站</strong>Pinia 保存 token，路由进入主界面。</div></div></div>
+              <div class="card"><h4>权限与安全控制</h4><p>通过 <code>BearerTokenAuthenticationFilter</code> 解析 token，查询用户角色与权限，结合 <code>@PreAuthorize</code> 保护关键接口。</p><ul class="clean"><li>管理员接口必须具备管理员角色。</li><li>成绩、课程、状态审核等接口通过权限码控制。</li><li>前端根据后端菜单生成可见入口。</li><li>Vue Router 负责未登录拦截。</li></ul></div>
+              <div class="card"><h4>后台用户管理</h4><p>管理员可以查看用户、创建测试用户、重置密码、分配角色。后端用 Spring MVC + MyBatis，前端用 Element Plus 表格、表单和弹窗。</p></div>
+              <div class="card"><h4>操作日志与审计</h4><p>记录教学班修改、申请审核、公告发布、角色权限调整等关键操作，便于追踪谁在什么时候修改了什么。</p></div>
+            </div>
+            <details open><summary>魏语石对应代码与 Redis key</summary><div class="details-body grid two"><div><h4>主要代码</h4><div class="code-list"><div class="file">src/main/java/weidonglang/tianshiwebside/auth/AuthController.java</div><div class="file">src/main/java/weidonglang/tianshiwebside/auth/AuthService.java</div><div class="file">src/main/java/weidonglang/tianshiwebside/security/SecurityConfig.java</div><div class="file">src/main/java/weidonglang/tianshiwebside/permission/RolePermissionController.java</div><div class="file">src/main/java/weidonglang/tianshiwebside/user/AdminUserController.java</div><div class="file">src/main/java/weidonglang/tianshiwebside/course/grab/LocalCourseGrabService.java</div><div class="file">src/main/java/weidonglang/tianshiwebside/admin/SystemMonitorController.java</div><div class="file">frontend/src/views/auth/LoginView.vue</div><div class="file">frontend/src/views/admin/RedisMonitorView.vue</div><div class="file">frontend/src/stores/menu.ts</div></div></div><div><h4>Redis 落点</h4><div class="redis-key"><b>1</b><p><code>selection:offering:{offeringId}:remaining</code><br>课程剩余名额缓存，用于抢课前预热库存、高并发扣减库存、库存不足时快速返回 FULL。</p></div><div class="redis-key"><b>2</b><p>数据库写入失败或容量不足时回滚 Redis 库存，避免缓存和数据库余量不一致。</p></div><div class="redis-key"><b>3</b><p>Redis 状态监控页展示库存 key、数据库容量、已选人数和是否超卖，便于答辩现场证明防超卖。</p></div></div></div></details>
+          </article>
+
+          <article class="chapter-panel" data-panel="guo">
+            <h3>三、郭凤圣：学生选课、抢课、课表与基础数据</h3>
+            <p>郭凤圣负责学生端课程业务，包括课程查询、自主选课、抢课、退课、个人课表、空闲教室和课程基础数据展示。这部分是项目中最能体现业务闭环和 Redis 高并发价值的模块。</p>
+            <div class="grid two">
+              <div class="card"><h4>自主选课与退课</h4><p>实现可选课程列表、已选课程列表、选课、抢课入口、退课和选课时间窗口判断。</p><ul class="clean"><li>学生进入自主选课页面。</li><li>前端调用课程列表接口。</li><li>后端按学生账号和学期查询可选课程。</li><li>选课时校验身份、时间窗口、重复选课和容量。</li><li>成功后写入选课记录，并刷新余量。</li></ul></div>
+              <div class="card"><h4>抢课模块与可替换边界</h4><p>抢课模块抽象为 <code>CourseGrabPort</code>，当前真实实现是 <code>LocalCourseGrabService</code>。Controller 依赖接口而不是具体实现，后续如需拆分服务可以替换实现。</p><ul class="clean"><li>课程列表和已选列表已加入分页。</li><li>前端抢课时生成 requestId。</li><li>Redis 负责库存、短锁、幂等。</li><li><code>@Transactional</code> 保证最终落库一致性。</li></ul></div>
+              <div class="card"><h4>个人课表与空闲教室</h4><p>通过 MyBatis 按学生、班级、学期、周次查询课程数据，前端把课程渲染成周一到周五的课表格子，并支持空闲教室查询。</p></div>
+              <div class="card"><h4>数据初始化</h4><p>补充学院、专业、班级、学生、课程、课表、成绩和考试安排等演示数据，覆盖信息科学与工程学院、医学院、经济管理学院、艺术学院。</p></div>
+            </div>
+            <details open><summary>郭凤圣对应代码与 Redis key</summary><div class="details-body grid two"><div><h4>主要代码</h4><div class="code-list"><div class="file">src/main/java/weidonglang/tianshiwebside/course/CourseSelectionController.java</div><div class="file">src/main/java/weidonglang/tianshiwebside/course/mapper/CourseSelectionReadMapper.java</div><div class="file">src/main/java/weidonglang/tianshiwebside/course/mapper/CourseSelectionWriteMapper.java</div><div class="file">src/main/java/weidonglang/tianshiwebside/course/grab/CourseGrabPort.java</div><div class="file">src/main/java/weidonglang/tianshiwebside/course/grab/LocalCourseGrabService.java</div><div class="file">src/main/java/weidonglang/tianshiwebside/schedule/PersonalScheduleController.java</div><div class="file">frontend/src/views/course/SelectionView.vue</div><div class="file">frontend/src/api/courseSelection.ts</div><div class="file">frontend/src/views/schedule/PersonalScheduleView.vue</div></div></div><div><h4>Redis 落点</h4><div class="redis-key"><b>1</b><p><code>selection:request:{requestId}</code><br>抢课请求幂等 key，防止重复点击、网络重试或同一请求重复提交。</p></div><div class="redis-key"><b>2</b><p>前端每次抢课生成唯一 requestId，后端处理后缓存请求结果；同一个 requestId 再来时直接返回已有结果。</p></div><div class="redis-key"><b>3</b><p>选课页已经加入可选课程分页和已选课程分页，避免课程、学生数据多时页面卡顿。</p></div></div></div></details>
+          </article>
+
+          <article class="chapter-panel" data-panel="ao">
+            <h3>四、敖东磊：教师端、成绩考试、通知评价与文件</h3>
+            <p>敖东磊负责教师端、成绩管理后台、考试管理后台、通知公告、教学评价、文件导入导出和部分学生申请审核页面。他的模块让教师和管理员能够维护教学过程中的结果数据。</p>
+            <div class="grid two">
+              <div class="card"><h4>教师端</h4><p>教师登录后可查看任课课程、成绩、考试安排和教学评价结果。后端从认证上下文获取用户名，再按教师姓名查询业务数据。</p></div>
+              <div class="card"><h4>成绩管理后台</h4><p>支持成绩查询、新增、修改、锁定、补考/重修/缓考状态、CSV 导入导出。查看由 <code>GRADE_READ</code> 控制，录入修改由 <code>GRADE_WRITE</code> 控制。</p></div>
+              <div class="card"><h4>考试管理后台</h4><p>维护考试安排、考场、座位和监考信息。新增或修改考试后，系统查询选中该课程的学生并生成通知。</p></div>
+              <div class="card"><h4>通知、评价与文件</h4><p>实现首页公告、分类通知、角色定向通知、已读未读状态、教学评价统计、课程/成绩 CSV 导入导出和学籍申请材料上传。</p></div>
+            </div>
+            <details open><summary>敖东磊对应代码与 Redis 口径</summary><div class="details-body grid two"><div><h4>主要代码</h4><div class="code-list"><div class="file">src/main/java/weidonglang/tianshiwebside/teacher/TeacherController.java</div><div class="file">src/main/java/weidonglang/tianshiwebside/teacher/mapper/TeacherMapper.java</div><div class="file">src/main/java/weidonglang/tianshiwebside/academic/AcademicAdminController.java</div><div class="file">src/main/java/weidonglang/tianshiwebside/notice/AdminNoticeController.java</div><div class="file">src/main/java/weidonglang/tianshiwebside/file/StatusChangeAttachmentController.java</div><div class="file">src/main/java/weidonglang/tianshiwebside/file/AdminFileController.java</div><div class="file">src/main/java/weidonglang/tianshiwebside/admin/SystemMonitorController.java</div><div class="file">frontend/src/views/admin/FileAdminView.vue</div><div class="file">frontend/src/views/admin/LoadTestReportsView.vue</div></div></div><div><h4>Redis 口径</h4><div class="redis-key"><b>1</b><p><code>selection:grab:lock:{offeringId}:{username}</code><br>同一个学生短时间重复抢同一教学班时，通过短锁拦截重复处理。</p></div><div class="redis-key"><b>2</b><p>Redis 状态监控负责 PING、key 列表、TTL、缓存清理和降级状态展示。</p></div><div class="redis-key"><b>3</b><p>压测历史报告页读取 reports 目录中的 JSON/HTML，辅助展示 Redis 开启和关闭时的性能对比。</p></div></div></div></details>
+          </article>
+
+          <article class="chapter-panel" data-panel="common">
+            <h3>五、公共技术实现</h3>
+            <p>公共技术决定了项目是否像一个完整工程，而不是一堆页面。Markdown 中列出了数据库版本、前端工程、后端公共结构三个基础部分。</p>
+            <div class="grid three">
+              <div class="card"><h4>数据库与初始化</h4><p>Flyway 按版本管理数据库结构；JPA Repository 和 JdbcTemplate 初始化基础数据与复杂演示数据；业务查询和后台列表主要使用 MyBatis。</p><div class="code-list"><div class="file">src/main/resources/db/migration/V1__initial_schema.sql</div><div class="file">src/main/resources/db/migration/V2__role_menu_permissions.sql</div><div class="file">src/main/resources/db/migration/V3__teaching_evaluation.sql</div><div class="file">src/main/resources/db/migration/V4__teacher_grade_exam_management.sql</div><div class="file">src/main/resources/db/migration/V5__notice_permission_audit_files.sql</div><div class="file">src/main/resources/db/migration/V6__registration_applications.sql</div><div class="file">src/main/resources/db/migration/V7__information_center.sql</div></div></div>
+              <div class="card"><h4>前端工程</h4><p>Vue 3 组件化开发，TypeScript 提升接口类型约束，Vite 构建，Element Plus 提供 UI，Pinia 保存登录和菜单状态，Vue Router 管理路由和守卫，Axios 统一请求。</p><div class="code-list"><div class="file">frontend/package.json</div><div class="file">frontend/vite.config.ts</div><div class="file">frontend/src/main.ts</div><div class="file">frontend/src/router/index.ts</div><div class="file">frontend/src/layouts/MainLayout.vue</div><div class="file">frontend/src/api/http.ts</div></div></div>
+              <div class="card"><h4>后端公共结构</h4><p>统一接口结构、分页结构、业务异常、全局异常处理和 TraceId 请求追踪，让不同模块返回格式一致、排错方式一致。分页响应目前分布在具体 Controller 的 record 中，前端用对应 PageResponse 接口接收。</p><div class="code-list"><div class="file">src/main/java/weidonglang/tianshiwebside/common/api/ApiResponse.java</div><div class="file">src/main/java/weidonglang/tianshiwebside/common/error/BusinessException.java</div><div class="file">src/main/java/weidonglang/tianshiwebside/common/error/GlobalExceptionHandler.java</div><div class="file">src/main/java/weidonglang/tianshiwebside/common/web/TraceIdFilter.java</div></div></div>
+            </div>
+          </article>
+
+          <article class="chapter-panel" data-panel="defense">
+            <h3>六、答辩表达建议</h3>
+            <div class="callout good"><strong>可直接作为答辩开场：</strong><br>本项目不是为了堆砌复杂技术，而是用课堂上真正学过的 Spring Boot、SSM、Vue 3、Element Plus 和 Redis，完成一个接近真实学校教务系统的业务复刻。我们重点实现了登录权限、学生选课、教师端、成绩考试、通知公告、操作审计和文件导入导出。Redis 没有被当成装饰，而是用在登录状态、失败次数限制、抢课库存、幂等请求和缓存一致性这些确实适合它的地方。</div>
+            <div class="grid three">
+              <div class="card"><h4>讲系统结构</h4><p>先讲三类角色，再讲前后端分离架构，最后讲统一响应、权限过滤、数据库和 Redis。</p></div>
+              <div class="card"><h4>讲成员分工</h4><p>不要只说“写了哪些页面”，而要讲“负责哪个业务闭环、从哪个页面进入、调用哪些接口、最终写入哪些数据”。</p></div>
+              <div class="card"><h4>讲 Redis</h4><p>重点讲认证 token、登录失败次数、抢课库存、短锁、请求幂等和后台维护后的库存缓存清理。</p></div>
+            </div>
+            <div class="callout warn"><strong>注意口径：</strong>当前系统是单体 Spring Boot 项目，并不是已经真正拆分的微服务。抢课模块通过 <code>CourseGrabPort</code> 预留了微服务边界，可以说“后续可以替换为远程抢课服务”，不要说成“已经完成微服务架构”。</div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="members" class="section-card reveal">
+      <div class="section-head">
+        <div>
+          <div class="section-kicker">Members</div>
+          <h2>三人分工总览</h2>
+        </div>
+      </div>
+      <p class="lead">分工按照业务边界拆分，而不是按前后端简单切开。每个人都有自己的业务入口、接口、数据库操作和前端页面。</p>
+      <div class="grid three">
+        <article class="card member-card">
+          <div class="avatar">魏</div>
+          <h3>魏语石（组长）</h3>
+          <p>系统总体架构、登录认证、权限体系、后台用户、角色权限、菜单、审计日志、公共响应结构和前端整体布局。</p>
+          <span class="tag">系统骨架</span><span class="tag">Spring Security</span><span class="tag">Redis Token</span>
+          <div class="member-actions"><button class="btn soft" type="button" data-open-modal="wei">查看详情</button></div>
+        </article>
+        <article class="card member-card">
+          <div class="avatar green">郭</div>
+          <h3>郭凤圣</h3>
+          <p>学生课程查询、自主选课、抢课、退课、个人课表、空闲教室、课程基础数据与演示数据初始化。</p>
+          <span class="tag green">选课闭环</span><span class="tag green">抢课幂等</span><span class="tag green">课表查询</span>
+          <div class="member-actions"><button class="btn soft" type="button" data-open-modal="guo">查看详情</button></div>
+        </article>
+        <article class="card member-card">
+          <div class="avatar orange">敖</div>
+          <h3>敖东磊</h3>
+          <p>教师端、成绩管理、考试管理、通知公告、教学评价、文件导入导出、学籍材料上传和申请审核相关页面。</p>
+          <span class="tag orange">教学结果</span><span class="tag orange">通知评价</span><span class="tag orange">CSV/文件</span>
+          <div class="member-actions"><button class="btn soft" type="button" data-open-modal="ao">查看详情</button></div>
+        </article>
+      </div>
+    </section>
+
+    <section id="redis" class="section-card reveal">
+      <div class="section-head">
+        <div>
+          <div class="section-kicker">Redis</div>
+          <h2>Redis 使用位置与技术意义</h2>
+        </div>
+      </div>
+      <p class="lead">Redis 在项目中分成三类：认证状态、抢课保护、后台维护后的库存缓存一致性。这里特别区分“已实现落点”和“后续可扩展点”。</p>
+      <div class="redis-tabs" role="tablist" aria-label="Redis 分类">
+        <button class="pill-tab active" type="button" data-redis="auth">认证模块</button>
+        <button class="pill-tab" type="button" data-redis="grab">抢课模块</button>
+        <button class="pill-tab" type="button" data-redis="consistency">缓存一致性</button>
+        <button class="pill-tab" type="button" data-redis="extension">后续扩展</button>
+      </div>
+      <div class="redis-panel active" data-redis-panel="auth">
+        <div class="grid three"><div class="redis-key"><b>1</b><p><code>auth:access:{token}</code><br>保存 access token 对应的用户名，适合短期访问令牌校验。</p></div><div class="redis-key"><b>2</b><p><code>auth:refresh:{token}</code><br>保存 refresh token 对应的用户名，用于刷新访问令牌。</p></div><div class="redis-key"><b>3</b><p><code>auth:failures:{username}</code><br>保存登录失败次数，超过阈值后临时锁定账号。</p></div></div>
+        <div class="callout">对应代码：<code>AuthService</code>、<code>AuthTokenStore</code>。技术意义是 token 和失败次数都有 TTL，Redis 能自动过期，避免频繁写数据库。</div>
+      </div>
+      <div class="redis-panel" data-redis-panel="grab">
+        <div class="grid three"><div class="redis-key"><b>1</b><p><code>selection:offering:{offeringId}:remaining</code><br>课程剩余容量，用于抢课时快速扣减库存。</p></div><div class="redis-key"><b>2</b><p><code>selection:grab:lock:{offeringId}:{username}</code><br>同一学生同一课程的短期处理锁。</p></div><div class="redis-key"><b>3</b><p><code>selection:request:{requestId}</code><br>抢课请求幂等 key，防止重复点击造成重复提交。</p></div></div>
+        <div class="callout good">对应代码：<code>LocalCourseGrabService#reserveStock</code>、<code>#tryLock</code>、<code>#markRequestProcessing</code>、<code>#cacheRequestResult</code>。数据库仍是最终数据源，Redis 是高并发保护层。</div>
+      </div>
+      <div class="redis-panel" data-redis-panel="consistency">
+        <div class="redis-key"><b>1</b><p><code>selection:offering:{offeringId}:remaining</code><br>管理员修改教学班容量、教室、时间等信息后，需要清理抢课库存缓存，下一次抢课重新根据数据库计算余量。</p></div>
+        <div class="callout">对应代码：<code>AdminCourseController#evictOfferingStock</code>、<code>LocalCourseGrabService#ensureStockKey</code>、<code>#stockKey</code>。</div>
+      </div>
+      <div class="redis-panel" data-redis-panel="extension">
+        <div class="grid three"><div class="redis-key"><b>扩</b><p><code>teacher:courses:{teacherId}</code><br>教师任课课程缓存。</p></div><div class="redis-key"><b>扩</b><p><code>exam:schedule:{studentId}:{term}</code><br>学生考试安排缓存。</p></div><div class="redis-key"><b>扩</b><p><code>grade:view:{studentId}:{term}</code><br>学生成绩查询缓存。</p></div></div>
+        <div class="callout warn"><strong>答辩口径：</strong>这些是后续合理扩展点，不是当前已写入代码的 Redis 落点。</div>
+      </div>
+
+      <div class="section-head" style="margin-top:1.4rem">
+        <div>
+          <div class="section-kicker">Redis Team Module</div>
+          <h3>按三个人分工拆开的 Redis 真实代码</h3>
+        </div>
+      </div>
+      <p class="lead">下面不是概念说明，而是答辩时可以逐个点击查看的真实代码入口。每个成员对应一个 Redis key、一个业务责任和一组可定位源码。</p>
+
+      <div class="grid three">
+        <article class="card plain-card">
+          <h4>魏语石：Redis 库存扣减检测</h4>
+          <p>负责课程剩余名额缓存、并发扣减、防超卖，以及数据库写入失败后的 Redis 库存回滚。</p>
+          <div class="redis-key"><b>key</b><p><code>selection:offering:{offeringId}:remaining</code><br>每个教学班一个库存 key，值是当前剩余名额。</p></div>
+          <ul class="clean">
+            <li>抢课前按数据库容量和已选人数预热库存。</li>
+            <li>高并发抢课时先扣 Redis 库存。</li>
+            <li>库存不足时快速返回 FULL。</li>
+            <li>数据库写入失败时补回 Redis 库存。</li>
+            <li>Redis 监控页展示数据库容量、已选人数和是否超卖。</li>
+          </ul>
+          <h4>可点击代码</h4>
+          <div class="code-list">
+            <button class="file code-file" type="button" data-file="src/main/java/weidonglang/tianshiwebside/course/grab/LocalCourseGrabService.java" data-group="魏语石 / Redis库存扣减"><span>LocalCourseGrabService.java</span><small>库存预热、扣减、FULL 判断、失败回滚</small></button>
+            <button class="file code-file" type="button" data-file="src/main/java/weidonglang/tianshiwebside/course/mapper/CourseSelectionWriteMapper.java" data-group="魏语石 / Redis库存扣减"><span>CourseSelectionWriteMapper.java</span><small>最终写入 course_selection，配合库存回滚</small></button>
+            <button class="file code-file" type="button" data-file="src/main/java/weidonglang/tianshiwebside/course/AdminCourseController.java" data-group="魏语石 / Redis库存扣减"><span>AdminCourseController.java</span><small>修改教学班后清理库存缓存</small></button>
+            <button class="file code-file" type="button" data-file="src/main/java/weidonglang/tianshiwebside/admin/SystemMonitorController.java" data-group="魏语石 / Redis库存扣减"><span>SystemMonitorController.java</span><small>库存 key、数据库容量、已选人数、超卖检测</small></button>
+          </div>
+        </article>
+
+        <article class="card plain-card">
+          <h4>郭凤圣：Redis 请求幂等检测</h4>
+          <p>负责防止同一次抢课请求重复提交，处理前端重复点击、网络重试和同一个 requestId 再次提交。</p>
+          <div class="redis-key"><b>key</b><p><code>selection:request:{requestId}</code><br>一个抢课请求对应一个幂等 key，用来记录处理中或已完成结果。</p></div>
+          <ul class="clean">
+            <li>前端每次抢课生成 requestId。</li>
+            <li>后端先检查 requestId 是否已经处理。</li>
+            <li>重复请求直接返回缓存结果，不重复写数据库。</li>
+            <li>选课页面已加入分页，方便大数据量展示。</li>
+            <li>Redis 监控页可查看幂等 key 是否存在和 TTL。</li>
+          </ul>
+          <h4>可点击代码</h4>
+          <div class="code-list">
+            <button class="file code-file" type="button" data-file="frontend/src/views/course/SelectionView.vue" data-group="郭凤圣 / Redis请求幂等"><span>SelectionView.vue</span><small>抢课按钮、requestId 生成、选课分页</small></button>
+            <button class="file code-file" type="button" data-file="frontend/src/api/courseSelection.ts" data-group="郭凤圣 / Redis请求幂等"><span>courseSelection.ts</span><small>选课、抢课、分页 API 封装</small></button>
+            <button class="file code-file" type="button" data-file="src/main/java/weidonglang/tianshiwebside/course/CourseSelectionController.java" data-group="郭凤圣 / Redis请求幂等"><span>CourseSelectionController.java</span><small>接收 requestId 并调用抢课服务</small></button>
+            <button class="file code-file" type="button" data-file="src/main/java/weidonglang/tianshiwebside/course/grab/LocalCourseGrabService.java" data-group="郭凤圣 / Redis请求幂等"><span>LocalCourseGrabService.java</span><small>markRequestProcessing、cacheRequestResult</small></button>
+          </div>
+        </article>
+
+        <article class="card plain-card">
+          <h4>敖东磊：Redis 短锁与运行状态检测</h4>
+          <p>负责学生抢课短锁、Redis 连接检测、缓存 TTL 展示、缓存清理和压测报告展示。</p>
+          <div class="redis-key"><b>key</b><p><code>selection:grab:lock:{offeringId}:{username}</code><br>同一个学生短时间重复抢同一教学班时的短锁。</p></div>
+          <ul class="clean">
+            <li>抢课前尝试设置短锁。</li>
+            <li>短锁存在时拦截重复抢课。</li>
+            <li>短锁 TTL 很短，避免长期占用。</li>
+            <li>Redis 监控页展示连接状态、PING、TTL 和 key 值。</li>
+            <li>压测面板支持 Redis 开启/关闭对比。</li>
+          </ul>
+          <h4>可点击代码</h4>
+          <div class="code-list">
+            <button class="file code-file" type="button" data-file="src/main/java/weidonglang/tianshiwebside/course/grab/LocalCourseGrabService.java" data-group="敖东磊 / Redis短锁运维"><span>LocalCourseGrabService.java</span><small>tryLock、短锁 TTL、重复请求拦截</small></button>
+            <button class="file code-file" type="button" data-file="src/main/java/weidonglang/tianshiwebside/admin/SystemMonitorController.java" data-group="敖东磊 / Redis短锁运维"><span>SystemMonitorController.java</span><small>Redis PING、key 扫描、TTL、报告读取</small></button>
+            <button class="file code-file" type="button" data-file="frontend/src/views/admin/RedisMonitorView.vue" data-group="敖东磊 / Redis短锁运维"><span>RedisMonitorView.vue</span><small>Redis 状态、新手说明、三人分工展示</small></button>
+            <button class="file code-file" type="button" data-file="frontend/src/views/admin/LoadTestReportsView.vue" data-group="敖东磊 / Redis短锁运维"><span>LoadTestReportsView.vue</span><small>压测历史报告列表</small></button>
+            <button class="file code-file" type="button" data-file="scripts/course_grab_panel.py" data-group="敖东磊 / Redis短锁运维"><span>course_grab_panel.py</span><small>Python 压测面板、Redis 开关和缓存查看</small></button>
+            <button class="file code-file" type="button" data-file="scripts/course-grab-load-test.js" data-group="敖东磊 / Redis短锁运维"><span>course-grab-load-test.js</span><small>万人抢课压测、Redis enabled/disabled 报告</small></button>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section id="flows" class="section-card reveal">
+      <div class="section-head">
+        <div>
+          <div class="section-kicker">Flow Carousel</div>
+          <h2>七类流程图轮播</h2>
+        </div>
+      </div>
+      <p class="lead">流程图重点不是复杂，而是让老师能看出角色、模块、数据流和 Redis 使用位置。下方支持左右切换。</p>
+      <div class="flow-stage">
+        <div class="flow-top">
+          <h3 class="flow-title" id="flowTitle">登录认证流程</h3>
+          <div class="flow-controls"><button class="round-btn" type="button" id="flowPrev">‹</button><button class="round-btn" type="button" id="flowNext">›</button></div>
+        </div>
+        <div class="flow-tabs" id="flowDots"></div>
+
+        <article class="flow-card active" data-flow-title="登录认证流程">
+          <div class="flow-diagram"><div class="flow-row"><div class="node primary">登录页输入账号密码</div><div class="arrow">→</div><div class="node">Axios 调用 /api/auth/login</div><div class="arrow">→</div><div class="node">AuthController</div><div class="arrow">→</div><div class="node">AuthService 查询用户</div><div class="arrow">→</div><div class="node orange">BCrypt 校验密码</div><div class="arrow">→</div><div class="node green">Redis 保存 token 和失败次数</div><div class="arrow">→</div><div class="node">返回用户信息和令牌</div><div class="arrow">→</div><div class="node purple">Pinia 保存登录态</div><div class="arrow">→</div><div class="node primary">进入系统首页</div></div></div>
+        </article>
+        <article class="flow-card" data-flow-title="权限访问流程">
+          <div class="flow-diagram"><div class="flow-row"><div class="node primary">业务页面发起请求</div><div class="arrow">→</div><div class="node">Axios 添加 Bearer Token</div><div class="arrow">→</div><div class="node">后端过滤器解析 Token</div><div class="arrow">→</div><div class="node green">Redis 查询 Token 对应用户</div><div class="arrow">→</div><div class="node">查询角色和权限</div><div class="arrow">→</div><div class="node orange">Spring Security 判断访问权限</div><div class="arrow">→</div><div class="node primary">Controller 执行业务</div></div></div>
+        </article>
+        <article class="flow-card" data-flow-title="选课抢课流程">
+          <div class="flow-vertical"><div class="node primary">学生点击抢课</div><div class="down">↓</div><div class="node">CourseSelectionController</div><div class="down">↓</div><div class="node">CourseGrabPort</div><div class="down">↓</div><div class="node orange">判断 requestId 是否重复；重复则返回已缓存结果</div><div class="down">↓</div><div class="node green">Redis 设置处理中 key，并获取短锁</div><div class="down">↓</div><div class="node">校验学生、教学班、选课时间和是否已选</div><div class="down">↓</div><div class="node green">Redis 扣减课程库存</div><div class="down">↓</div><div class="node">数据库写入选课记录</div><div class="down">↓</div><div class="node green">缓存请求结果</div><div class="down">↓</div><div class="node primary">返回抢课成功</div></div>
+        </article>
+        <article class="flow-card" data-flow-title="成绩管理流程">
+          <div class="flow-diagram"><div class="flow-row"><div class="node primary">管理员成绩页面</div><div class="arrow">→</div><div class="node">提交成绩数据</div><div class="arrow">→</div><div class="node orange">GRADE_WRITE 权限校验</div><div class="arrow">→</div><div class="node">校验学生、课程、分数、锁定状态</div><div class="arrow">→</div><div class="node">MyBatis 写入或更新成绩</div><div class="arrow">→</div><div class="node purple">AuditLogService 记录日志</div><div class="arrow">→</div><div class="node primary">返回结果并刷新列表</div></div></div>
+        </article>
+        <article class="flow-card" data-flow-title="考试安排流程">
+          <div class="flow-diagram"><div class="flow-row"><div class="node primary">管理员维护考试安排</div><div class="arrow">→</div><div class="node">校验教学班</div><div class="arrow">→</div><div class="node">写入考试时间、考场、座位、监考</div><div class="arrow">→</div><div class="node">查询选中该课程的学生</div><div class="arrow">→</div><div class="node purple">NotificationService 生成通知</div><div class="arrow">→</div><div class="node primary">学生端考试查询和通知列表展示</div></div></div>
+        </article>
+        <article class="flow-card" data-flow-title="通知公告流程">
+          <div class="flow-vertical"><div class="node primary">管理员发布公告</div><div class="down">↓</div><div class="node orange">NOTICE_WRITE 权限校验</div><div class="down">↓</div><div class="node">写入公告表</div><div class="down">↓</div><div class="node purple">按角色或全部用户生成通知</div><div class="down">↓</div><div class="node">首页公告分页展示 / 我的通知显示未读</div><div class="down">↓</div><div class="node primary">用户点击后标记已读</div></div>
+        </article>
+        <article class="flow-card" data-flow-title="总体系统架构流程">
+          <div class="architecture-flow" aria-label="总体系统架构流程">
+            <div class="arch-layer front">
+              <div class="arch-title">前端入口层<br><small>Vue 3</small></div>
+              <div class="arch-nodes">
+                <div class="arch-node"><b>浏览器访问</b><span>学生、教师、管理员进入不同业务页面。</span></div>
+                <div class="arch-node"><b>Vue Router</b><span>登录守卫判断 token 和动态菜单。</span></div>
+                <div class="arch-node"><b>Pinia 状态</b><span>保存用户、角色、权限、菜单和登录态。</span></div>
+                <div class="arch-node"><b>Axios 请求</b><span>统一携带 Bearer Token 调用后端接口。</span></div>
+              </div>
+            </div>
+            <div class="arch-connector">HTTP / JSON / Bearer Token</div>
+            <div class="arch-layer backend">
+              <div class="arch-title">后端业务层<br><small>Spring Boot</small></div>
+              <div class="arch-nodes">
+                <div class="arch-node"><b>Security Filter</b><span>解析 token，构造认证上下文。</span></div>
+                <div class="arch-node"><b>Controller</b><span>接收登录、选课、成绩、考试、通知等请求。</span></div>
+                <div class="arch-node"><b>Service</b><span>完成业务校验、事务控制、日志和通知生成。</span></div>
+                <div class="arch-node"><b>Mapper / Repository</b><span>通过 MyBatis、JPA 访问业务数据。</span></div>
+              </div>
+            </div>
+            <div class="arch-connector">事务数据 / 缓存状态 / 文件资源</div>
+            <div class="arch-layer data">
+              <div class="arch-title">数据资源层<br><small>DB + Redis</small></div>
+              <div class="arch-nodes">
+                <div class="arch-node"><b>MySQL / H2</b><span>保存用户、课程、成绩、考试、通知等最终数据。</span></div>
+                <div class="arch-node"><b>Redis</b><span>保存 token、登录失败次数、抢课库存、短锁和幂等结果。</span></div>
+                <div class="arch-node"><b>Flyway</b><span>版本化维护数据库结构和演示数据基础。</span></div>
+                <div class="arch-node"><b>uploads</b><span>保存学籍申请、材料上传等文件资源。</span></div>
+              </div>
+            </div>
+            <div class="arch-note">
+              <div class="mini-note">答辩重点：前端负责交互，后端负责权限和业务，数据库是最终数据源。</div>
+              <div class="mini-note">Redis 不是装饰：它承担登录态、失败次数、抢课库存和幂等保护。</div>
+              <div class="mini-note">所有模块统一返回 ApiResponse / PageResponse，便于前后端协作。</div>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section id="code" class="section-card reveal">
+      <div class="section-head">
+        <div>
+          <div class="section-kicker">Code Atlas</div>
+          <h2>代码清单搜索</h2>
+        </div>
+      </div>
+      <p class="lead">输入关键词可以快速筛选 Markdown 中提到的主要代码文件，例如 <code>Auth</code>、<code>Course</code>、<code>Grade</code>、<code>Vue</code>、<code>Redis</code>。</p>
+      <div class="search-box"><span>🔎</span><input id="codeSearch" type="search" placeholder="搜索代码文件或模块名……" /></div>
+      <div id="codeAtlas" class="grid two code-atlas"></div>
+    </section>
+
+    <section id="code-analysis" class="section-card reveal code-detail-page" aria-live="polite">
+      <div class="section-head">
+        <div>
+          <div class="section-kicker">Inline Code Detail</div>
+          <h2 id="codeDetailTitle">完整代码分析</h2>
+        </div>
+      </div>
+      <p class="lead" id="codeDetailLead">点击上方任意代码文件后，会在这里显示功能说明、技术说明、方法原理，并在下方读取完整源码。</p>
+      <div class="code-detail-shell">
+        <div class="code-detail-main">
+          <h3 id="codeDetailFileName">尚未选择代码文件</h3>
+          <code id="codeDetailPath" class="detail-path">等待选择……</code>
+          <div id="codePlaceholder">
+            <div class="placeholder-canvas">
+              <div><strong>请选择一个代码文件</strong><span>选择后这里会显示：实现功能、使用技术、关键方法、完整源码和方法原理。</span></div>
+            </div>
+          </div>
+          <div class="principle-box" id="methodPrinciple">
+            <h4>方法原理</h4>
+            <p>选择一个代码文件后，再点击它的关键方法，就会在这里展示方法原理，并同步高亮下方代码片段。</p>
+          </div>
+          <div class="tech-explain-box" id="featureTechExplain">
+            <h4>功能技术说明</h4>
+            <p>点击“实现了项目中的什么功能”里的条目，会在这里说明这个功能主要用了哪些技术，以及这些技术在流程里承担什么作用。</p>
+          </div>
+          <div class="path-actions">
+            <button class="btn" type="button" id="copyCodePath">复制相对路径</button>
+            <a class="btn ghost" id="openLocalCode" href="#" target="_blank" rel="noopener">本地源码链接预留</a>
+            <button class="btn soft" type="button" id="backToCodeAtlas">返回代码清单</button>
+          </div>
+        </div>
+        <aside class="code-detail-side">
+          <h3>后期本地接代码的方式</h3>
+          <div class="detail-list">
+            <div><b>推荐放置位置：</b>把本 HTML 放在项目根目录，也就是和 <code>pom.xml</code>、<code>frontend</code>、<code>src</code> 同级。</div>
+            <div><b>相对链接规则：</b>页面已经为每个代码项预留 <code>./src/...</code> 或 <code>./frontend/...</code> 的本地源码入口。</div>
+            <div><b>当前点击逻辑：</b>默认先在本页面展示完整代码分析，不离开页面；右侧按钮仍保留本地源码链接。</div>
+            <div><b>分析交互：</b>点击方法按钮会高亮对应代码片段，并解释这个方法为什么这样写、数据如何流动。</div>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section id="summary" class="section-card reveal">
+      <div class="section-head"><div><div class="section-kicker">Summary Table</div><h2>三人分工汇总表</h2></div></div>
+      <p class="lead">主要职责、前端页面和后端代码都可以点击。点击职责会跳到代码清单并高亮相关实现；点击具体代码会在本页面打开完整代码分析。</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>成员</th><th>主要职责功能</th><th>主要前端页面</th><th>主要后端代码</th><th>Redis 相关点</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><strong>魏语石</strong><br><span class="muted">系统骨架</span></td>
+              <td><div class="responsibility-chips">
+                <button class="resp-chip" type="button" data-highlight="AuthController.java|AuthService.java|AuthTokenStore.java|LoginView.vue|auth.ts">登录认证</button>
+                <button class="resp-chip" type="button" data-highlight="SecurityConfig.java|BearerTokenAuthenticationFilter.java|RolePermissionController.java|MenuController.java|RolePermissionMapper.java">权限体系</button>
+                <button class="resp-chip" type="button" data-highlight="AdminUserController.java">后台用户管理</button>
+                <button class="resp-chip" type="button" data-highlight="AuditLogService.java">审计日志</button>
+                <button class="resp-chip" type="button" data-highlight="MainLayout.vue|router/index.ts|stores/menu.ts">前端布局与菜单</button>
+              </div></td>
+              <td><div class="inline-code-links">
+                <button class="mini-code" type="button" data-code-file="frontend/src/views/auth/LoginView.vue">LoginView.vue</button>
+                <button class="mini-code" type="button" data-code-file="frontend/src/layouts/MainLayout.vue">MainLayout.vue</button>
+                <button class="mini-code" type="button" data-code-file="frontend/src/stores/auth.ts">stores/auth.ts</button>
+                <button class="mini-code" type="button" data-code-file="frontend/src/stores/menu.ts">stores/menu.ts</button>
+              </div></td>
+              <td><div class="inline-code-links">
+                <button class="mini-code" type="button" data-code-file="src/main/java/weidonglang/tianshiwebside/auth/AuthService.java">AuthService</button>
+                <button class="mini-code" type="button" data-code-file="src/main/java/weidonglang/tianshiwebside/auth/AuthTokenStore.java">AuthTokenStore</button>
+                <button class="mini-code" type="button" data-code-file="src/main/java/weidonglang/tianshiwebside/security/SecurityConfig.java">SecurityConfig</button>
+                <button class="mini-code" type="button" data-code-file="src/main/java/weidonglang/tianshiwebside/security/BearerTokenAuthenticationFilter.java">BearerTokenAuthenticationFilter</button>
+                <button class="mini-code" type="button" data-code-file="src/main/java/weidonglang/tianshiwebside/permission/RolePermissionController.java">RolePermissionController</button>
+                <button class="mini-code" type="button" data-code-file="src/main/java/weidonglang/tianshiwebside/user/AdminUserController.java">AdminUserController</button>
+                <button class="mini-code" type="button" data-code-file="src/main/java/weidonglang/tianshiwebside/audit/AuditLogService.java">AuditLogService</button>
+              </div></td>
+              <td>登录 token、刷新 token、登录失败次数。</td>
+            </tr>
+            <tr>
+              <td><strong>郭凤圣</strong><br><span class="muted">选课闭环</span></td>
+              <td><div class="responsibility-chips">
+                <button class="resp-chip" type="button" data-highlight="CourseSelectionController.java|CourseSelectionReadMapper.java|CourseSelectionWriteMapper.java|SelectionView.vue">课程查询与自主选课</button>
+                <button class="resp-chip" type="button" data-highlight="CourseGrabPort.java|LocalCourseGrabService.java|RemoteCourseGrabClient.java">抢课服务</button>
+                <button class="resp-chip" type="button" data-highlight="PersonalScheduleController.java|PersonalScheduleView.vue">个人课表</button>
+                <button class="resp-chip" type="button" data-highlight="FreeClassroomView.vue|AcademicQueryController.java">空闲教室</button>
+                <button class="resp-chip" type="button" data-highlight="InformationCenterController.java|InformationQueryView.vue">信息查询</button>
+              </div></td>
+              <td><div class="inline-code-links">
+                <button class="mini-code" type="button" data-code-file="frontend/src/views/course/SelectionView.vue">SelectionView.vue</button>
+                <button class="mini-code" type="button" data-code-file="frontend/src/views/schedule/PersonalScheduleView.vue">PersonalScheduleView.vue</button>
+                <button class="mini-code" type="button" data-code-file="frontend/src/views/schedule/FreeClassroomView.vue">FreeClassroomView.vue</button>
+              </div></td>
+              <td><div class="inline-code-links">
+                <button class="mini-code" type="button" data-code-file="src/main/java/weidonglang/tianshiwebside/course/CourseSelectionController.java">CourseSelectionController</button>
+                <button class="mini-code" type="button" data-code-file="src/main/java/weidonglang/tianshiwebside/course/grab/LocalCourseGrabService.java">LocalCourseGrabService</button>
+                <button class="mini-code" type="button" data-code-file="src/main/java/weidonglang/tianshiwebside/course/mapper/CourseSelectionReadMapper.java">CourseSelectionReadMapper</button>
+                <button class="mini-code" type="button" data-code-file="src/main/java/weidonglang/tianshiwebside/course/mapper/CourseSelectionWriteMapper.java">CourseSelectionWriteMapper</button>
+                <button class="mini-code" type="button" data-code-file="src/main/java/weidonglang/tianshiwebside/schedule/PersonalScheduleController.java">PersonalScheduleController</button>
+              </div></td>
+              <td>课程库存、短锁、请求幂等。</td>
+            </tr>
+            <tr>
+              <td><strong>敖东磊</strong><br><span class="muted">教学结果</span></td>
+              <td><div class="responsibility-chips">
+                <button class="resp-chip" type="button" data-highlight="TeacherController.java|TeacherMapper.java|TeacherOfferingsView.vue|TeacherGradesView.vue">教师端</button>
+                <button class="resp-chip" type="button" data-highlight="AcademicAdminController.java|AcademicAdminMapper.java|AcademicGrade.java|GradeAdminView.vue">成绩后台</button>
+                <button class="resp-chip" type="button" data-highlight="ExamSchedule.java|ExamAdminView.vue|AcademicAdminController.java">考试后台</button>
+                <button class="resp-chip" type="button" data-highlight="NoticeController.java|AdminNoticeController.java|NotificationService.java|NoticeAdminView.vue">通知公告</button>
+                <button class="resp-chip" type="button" data-highlight="TeachingEvaluationController.java|EvaluationAdminView.vue">教学评价</button>
+                <button class="resp-chip" type="button" data-highlight="StatusChangeAttachmentController.java">文件与学籍材料</button>
+              </div></td>
+              <td><div class="inline-code-links">
+                <button class="mini-code" type="button" data-code-file="frontend/src/views/teacher/TeacherOfferingsView.vue">TeacherOfferingsView.vue</button>
+                <button class="mini-code" type="button" data-code-file="frontend/src/views/teacher/TeacherGradesView.vue">TeacherGradesView.vue</button>
+                <button class="mini-code" type="button" data-code-file="frontend/src/views/admin/GradeAdminView.vue">GradeAdminView.vue</button>
+                <button class="mini-code" type="button" data-code-file="frontend/src/views/admin/ExamAdminView.vue">ExamAdminView.vue</button>
+                <button class="mini-code" type="button" data-code-file="frontend/src/views/admin/NoticeAdminView.vue">NoticeAdminView.vue</button>
+                <button class="mini-code" type="button" data-code-file="frontend/src/views/admin/EvaluationAdminView.vue">EvaluationAdminView.vue</button>
+              </div></td>
+              <td><div class="inline-code-links">
+                <button class="mini-code" type="button" data-code-file="src/main/java/weidonglang/tianshiwebside/teacher/TeacherController.java">TeacherController</button>
+                <button class="mini-code" type="button" data-code-file="src/main/java/weidonglang/tianshiwebside/academic/AcademicAdminController.java">AcademicAdminController</button>
+                <button class="mini-code" type="button" data-code-file="src/main/java/weidonglang/tianshiwebside/notice/NoticeController.java">NoticeController</button>
+                <button class="mini-code" type="button" data-code-file="src/main/java/weidonglang/tianshiwebside/notice/AdminNoticeController.java">AdminNoticeController</button>
+                <button class="mini-code" type="button" data-code-file="src/main/java/weidonglang/tianshiwebside/evaluation/TeachingEvaluationController.java">TeachingEvaluationController</button>
+                <button class="mini-code" type="button" data-code-file="src/main/java/weidonglang/tianshiwebside/file/StatusChangeAttachmentController.java">StatusChangeAttachmentController</button>
+              </div></td>
+              <td>后台维护后清理选课库存缓存；成绩、考试、教师课程缓存为后续扩展。</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <div class="floating-tools" aria-label="浮动工具">
+    <button class="float-btn" type="button" id="toTop" title="返回顶部">↑</button>
+    <button class="float-btn" type="button" data-open-modal="speech" title="答辩稿">稿</button>
+  </div>
+
+  <div class="modal-backdrop" id="modalBackdrop" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal">
+      <div class="modal-head">
+        <h3 id="modalTitle" class="modal-title">详情</h3>
+        <button class="close-btn" type="button" id="modalClose" aria-label="关闭弹窗">×</button>
+      </div>
+      <div class="modal-body" id="modalBody"></div>
+    </div>
+  </div>
+
+  <footer>
+    <p>根据 <strong>team-responsibility-implementation.md</strong> 重新整理生成 · 单文件静态 HTML · 支持分页、弹窗、轮播、搜索、同页代码分析、本地源码链接预留、滚动动画、打印导出</p>
+  </footer>
+
+  <script>
+    const $ = (s, root = document) => root.querySelector(s);
+    const $$ = (s, root = document) => Array.from(root.querySelectorAll(s));
+
+    const modalData = {
+      wei: {
+        title: '魏语石：系统骨架、认证权限与后台基础',
+        html: `<p>魏语石负责项目总体架构、登录认证、权限体系、后台管理、公共响应结构、异常处理、审计日志、菜单体系和前端整体布局。</p>
+          <div class="grid two"><div class="card plain-card"><h4>核心目标</h4><p>让系统先形成完整骨架：用户能登录，前端能带 token 请求接口，后端能识别身份，菜单能按角色展示，管理员能维护用户和权限。</p></div><div class="card plain-card"><h4>技术关键词</h4><span class="tag">Spring Security</span><span class="tag">Bearer Token</span><span class="tag">Pinia</span><span class="tag">动态菜单</span><span class="tag">审计日志</span></div></div>
+          <h4>对应代码</h4><div class="code-list"><div class="file">AuthController.java / AuthService.java / SecurityConfig.java</div><div class="file">RolePermissionController.java / MenuController.java / AdminUserController.java</div><div class="file">LocalCourseGrabService.java / SystemMonitorController.java</div><div class="file">LoginView.vue / RedisMonitorView.vue / stores/menu.ts</div></div>
+          <h4>Redis</h4><div class="redis-key"><b>1</b><p><code>selection:offering:{offeringId}:remaining</code>：课程剩余名额缓存，抢课时先扣 Redis 库存。</p></div><div class="redis-key"><b>2</b><p>数据库写入失败时回滚 Redis 库存，避免缓存和数据库不一致。</p></div><div class="redis-key"><b>3</b><p>Redis 监控页展示库存、容量、已选人数和是否超卖。</p></div>`
+      },
+      guo: {
+        title: '郭凤圣：学生选课、抢课、课表与基础数据',
+        html: `<p>郭凤圣负责学生端课程业务，包括课程查询、自主选课、抢课、退课、个人课表、空闲教室和课程相关基础数据展示。</p>
+          <div class="grid two"><div class="card plain-card"><h4>核心目标</h4><p>让学生完成从“查课程”到“选课程”，再到“查看课表”的完整闭环。</p></div><div class="card plain-card"><h4>技术关键词</h4><span class="tag green">Redis decrement</span><span class="tag green">setIfAbsent</span><span class="tag green">请求幂等</span><span class="tag green">@Transactional</span><span class="tag green">MyBatis</span></div></div>
+          <h4>对应代码</h4><div class="code-list"><div class="file">CourseSelectionController.java / CourseSelectionReadMapper.java / CourseSelectionWriteMapper.java</div><div class="file">CourseGrabPort.java / LocalCourseGrabService.java</div><div class="file">PersonalScheduleController.java / AcademicQueryController.java / InformationCenterController.java</div><div class="file">SelectionView.vue / courseSelection.ts / PersonalScheduleView.vue / FreeClassroomView.vue</div></div>
+          <h4>Redis</h4><div class="redis-key"><b>1</b><p><code>selection:request:{requestId}</code>：抢课请求幂等 key，防止重复点击重复写库。</p></div><div class="redis-key"><b>2</b><p>前端每次抢课生成 requestId，后端处理后缓存请求结果。</p></div><div class="redis-key"><b>3</b><p>选课页已经加入可选课程分页和已选课程分页。</p></div>`
+      },
+      ao: {
+        title: '敖东磊：教师端、成绩考试、通知评价与文件',
+        html: `<p>敖东磊负责教师端、成绩管理后台、考试管理后台、通知公告、教学评价、文件导入导出和部分学生申请审核页面。</p>
+          <div class="grid two"><div class="card plain-card"><h4>核心目标</h4><p>让教师和管理员维护教学过程中的结果数据，包括成绩、考试、评价和通知。</p></div><div class="card plain-card"><h4>技术关键词</h4><span class="tag orange">GRADE_WRITE</span><span class="tag orange">EXAM_WRITE</span><span class="tag orange">NOTICE_WRITE</span><span class="tag orange">CSV</span><span class="tag orange">ECharts</span></div></div>
+          <h4>对应代码</h4><div class="code-list"><div class="file">TeacherController.java / TeacherMapper.java</div><div class="file">AcademicAdminController.java / AcademicAdminMapper.java / AcademicGrade.java / ExamSchedule.java</div><div class="file">NoticeController.java / AdminNoticeController.java / NotificationService.java</div><div class="file">AdminFileController.java / FileAdminView.vue / LoadTestReportsView.vue</div></div>
+          <h4>Redis 口径</h4><div class="redis-key"><b>1</b><p><code>selection:grab:lock:{offeringId}:{username}</code>：学生短时间重复抢同一课程时的短锁。</p></div><div class="redis-key"><b>2</b><p>负责 Redis PING、TTL、key 列表、缓存清理和降级状态说明。</p></div><div class="redis-key"><b>3</b><p>压测历史报告页展示 Redis 开启/关闭后的报告结果。</p></div>`
+      },
+      speech: {
+        title: '答辩开场稿',
+        html: `<div class="callout good"><strong>可直接使用：</strong><br>本项目不是为了堆砌复杂技术，而是用课堂上真正学过的 Spring Boot、SSM、Vue 3、Element Plus 和 Redis，完成一个接近真实学校教务系统的业务复刻。我们重点实现了登录权限、学生选课、教师端、成绩考试、通知公告、操作审计和文件导入导出。Redis 没有被当成装饰，而是用在登录状态、失败次数限制、抢课库存、幂等请求和缓存一致性这些确实适合它的地方。</div>
+          <div class="grid three"><div class="card plain-card"><h4>结构说明</h4><p>先讲三类角色，再讲前后端分离架构，最后讲统一响应、权限过滤、数据库和 Redis。</p></div><div class="card plain-card"><h4>分工说明</h4><p>按业务闭环讲：系统底座、学生选课、教学结果管理。</p></div><div class="card plain-card"><h4>Redis 说明</h4><p>重点讲 token、失败次数、抢课库存、短锁、幂等和库存缓存清理。</p></div></div>`
+      }
+    };
+
+    const codeItems = [
+      ['魏语石 / 登录认证', 'src/main/java/weidonglang/tianshiwebside/auth/AuthController.java'],
+      ['魏语石 / 登录认证', 'src/main/java/weidonglang/tianshiwebside/auth/AuthService.java'],
+      ['魏语石 / 登录认证', 'src/main/java/weidonglang/tianshiwebside/auth/AuthTokenStore.java'],
+      ['魏语石 / 登录认证', 'src/main/java/weidonglang/tianshiwebside/auth/dto/LoginRequest.java'],
+      ['魏语石 / 登录认证', 'src/main/java/weidonglang/tianshiwebside/auth/dto/LoginResponse.java'],
+      ['魏语石 / 登录认证', 'frontend/src/views/auth/LoginView.vue'],
+      ['魏语石 / 登录认证', 'frontend/src/api/auth.ts'],
+      ['魏语石 / 登录认证', 'frontend/src/stores/auth.ts'],
+      ['魏语石 / 权限安全', 'src/main/java/weidonglang/tianshiwebside/security/SecurityConfig.java'],
+      ['魏语石 / 权限安全', 'src/main/java/weidonglang/tianshiwebside/security/BearerTokenAuthenticationFilter.java'],
+      ['魏语石 / 权限安全', 'src/main/java/weidonglang/tianshiwebside/permission/RolePermissionController.java'],
+      ['魏语石 / 权限安全', 'src/main/java/weidonglang/tianshiwebside/permission/MenuController.java'],
+      ['魏语石 / 权限安全', 'src/main/java/weidonglang/tianshiwebside/permission/mapper/RolePermissionMapper.java'],
+      ['魏语石 / 后台用户', 'src/main/java/weidonglang/tianshiwebside/user/AdminUserController.java'],
+      ['魏语石 / 审计日志', 'src/main/java/weidonglang/tianshiwebside/audit/AuditLogService.java'],
+      ['郭凤圣 / 选课', 'src/main/java/weidonglang/tianshiwebside/course/CourseSelectionController.java'],
+      ['郭凤圣 / 选课', 'src/main/java/weidonglang/tianshiwebside/course/mapper/CourseSelectionReadMapper.java'],
+      ['郭凤圣 / 选课', 'src/main/java/weidonglang/tianshiwebside/course/mapper/CourseSelectionWriteMapper.java'],
+      ['郭凤圣 / 抢课', 'src/main/java/weidonglang/tianshiwebside/course/grab/CourseGrabPort.java'],
+      ['郭凤圣 / 抢课', 'src/main/java/weidonglang/tianshiwebside/course/grab/LocalCourseGrabService.java'],
+      ['郭凤圣 / 抢课', 'src/main/java/weidonglang/tianshiwebside/course/grab/RemoteCourseGrabClient.java'],
+      ['郭凤圣 / 选课前端', 'frontend/src/api/courseSelection.ts'],
+      ['魏语石 / Redis库存扣减', 'src/main/java/weidonglang/tianshiwebside/course/AdminCourseController.java'],
+      ['郭凤圣 / 课表', 'src/main/java/weidonglang/tianshiwebside/schedule/PersonalScheduleController.java'],
+      ['郭凤圣 / 信息查询', 'src/main/java/weidonglang/tianshiwebside/academic/AcademicQueryController.java'],
+      ['郭凤圣 / 信息查询', 'src/main/java/weidonglang/tianshiwebside/information/InformationCenterController.java'],
+      ['郭凤圣 / 前端页面', 'frontend/src/views/course/SelectionView.vue'],
+      ['郭凤圣 / 前端页面', 'frontend/src/views/schedule/PersonalScheduleView.vue'],
+      ['郭凤圣 / 前端页面', 'frontend/src/views/schedule/FreeClassroomView.vue'],
+      ['敖东磊 / 教师端', 'src/main/java/weidonglang/tianshiwebside/teacher/TeacherController.java'],
+      ['敖东磊 / 教师端', 'src/main/java/weidonglang/tianshiwebside/teacher/mapper/TeacherMapper.java'],
+      ['敖东磊 / 成绩考试', 'src/main/java/weidonglang/tianshiwebside/academic/AcademicAdminController.java'],
+      ['敖东磊 / 成绩考试', 'src/main/java/weidonglang/tianshiwebside/academic/mapper/AcademicAdminMapper.java'],
+      ['敖东磊 / 成绩考试', 'src/main/java/weidonglang/tianshiwebside/academic/AcademicGrade.java'],
+      ['敖东磊 / 成绩考试', 'src/main/java/weidonglang/tianshiwebside/academic/ExamSchedule.java'],
+      ['敖东磊 / 通知评价文件', 'src/main/java/weidonglang/tianshiwebside/notice/NoticeController.java'],
+      ['敖东磊 / 通知评价文件', 'src/main/java/weidonglang/tianshiwebside/notice/AdminNoticeController.java'],
+      ['敖东磊 / 通知评价文件', 'src/main/java/weidonglang/tianshiwebside/notice/NotificationService.java'],
+      ['敖东磊 / 通知评价文件', 'src/main/java/weidonglang/tianshiwebside/evaluation/TeachingEvaluationController.java'],
+      ['敖东磊 / 通知评价文件', 'src/main/java/weidonglang/tianshiwebside/file/StatusChangeAttachmentController.java'],
+      ['敖东磊 / 文件管理', 'src/main/java/weidonglang/tianshiwebside/file/AdminFileController.java'],
+      ['敖东磊 / 文件管理', 'frontend/src/api/adminFile.ts'],
+      ['敖东磊 / 文件管理', 'frontend/src/views/admin/FileAdminView.vue'],
+      ['公共技术 / Redis监控', 'src/main/java/weidonglang/tianshiwebside/admin/SystemMonitorController.java'],
+      ['公共技术 / Redis监控', 'frontend/src/api/systemMonitor.ts'],
+      ['公共技术 / Redis监控', 'frontend/src/views/admin/RedisMonitorView.vue'],
+      ['公共技术 / 压测报告', 'frontend/src/views/admin/LoadTestReportsView.vue'],
+      ['敖东磊 / 压测面板', 'scripts/course_grab_panel.py'],
+      ['敖东磊 / 压测脚本', 'scripts/course-grab-load-test.js'],
+      ['公共技术 / 数据库', 'src/main/resources/db/migration/V1__initial_schema.sql'],
+      ['公共技术 / 数据库', 'src/main/resources/db/migration/V2__role_menu_permissions.sql'],
+      ['公共技术 / 数据库', 'src/main/resources/db/migration/V3__teaching_evaluation.sql'],
+      ['公共技术 / 数据库', 'src/main/resources/db/migration/V4__teacher_grade_exam_management.sql'],
+      ['公共技术 / 数据库', 'src/main/resources/db/migration/V5__notice_permission_audit_files.sql'],
+      ['公共技术 / 数据库', 'src/main/resources/db/migration/V6__registration_applications.sql'],
+      ['公共技术 / 数据库', 'src/main/resources/db/migration/V7__information_center.sql'],
+      ['公共技术 / 后端公共', 'src/main/java/weidonglang/tianshiwebside/common/api/ApiResponse.java'],
+      ['公共技术 / 后端公共', 'src/main/java/weidonglang/tianshiwebside/common/api/PageResponse.java'],
+      ['公共技术 / 后端公共', 'src/main/java/weidonglang/tianshiwebside/common/error/BusinessException.java'],
+      ['公共技术 / 后端公共', 'src/main/java/weidonglang/tianshiwebside/common/error/GlobalExceptionHandler.java'],
+      ['公共技术 / 后端公共', 'src/main/java/weidonglang/tianshiwebside/common/web/TraceIdFilter.java'],
+      ['公共技术 / 前端', 'frontend/src/main.ts'],
+      ['公共技术 / 前端', 'frontend/src/router/index.ts'],
+      ['公共技术 / 前端', 'frontend/src/layouts/MainLayout.vue'],
+      ['公共技术 / 前端', 'frontend/src/api/http.ts']
+    ];
+
+    function setChapter(name) {
+      $$('.chapter-tab').forEach(btn => btn.classList.toggle('active', btn.dataset.chapter === name));
+      $$('.chapter-panel').forEach(panel => panel.classList.toggle('active', panel.dataset.panel === name));
+    }
+    $$('.chapter-tab').forEach(btn => btn.addEventListener('click', () => setChapter(btn.dataset.chapter)));
+    $('#nextChapterBtn').addEventListener('click', () => {
+      const tabs = $$('.chapter-tab');
+      const idx = tabs.findIndex(b => b.classList.contains('active'));
+      const next = tabs[(idx + 1) % tabs.length];
+      setChapter(next.dataset.chapter);
+      $('#chapters').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+
+    $$('.pill-tab[data-redis]').forEach(btn => btn.addEventListener('click', () => {
+      $$('.pill-tab[data-redis]').forEach(b => b.classList.toggle('active', b === btn));
+      $$('.redis-panel').forEach(panel => panel.classList.toggle('active', panel.dataset.redisPanel === btn.dataset.redis));
+    }));
+
+    const flowCards = $$('.flow-card');
+    const flowDots = $('#flowDots');
+    let flowIndex = 0;
+    flowCards.forEach((card, i) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'pill-tab' + (i === 0 ? ' active' : '');
+      btn.textContent = String(i + 1);
+      btn.title = card.dataset.flowTitle;
+      btn.addEventListener('click', () => showFlow(i));
+      flowDots.appendChild(btn);
+    });
+    function showFlow(i) {
+      flowIndex = (i + flowCards.length) % flowCards.length;
+      flowCards.forEach((card, idx) => card.classList.toggle('active', idx === flowIndex));
+      $$('.pill-tab', flowDots).forEach((btn, idx) => btn.classList.toggle('active', idx === flowIndex));
+      $('#flowTitle').textContent = flowCards[flowIndex].dataset.flowTitle;
+    }
+    $('#flowPrev').addEventListener('click', () => showFlow(flowIndex - 1));
+    $('#flowNext').addEventListener('click', () => showFlow(flowIndex + 1));
+
+    function escapeHtml(str) {
+      return String(str).replace(/[&<>"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));
+    }
+    function escapeAttr(str) {
+      return escapeHtml(str).replace(/'/g, '&#39;');
+    }
+    const codeIndex = new Map(codeItems.map(([group, file]) => [file, { group, file }]));
+    const codeByBase = new Map();
+    codeItems.forEach(([group, file]) => {
+      const base = file.split('/').pop();
+      if (!codeByBase.has(base)) codeByBase.set(base, []);
+      codeByBase.get(base).push({ group, file });
+    });
+    let highlightedFiles = new Set();
+    let currentCodeFile = '';
+    let currentAnalysis = null;
+    let currentFullCodeLines = [];
+    let currentSelectedMethodId = '';
+
+    const codeAnalysisData = {
+      'src/main/java/weidonglang/tianshiwebside/auth/AuthService.java': {
+        functions: ['账号密码登录', '登录失败限制', '生成访问令牌', 'Redis 保存短期认证状态'],
+        technologies: ['Spring Service', 'Spring Security PasswordEncoder', 'MyBatis Mapper', 'Redis StringRedisTemplate', '事务 @Transactional'],
+        tables: ['sys_user', 'sys_user_role', 'sys_role', 'sys_permission'],
+        methods: [
+          {
+            id: 'login',
+            name: 'login(request)',
+            title: '登录主流程',
+            lineIds: ['login-1', 'login-2', 'login-3', 'login-4', 'login-5', 'login-6'],
+            principle: '登录方法把认证流程串起来：先标准化用户名，再检查 Redis 中的失败次数；随后查数据库用户、校验状态和密码。校验通过后清空失败记录，更新最后登录时间，生成 token 并写入 Redis，最后返回前端需要的用户会话。',
+            flow: ['接收账号密码', '检查失败锁定', '查用户', '校验密码', '写 Redis token', '返回会话']
+          },
+          {
+            id: 'failure',
+            name: 'invalidCredentials(username)',
+            title: '失败次数限制',
+            lineIds: ['fail-1', 'fail-2', 'fail-3'],
+            principle: '密码错误不会直接写数据库，而是把失败次数放进 Redis，并设置 10 分钟过期时间。这样既能限制暴力尝试，又不会污染用户主数据。达到阈值后返回禁止访问。',
+            flow: ['密码错误', 'Redis 自增', '设置 TTL', '超过阈值锁定']
+          },
+          {
+            id: 'token',
+            name: 'tokenStore.saveAccessToken',
+            title: 'Token 存储',
+            lineIds: ['token-1', 'token-2', 'token-3'],
+            principle: '后端生成随机 token，不把用户完整信息塞进 token，而是把 token 与用户名的映射放入 Redis。后续请求只要带 token，过滤器就能反查用户身份。',
+            flow: ['生成 UUID token', 'Redis 保存映射', '设置过期时间']
+          }
+        ],
+        codeLines: [
+          { id: 'login-1', text: 'public LoginResponse login(LoginRequest request) {' },
+          { id: 'login-1', text: '    String username = request.username().trim();' },
+          { id: 'login-2', text: '    ensureNotLocked(username);' },
+          { id: 'login-3', text: '    UserAccountRow user = userAccountMapper.findByUsername(username);' },
+          { id: 'login-4', text: '    if (!passwordEncoder.matches(request.password(), user.passwordHash())) {' },
+          { id: 'fail-1', text: '        throw invalidCredentials(username);' },
+          { id: 'login-4', text: '    }' },
+          { id: 'login-5', text: '    clearFailures(username);' },
+          { id: 'login-5', text: '    userAccountMapper.updateLastLoginAt(user.id(), Instant.now());' },
+          { id: 'token-1', text: '    String accessToken = "dev-access-" + UUID.randomUUID();' },
+          { id: 'token-2', text: '    tokenStore.saveAccessToken(accessToken, username, securityProperties.accessTokenTtl());' },
+          { id: 'token-3', text: '    tokenStore.saveRefreshToken(refreshToken, username, securityProperties.refreshTokenTtl());' },
+          { id: 'login-6', text: '    return new LoginResponse(accessToken, refreshToken, expiresAt, userSession);' },
+          { id: 'login-6', text: '}' },
+          { id: 'fail-1', text: 'private BusinessException invalidCredentials(String username) {' },
+          { id: 'fail-2', text: '    long failures = incrementFailures(username);' },
+          { id: 'fail-3', text: '    if (failures >= MAX_LOGIN_FAILURES) return new BusinessException(FORBIDDEN, "...");' },
+          { id: 'fail-3', text: '}' }
+        ]
+      },
+      'src/main/java/weidonglang/tianshiwebside/auth/AuthTokenStore.java': {
+        functions: ['保存 access token', '保存 refresh token', '按 token 查询用户', 'Redis 不可用时本地 fallback'],
+        technologies: ['Spring Component', 'Redis StringRedisTemplate', 'ConcurrentHashMap', 'TTL 过期控制'],
+        redisKeys: ['auth:access:{token}', 'auth:refresh:{token}'],
+        methods: [
+          {
+            id: 'save',
+            name: 'save(redisKey, fallbackKey, username, ttl)',
+            title: '令牌保存',
+            lineIds: ['save-1', 'save-2', 'save-3'],
+            principle: '保存 token 时先写入内存 fallback，再尝试写入 Redis。这样本地开发时即使 Redis 没启动，系统也能继续跑；生产环境则由 Redis 承担主要状态存储。',
+            flow: ['写内存 fallback', '写 Redis', '设置 TTL']
+          },
+          {
+            id: 'find',
+            name: 'find(redisKey, fallbackKey)',
+            title: '令牌查询',
+            lineIds: ['find-1', 'find-2', 'find-3', 'find-4'],
+            principle: '查询时优先读取 Redis，失败或不存在时再查内存 fallback。fallback 会判断过期时间，过期后移除，避免本地状态无限增长。',
+            flow: ['查 Redis', '查 fallback', '判断过期', '返回用户名']
+          }
+        ],
+        codeLines: [
+          { id: 'save-1', text: 'fallbackTokens.put(fallbackKey, new FallbackToken(username, Instant.now().plus(ttl)));' },
+          { id: 'save-2', text: 'redisTemplate.opsForValue().set(redisKey, username, ttl);' },
+          { id: 'save-3', text: '} catch (RuntimeException ignored) { /* keep local usable */ }' },
+          { id: 'find-1', text: 'String username = redisTemplate.opsForValue().get(redisKey);' },
+          { id: 'find-2', text: 'if (username != null) return Optional.of(username);' },
+          { id: 'find-3', text: 'FallbackToken token = fallbackTokens.get(fallbackKey);' },
+          { id: 'find-4', text: 'if (token.expiresAt().isBefore(Instant.now())) fallbackTokens.remove(fallbackKey);' }
+        ]
+      },
+      'src/main/java/weidonglang/tianshiwebside/security/BearerTokenAuthenticationFilter.java': {
+        functions: ['解析 Bearer Token', '从 token 反查用户', '装配角色权限', '写入 SecurityContext'],
+        technologies: ['OncePerRequestFilter', 'Spring Security', 'SimpleGrantedAuthority', 'Redis Token Store', 'MyBatis 用户权限查询'],
+        methods: [
+          {
+            id: 'filter',
+            name: 'doFilterInternal',
+            title: '请求认证过滤',
+            lineIds: ['filter-1', 'filter-2', 'filter-3', 'filter-4', 'filter-5'],
+            principle: '每个请求进入 Controller 前都会经过过滤器。过滤器从请求头提取 Bearer token，通过 AuthTokenStore 找到用户名，再查询角色和权限，最后构造 Authentication 放入 Spring Security 上下文。',
+            flow: ['取 Authorization', '查 token owner', '查角色权限', '写入上下文', '放行请求']
+          }
+        ],
+        codeLines: [
+          { id: 'filter-1', text: 'String token = resolveBearerToken(request);' },
+          { id: 'filter-2', text: 'tokenStore.findAccessTokenOwner(token)' },
+          { id: 'filter-3', text: '    .flatMap(username -> Optional.ofNullable(userAccountMapper.findByUsername(username)))' },
+          { id: 'filter-4', text: 'authorities.addAll(userAccountMapper.findRoleCodesByUserId(user.id()).stream()...)' },
+          { id: 'filter-4', text: 'authorities.addAll(userAccountMapper.findPermissionCodesByUserId(user.id()).stream()...)' },
+          { id: 'filter-5', text: 'SecurityContextHolder.getContext().setAuthentication(authentication);' }
+        ]
+      },
+      'src/main/java/weidonglang/tianshiwebside/course/grab/LocalCourseGrabService.java': {
+        functions: ['选课抢课', 'Redis 库存扣减', '请求幂等', '短期处理锁', '数据库最终落库'],
+        technologies: ['Spring Service', '@Transactional', 'MyBatis', 'Redis setIfAbsent/decrement', '面向接口 CourseGrabPort'],
+        redisKeys: ['selection:offering:{offeringId}:remaining', 'selection:grab:lock:{offeringId}:{username}', 'selection:request:{requestId}'],
+        tables: ['course_offering', 'course_selection', 'student'],
+        methods: [
+          {
+            id: 'grab',
+            name: 'grab(command)',
+            title: '抢课主流程',
+            lineIds: ['grab-1', 'grab-2', 'grab-3', 'grab-4', 'grab-5', 'grab-6', 'grab-7'],
+            principle: '抢课主流程先处理 requestId 幂等，再用 Redis 短锁限制同一学生重复点击。之后校验学生、教学班、选课时间和是否已选，最后预扣 Redis 库存并写入数据库。数据库仍是最终可信数据源。',
+            flow: ['幂等判断', '获取短锁', '校验学生课程', '校验窗口', 'Redis 扣库存', '数据库插入', '缓存结果']
+          },
+          {
+            id: 'stock',
+            name: 'reserveStock(offering)',
+            title: 'Redis 库存扣减',
+            lineIds: ['stock-1', 'stock-2', 'stock-3', 'stock-4'],
+            principle: '库存 key 不存在时先根据数据库已选人数初始化，再使用 Redis decrement 原子扣减。扣成负数说明已满，立即回滚 Redis 数值并抛出容量已满。',
+            flow: ['初始化库存', '原子扣减', '判断负数', '失败回滚']
+          },
+          {
+            id: 'lock',
+            name: 'tryLock(lockKey)',
+            title: '短期处理锁',
+            lineIds: ['lock-1', 'lock-2'],
+            principle: '使用 Redis setIfAbsent 实现短锁，同一学生同一课程在锁有效期内只能处理一次，避免连续点击造成并发写入。',
+            flow: ['构造 lockKey', 'setIfAbsent', '设置 8 秒 TTL']
+          }
+        ],
+        codeLines: [
+          { id: 'grab-1', text: 'String requestId = normalizeRequestId(command.requestId());' },
+          { id: 'grab-1', text: 'CourseGrabResult cached = readCachedRequest(requestKey);' },
+          { id: 'grab-2', text: 'if (!markRequestProcessing(requestKey)) throw failure(DUPLICATE_REQUEST, "...");' },
+          { id: 'lock-1', text: 'String lockKey = lockKey(command.username(), command.offeringId());' },
+          { id: 'lock-2', text: 'boolean locked = tryLock(lockKey);' },
+          { id: 'grab-3', text: 'Long studentId = selectionWriteMapper.findStudentIdByUsername(command.username());' },
+          { id: 'grab-4', text: 'CourseOfferingDetailRow offering = selectionWriteMapper.findOfferingDetail(command.offeringId());' },
+          { id: 'grab-5', text: 'if (selectionWriteMapper.countStudentOfferingSelection(studentId, offering.offeringId()) > 0) ...' },
+          { id: 'stock-1', text: 'ensureStockKey(key, offering);' },
+          { id: 'stock-2', text: 'Long remaining = redisTemplate.opsForValue().decrement(key);' },
+          { id: 'stock-3', text: 'if (remaining < 0) { redisTemplate.opsForValue().increment(key); throw failure(FULL, "..."); }' },
+          { id: 'grab-6', text: 'selectionWriteMapper.insertSelection(insertCommand);' },
+          { id: 'grab-7', text: 'cacheRequestResult(requestKey, result);' },
+          { id: 'stock-4', text: 'redisTemplate.opsForValue().setIfAbsent(key, Long.toString(remaining), STOCK_TTL);' }
+        ]
+      },
+      'src/main/java/weidonglang/tianshiwebside/course/CourseSelectionController.java': {
+        functions: ['可选课程分页列表', '已选课程分页列表', '选课入口', '抢课入口', '退课'],
+        technologies: ['Spring MVC Controller', 'Authentication', 'MyBatis', 'Record DTO', 'RESTful API'],
+        methods: [
+          {
+            id: 'offerings',
+            name: 'offerings(authentication)',
+            title: '分页查询可选课程',
+            lineIds: ['offer-1', 'offer-2', 'offer-3'],
+            principle: '根据当前登录学生、学期和分页参数查询可选教学班，再把数据库行转换成前端需要的响应对象，包括容量、已选人数、时间窗口状态和是否已选。分页能避免大量教学班一次性渲染导致页面变慢。',
+            flow: ['取用户名', '读取分页参数', '查可选课程', '转换响应']
+          },
+          {
+            id: 'grab',
+            name: 'grabWithRequestId',
+            title: '抢课入口',
+            lineIds: ['grabc-1', 'grabc-2', 'grabc-3'],
+            principle: 'Controller 不直接写抢课逻辑，而是把用户名、教学班 ID、requestId 封装成命令交给 CourseGrabPort。这样本地实现和未来微服务实现可以替换。',
+            flow: ['接收请求', '封装 Command', '调用 CourseGrabPort']
+          }
+        ],
+        codeLines: [
+          { id: 'offer-1', text: '@GetMapping("/offerings")' },
+          { id: 'offer-2', text: 'String username = authenticatedUsername(authentication);' },
+          { id: 'offer-3', text: 'selectionReadMapper.findOfferings(username, CURRENT_TERM, offset, size).stream().map(this::toOfferingResponse)' },
+          { id: 'grabc-1', text: '@PostMapping("/grab")' },
+          { id: 'grabc-2', text: 'new CourseGrabCommand(authentication.getName(), request.offeringId(), request.requestId())' },
+          { id: 'grabc-3', text: 'return ApiResponse.success(courseGrabPort.grab(command));' }
+        ]
+      },
+      'src/main/java/weidonglang/tianshiwebside/course/AdminCourseController.java': {
+        functions: ['课程基础信息维护', '教学班容量维护', '修改后清理 Redis 库存缓存', '后台课程导入导出'],
+        technologies: ['Spring MVC', '@PreAuthorize', 'MyBatis/JdbcTemplate', 'StringRedisTemplate', 'AuditLogService'],
+        redisKeys: ['selection:offering:{offeringId}:remaining'],
+        methods: [
+          {
+            id: 'evictOfferingStock',
+            name: 'evictOfferingStock(offeringId)',
+            title: '清理教学班库存缓存',
+            lineIds: ['ac-1', 'ac-2', 'ac-3'],
+            principle: '管理员修改教学班容量、时间、教室等信息后，旧的 Redis 库存可能已经不准确。这里主动删除库存 key，下一次抢课时再根据数据库容量和已选人数重新计算，保证缓存和数据库一致。',
+            flow: ['管理员修改教学班', '删除库存 key', '记录审计', '下次抢课重新预热']
+          }
+        ],
+        codeLines: [
+          { id: 'ac-1', text: 'private void evictOfferingStock(Long offeringId)' },
+          { id: 'ac-2', text: 'redisTemplate.delete("selection:offering:" + offeringId + ":remaining");' },
+          { id: 'ac-3', text: 'auditLogService.record(...)' }
+        ]
+      },
+      'src/main/java/weidonglang/tianshiwebside/academic/AcademicAdminController.java': {
+        functions: ['成绩后台录入修改', '成绩导入导出', '成绩锁定控制', '考试安排维护', '考试通知联动'],
+        technologies: ['Spring MVC', '@PreAuthorize', 'Bean Validation', 'MultipartFile', 'MyBatis', 'AuditLogService', 'NotificationService'],
+        methods: [
+          {
+            id: 'grade',
+            name: 'createGrade / updateGrade',
+            title: '成绩录入修改',
+            lineIds: ['grade-1', 'grade-2', 'grade-3', 'grade-4'],
+            principle: '成绩写入前先做权限校验，再校验学生、课程和锁定状态。写入数据库后记录审计日志，方便追踪谁修改了成绩。',
+            flow: ['权限校验', '校验学生课程', '判断锁定', '写入成绩', '记录审计']
+          },
+          {
+            id: 'exam',
+            name: 'createExam / updateExam',
+            title: '考试维护',
+            lineIds: ['exam-1', 'exam-2', 'exam-3', 'exam-4'],
+            principle: '考试维护先校验教学班，再写入考试时间、考场、座位、监考等信息。保存后查询该课程已选学生，批量生成考试通知，实现考试后台和学生端联动。',
+            flow: ['校验教学班', '写入考试安排', '查询选课学生', '生成通知', '记录审计']
+          },
+          {
+            id: 'csv',
+            name: 'importGradesCsv',
+            title: '成绩 CSV 导入',
+            lineIds: ['csv-1', 'csv-2', 'csv-3'],
+            principle: '为了保持技术简单，导入使用 CSV 文本解析而不是引入复杂 Excel 库。每一行解析成 GradeRequest 后复用 createGrade 流程，避免重复写校验逻辑。',
+            flow: ['读取文件', '按行解析', '复用 createGrade']
+          }
+        ],
+        codeLines: [
+          { id: 'grade-1', text: '@PreAuthorize("hasAuthority(\'GRADE_WRITE\')")' },
+          { id: 'grade-2', text: 'Long studentId = mapper.findStudentIdByStudentNo(request.studentNo().trim());' },
+          { id: 'grade-3', text: 'if (mapper.countLockedGrade(gradeId) > 0) throw new BusinessException(CONFLICT, "...");' },
+          { id: 'grade-4', text: 'auditLogService.record(authentication.getName(), "UPDATE_GRADE", "GRADE", gradeId, ...);' },
+          { id: 'exam-1', text: '@PreAuthorize("hasAuthority(\'EXAM_WRITE\')")' },
+          { id: 'exam-2', text: 'ensureOffering(request.offeringId());' },
+          { id: 'exam-3', text: 'mapper.insertExam(toExamCommand(null, request));' },
+          { id: 'exam-4', text: 'notificationService.notifyUsers(mapper.findSelectedUserIdsByOfferingId(request.offeringId()), ...);' },
+          { id: 'csv-1', text: 'String content = new String(file.getBytes(), StandardCharsets.UTF_8);' },
+          { id: 'csv-2', text: 'for (String line : content.split("\\\\R")) { ... }' },
+          { id: 'csv-3', text: 'createGrade(authentication, new GradeRequest(...));' }
+        ]
+      },
+      'src/main/java/weidonglang/tianshiwebside/notice/AdminNoticeController.java': {
+        functions: ['管理员发布公告', '按角色生成通知', '写入公告表', '已读未读统计', '记录发布审计'],
+        technologies: ['Spring MVC', '@PreAuthorize', 'Bean Validation', 'MyBatis', 'NotificationService', 'AuditLogService'],
+        methods: [
+          {
+            id: 'publish',
+            name: 'publish(principal, request)',
+            title: '公告发布',
+            lineIds: ['pub-1', 'pub-2', 'pub-3', 'pub-4', 'pub-5'],
+            principle: '管理员发布公告时，先写公告主表，再根据 roleCode 找目标用户。随后为这些用户生成通知记录，并写入审计日志。这样首页公告和个人通知可以使用同一份发布动作驱动。',
+            flow: ['权限校验', '写公告', '筛选用户', '生成通知', '记录审计']
+          },
+          {
+            id: 'stats',
+            name: 'stats()',
+            title: '公告统计',
+            lineIds: ['pub-6', 'pub-7'],
+            principle: '公告管理页需要展示总公告数、已读未读数量等摘要信息，后端提供独立统计接口，避免前端为了统计而加载全部公告明细。',
+            flow: ['调用统计接口', '聚合公告和通知状态', '返回卡片数据']
+          }
+        ],
+        codeLines: [
+          { id: 'pub-1', text: '@RequestMapping("/api/admin/notices")' },
+          { id: 'pub-1', text: '@PreAuthorize("hasAuthority(\'NOTICE_WRITE\')")' },
+          { id: 'pub-2', text: 'noticeMapper.insertNotice(command);' },
+          { id: 'pub-3', text: 'List<Long> userIds = request.roleCode() == null ? noticeMapper.findAllUserIds() : ...;' },
+          { id: 'pub-4', text: 'notificationService.notifyUsers(userIds, request.title(), request.content(), ...);' },
+          { id: 'pub-5', text: 'auditLogService.record(principal.getName(), "PUBLISH_NOTICE", "NOTICE", command.getId(), ...);' },
+          { id: 'pub-6', text: '@GetMapping("/stats")' },
+          { id: 'pub-7', text: 'return ApiResponse.success(noticeMapper.findNoticeStats());' }
+        ]
+      },
+      'src/main/java/weidonglang/tianshiwebside/teacher/TeacherController.java': {
+        functions: ['教师任课课程查看', '教师成绩分页查询', '教师成绩录入保存', '教师考试安排查看', '教学评价结果查看'],
+        technologies: ['Spring MVC', 'Spring Security Authentication', 'MyBatis TeacherMapper', '统一 ApiResponse'],
+        methods: [
+          {
+            id: 'teacherName',
+            name: 'teacherName(authentication)',
+            title: '教师身份解析',
+            lineIds: ['tn-1', 'tn-2', 'tn-3'],
+            principle: '教师端接口不相信前端传来的教师姓名，而是根据当前登录用户名在数据库中反查显示姓名，再用这个姓名查询教师相关业务数据，避免前端伪造查询条件。',
+            flow: ['取登录用户', '查显示姓名', '作为教师查询条件']
+          },
+          {
+            id: 'views',
+            name: 'offerings / grades / exams / evaluations',
+            title: '教师工作台查询与分页',
+            lineIds: ['tv-1', 'tv-2', 'tv-3', 'tv-4'],
+            principle: '教师端统一读取教师身份和学期筛选条件，再交给 TeacherMapper 查询对应列表。成绩录入页已经加入分页参数，避免一次性加载过多学生成绩。',
+            flow: ['教师身份', '学期筛选', '分页参数', 'Mapper 查询', '返回列表']
+          },
+          {
+            id: 'saveGrade',
+            name: 'saveGrade(authentication, request)',
+            title: '教师成绩录入保存',
+            lineIds: ['tg-1', 'tg-2', 'tg-3'],
+            principle: '教师只能维护自己任课教学班下的学生成绩。保存时先按当前登录教师校验教学班归属，再执行成绩新增或更新，避免教师越权录入别人的课程成绩。',
+            flow: ['教师身份', '校验教学班归属', '保存成绩', '刷新分页列表']
+          }
+        ],
+        codeLines: [
+          { id: 'tv-1', text: '@GetMapping("/offerings") teacherMapper.findOfferings(teacherName(authentication), normalize(term));' },
+          { id: 'tv-2', text: '@GetMapping("/grades") teacherMapper.findGrades(teacherName(authentication), normalize(term));' },
+          { id: 'tv-3', text: '@GetMapping("/exams") teacherMapper.findExams(teacherName(authentication), normalize(term));' },
+          { id: 'tv-4', text: '@GetMapping("/evaluations") teacherMapper.findEvaluationSummaries(teacherName(authentication), normalize(term));' },
+          { id: 'tg-1', text: '@PostMapping("/grades")' },
+          { id: 'tg-2', text: 'ensureTeacherOffering(authentication, request.offeringId());' },
+          { id: 'tg-3', text: 'teacherMapper.upsertGrade(command);' },
+          { id: 'tn-1', text: 'if (authentication == null || !authentication.isAuthenticated()) throw new BusinessException(UNAUTHORIZED);' },
+          { id: 'tn-2', text: 'String displayName = teacherMapper.findDisplayNameByUsername(authentication.getName());' },
+          { id: 'tn-3', text: 'return displayName;' }
+        ]
+      },
+      'src/main/java/weidonglang/tianshiwebside/file/AdminFileController.java': {
+        functions: ['后台文件列表', '申请材料查看', '文件下载', '文件删除'],
+        technologies: ['Spring MVC', '@PreAuthorize', 'MultipartFile 文件表', 'ApiResponse'],
+        methods: [
+          {
+            id: 'files',
+            name: 'files(keyword, page, size)',
+            title: '后台文件分页查询',
+            lineIds: ['file-1', 'file-2', 'file-3'],
+            principle: '文件管理页不直接扫描磁盘，而是读取系统记录的上传材料和导入导出文件元数据，再按分页返回给前端，避免文件数量多时页面卡顿。',
+            flow: ['管理员鉴权', '读取分页参数', '查询文件元数据', '返回列表']
+          },
+          {
+            id: 'download',
+            name: 'download(id)',
+            title: '文件下载',
+            lineIds: ['file-4', 'file-5'],
+            principle: '下载接口先根据文件 ID 查元数据，再定位真实文件路径并返回二进制内容，前端只负责触发浏览器下载。',
+            flow: ['查文件记录', '定位本地文件', '返回下载响应']
+          }
+        ],
+        codeLines: [
+          { id: 'file-1', text: '@RequestMapping("/api/admin/files")' },
+          { id: 'file-2', text: '@GetMapping' },
+          { id: 'file-3', text: 'return ApiResponse.success(new PageResponse<>(records, page, size, total));' },
+          { id: 'file-4', text: '@GetMapping("/{id}/download")' },
+          { id: 'file-5', text: 'return ResponseEntity.ok().headers(headers).body(resource);' }
+        ]
+      },
+      'src/main/java/weidonglang/tianshiwebside/admin/SystemMonitorController.java': {
+        functions: ['Redis 连接检测', 'Redis key 列表', '库存扣减检测', '请求幂等检测', '短锁检测', '压测历史报告'],
+        technologies: ['Spring MVC', 'StringRedisTemplate', 'MyBatis/JdbcTemplate', 'reports 目录 JSON 解析'],
+        methods: [
+          {
+            id: 'redis',
+            name: 'redisStatus / redisKeys',
+            title: 'Redis 状态监控',
+            lineIds: ['redis-1', 'redis-2', 'redis-3'],
+            principle: '监控接口通过 PING 和 selection:* key 扫描，把 Redis 是否可用、key 数量、TTL、库存 key、幂等 key、短锁 key 转换成前端可展示的数据。',
+            flow: ['PING Redis', '扫描 selection:*', '读取 TTL 和值', '返回监控卡片']
+          },
+          {
+            id: 'reports',
+            name: 'loadTestReports()',
+            title: '压测历史报告',
+            lineIds: ['report-1', 'report-2'],
+            principle: '压测脚本会在 reports 目录生成 JSON 和 HTML，后端读取这些报告摘要，前端就能展示历史压测列表和 Redis 开关效果。',
+            flow: ['读取 reports 目录', '解析 JSON 摘要', '按时间排序', '返回列表']
+          }
+        ],
+        codeLines: [
+          { id: 'redis-1', text: '@RequestMapping("/api/admin/system")' },
+          { id: 'redis-2', text: 'redisTemplate.getConnectionFactory().getConnection().ping();' },
+          { id: 'redis-3', text: 'redisTemplate.keys("selection:*")' },
+          { id: 'report-1', text: 'Path reportsDir = Paths.get("reports");' },
+          { id: 'report-2', text: 'load-test-*.json' }
+        ]
+      },
+      'frontend/src/views/admin/FileAdminView.vue': {
+        functions: ['后台文件管理页面', '分页查询文件', '下载文件', '删除文件'],
+        technologies: ['Vue 3', 'Element Plus Table', 'Pagination', 'Axios API'],
+        methods: [
+          {
+            id: 'load',
+            name: 'loadFiles()',
+            title: '加载文件列表',
+            lineIds: ['ff-1', 'ff-2'],
+            principle: '页面按当前页码、每页条数和筛选条件请求后台接口，返回后更新表格和分页总数。',
+            flow: ['读取查询条件', '调用 API', '更新表格', '更新分页']
+          }
+        ],
+        codeLines: [
+          { id: 'ff-1', text: 'const result = await fetchAdminFilesApi(query)' },
+          { id: 'ff-2', text: '<el-pagination' }
+        ]
+      },
+      'frontend/src/views/admin/LoadTestReportsView.vue': {
+        functions: ['压测历史报告列表', 'JSON/HTML 报告入口', 'Redis 开关结果对比'],
+        technologies: ['Vue 3', 'Element Plus Table', 'reports JSON', 'Axios API'],
+        methods: [
+          {
+            id: 'loadReports',
+            name: 'loadReports()',
+            title: '加载压测报告',
+            lineIds: ['lr-1', 'lr-2'],
+            principle: '页面从后端读取 reports 目录报告摘要，展示生成时间、请求数、成功数、吞吐量、平均响应和 Redis 是否开启。',
+            flow: ['调用报告接口', '渲染表格', '打开 JSON/HTML 报告']
+          }
+        ],
+        codeLines: [
+          { id: 'lr-1', text: 'loadTestReportsApi()' },
+          { id: 'lr-2', text: 'load-test-*.html' }
+        ]
+      },
+      'frontend/src/views/admin/RedisMonitorView.vue': {
+        functions: ['Redis 状态监控页', '团队 Redis 分工展示', '库存/幂等/短锁检测', '新手说明'],
+        technologies: ['Vue 3', 'Element Plus', 'systemMonitor API', 'Redis key 可视化'],
+        methods: [
+          {
+            id: 'refresh',
+            name: 'refresh()',
+            title: '刷新 Redis 状态',
+            lineIds: ['rm-1', 'rm-2'],
+            principle: '页面调用后端监控接口，把 Redis 连接状态、key 总数、库存 key、幂等 key、短锁 key、TTL 和数据库校验结果展示出来。',
+            flow: ['调用监控接口', '展示三人分工', '解释 key 含义']
+          }
+        ],
+        codeLines: [
+          { id: 'rm-1', text: 'fetchRedisStatusApi()' },
+          { id: 'rm-2', text: 'selection:offering:{offeringId}:remaining' }
+        ]
+      },
+      'scripts/course_grab_panel.py': {
+        functions: ['Python 可视化压测面板', '是否开启 Redis 缓存开关', 'Redis 缓存查看', '课程容量维护', '压测实时输出'],
+        technologies: ['Python Tkinter', 'subprocess', 'MySQL CLI', 'Node.js 压测脚本', 'Redis key 查看'],
+        methods: [
+          {
+            id: 'runLoadTest',
+            name: 'run_load_test()',
+            title: '启动压测',
+            lineIds: ['py-1', 'py-2', 'py-3'],
+            principle: '面板把用户选择的教学班、并发数、请求数和 Redis 开关转换成环境变量，再启动 Node.js 压测脚本。这样答辩时可以不用手敲命令，直接演示 Redis 开启和关闭的性能对比。',
+            flow: ['读取面板参数', '设置环境变量', '启动 Node 脚本', '实时显示输出']
+          },
+          {
+            id: 'redisView',
+            name: 'refresh_redis_keys()',
+            title: '刷新 Redis 缓存',
+            lineIds: ['py-4', 'py-5'],
+            principle: '缓存查看功能读取 selection:* 相关 key，展示 key 名称、TTL 和当前值，用来证明 Redis 中确实存在库存、幂等和短锁数据。',
+            flow: ['连接 Redis', '扫描 selection:*', '读取 TTL 和值', '显示到面板']
+          }
+        ],
+        codeLines: [
+          { id: 'py-1', text: 'env["REDIS_ENABLED"] = ...' },
+          { id: 'py-2', text: 'env["OFFERING_IDS"] = ...' },
+          { id: 'py-3', text: 'subprocess.Popen(["node", "scripts/course-grab-load-test.js"], ...)' },
+          { id: 'py-4', text: 'selection:*' },
+          { id: 'py-5', text: 'TTL / value' }
+        ]
+      },
+      'scripts/course-grab-load-test.js': {
+        functions: ['万人抢课压测', 'Redis 开启/关闭对比', '智慧随机选课', '自动生成 JSON/HTML 报告', '压测数据清理'],
+        technologies: ['Node.js', 'fetch API', '并发控制', '环境变量配置', 'HTML 报告生成'],
+        methods: [
+          {
+            id: 'run',
+            name: 'main()',
+            title: '压测主流程',
+            lineIds: ['js-1', 'js-2', 'js-3'],
+            principle: '脚本先登录管理员和压测学生账号，再按并发数发起抢课请求。压测结束后统计吞吐量、平均延迟、P95、成功数、FULL 数，并生成 JSON/HTML 报告。',
+            flow: ['登录管理员', '准备账号', '学生登录', '并发抢课', '清理数据', '生成报告']
+          },
+          {
+            id: 'redisMode',
+            name: 'setBackendRedisMode()',
+            title: '切换后端 Redis 模式',
+            lineIds: ['js-4', 'js-5'],
+            principle: '压测前根据面板或环境变量决定是否开启 Redis。关闭时走数据库兜底，开启时走 Redis 库存、幂等和短锁，用于对比两种模式的数据。',
+            flow: ['读取 REDIS_ENABLED', '调用后端模式接口', '执行压测', '恢复默认模式']
+          }
+        ],
+        codeLines: [
+          { id: 'js-1', text: 'async function main()' },
+          { id: 'js-2', text: 'CONCURRENCY' },
+          { id: 'js-3', text: 'writeReports(summary)' },
+          { id: 'js-4', text: 'REDIS_ENABLED' },
+          { id: 'js-5', text: 'Backend Redis mode' }
+        ]
+      },
+      'frontend/src/stores/auth.ts': {
+        functions: ['前端登录状态管理', 'token 本地持久化', '用户信息缓存', '退出登录清理'],
+        technologies: ['Pinia', 'TypeScript', 'localStorage', 'Axios API 封装'],
+        methods: [
+          {
+            id: 'login',
+            name: 'login(username, password)',
+            title: '前端登录动作',
+            lineIds: ['fa-1', 'fa-2', 'fa-3', 'fa-4'],
+            principle: 'Pinia 的 login action 调用后端登录接口，拿到 token 和用户信息后同时写入 store 和 localStorage。刷新页面时 store 初始值会从 localStorage 恢复。',
+            flow: ['调用 loginApi', '写 store', '写 localStorage', '路由放行']
+          },
+          {
+            id: 'clear',
+            name: 'clearSession()',
+            title: '清理会话',
+            lineIds: ['fc-1', 'fc-2', 'fc-3'],
+            principle: '退出或 401/403 时必须清空 token、refreshToken 和用户信息，避免前端继续携带无效 token 请求接口。',
+            flow: ['清空状态', '删除 localStorage', '回到登录页']
+          }
+        ],
+        codeLines: [
+          { id: 'fa-1', text: 'const response = await loginApi({ username, password })' },
+          { id: 'fa-2', text: 'this.accessToken = response.data.accessToken' },
+          { id: 'fa-3', text: 'this.user = response.data.user' },
+          { id: 'fa-4', text: 'localStorage.setItem(ACCESS_TOKEN_KEY, this.accessToken)' },
+          { id: 'fc-1', text: 'this.accessToken = ""' },
+          { id: 'fc-2', text: 'this.user = null' },
+          { id: 'fc-3', text: 'localStorage.removeItem(ACCESS_TOKEN_KEY)' }
+        ]
+      },
+      'frontend/src/api/http.ts': {
+        functions: ['统一 Axios 实例', '请求自动带 token', '401/403 自动清理登录态', '统一读取 ApiResponse'],
+        technologies: ['Axios', 'Pinia', 'TypeScript', '拦截器'],
+        methods: [
+          {
+            id: 'request',
+            name: 'request interceptor',
+            title: '请求拦截器',
+            lineIds: ['hr-1', 'hr-2', 'hr-3'],
+            principle: '每个 API 请求发出前，从 Pinia 读取 accessToken。如果存在 token，就自动写入 Authorization 请求头，业务页面无需重复处理认证头。',
+            flow: ['读取 store', '判断 token', '写请求头']
+          },
+          {
+            id: 'response',
+            name: 'response interceptor',
+            title: '响应拦截器',
+            lineIds: ['hs-1', 'hs-2', 'hs-3'],
+            principle: '响应成功时直接返回后端的 data 结构；如果遇到 401 或 403，说明 token 无效或权限不足，前端立即清理登录态并跳回登录页。',
+            flow: ['返回 response.data', '捕获错误', '清理会话', '跳转登录']
+          }
+        ],
+        codeLines: [
+          { id: 'hr-1', text: 'http.interceptors.request.use((config) => {' },
+          { id: 'hr-2', text: '  const auth = useAuthStore()' },
+          { id: 'hr-3', text: '  config.headers.Authorization = `Bearer ${auth.accessToken}`' },
+          { id: 'hs-1', text: 'http.interceptors.response.use((response) => response.data, (error) => {' },
+          { id: 'hs-2', text: '  if (status === 401 || status === 403) auth.clearSession()' },
+          { id: 'hs-3', text: '  window.location.assign(`/login?redirect=${encodeURIComponent(window.location.pathname)}`)' }
+        ]
+      }
+    };
+
+    function fileBase(file) {
+      return String(file || '').split('/').pop() || file;
+    }
+    function findCodeItemByText(text) {
+      const t = String(text || '').trim();
+      if (!t) return null;
+      if (codeIndex.has(t)) return codeIndex.get(t);
+      const normalized = t.replace(/^\.\//, '');
+      if (codeIndex.has(normalized)) return codeIndex.get(normalized);
+      const exactBase = codeByBase.get(fileBase(normalized));
+      if (exactBase && exactBase.length) return exactBase[0];
+      const hit = codeItems.find(([group, file]) => t.includes(fileBase(file)) || file.includes(t) || t.includes(file));
+      return hit ? { group: hit[0], file: hit[1] } : null;
+    }
+    function localHref(file) {
+      const normalized = String(file || '').replace(/^\.\//, '').replace(/\\/g, '/');
+      return './' + normalized;
+    }
+    function fileProfile(file, group) {
+      const base = fileBase(file);
+      const lower = (group + ' ' + file + ' ' + base).toLowerCase();
+      const profiles = [
+        {
+          test: () => base === 'SecurityConfig.java',
+          functions: ['配置接口访问权限', '关闭表单登录并启用无状态接口认证', '注册 Bearer Token 过滤器', '提供 BCrypt 密码加密器'],
+          technologies: ['Spring Security 7', 'SecurityFilterChain', 'SessionCreationPolicy.STATELESS', 'BCryptPasswordEncoder', 'HTTP 路径授权规则'],
+          methodTitle: 'SecurityFilterChain 配置',
+          principle: '这个文件是真实的安全总开关。它定义哪些接口可以匿名访问，哪些接口必须登录，哪些接口必须具备 ADMIN/TEACHER 角色；同时把 BearerTokenAuthenticationFilter 插入到用户名密码过滤器之前，让每次 API 请求都先解析 token。',
+          flow: ['关闭 CSRF', '配置无状态 Session', '放行登录接口', '限制 /api/admin/**', '注册 Bearer 过滤器']
+        },
+        {
+          test: () => base === 'RolePermissionController.java',
+          functions: ['查询角色列表', '查询菜单权限列表', '查询角色已有菜单', '更新角色菜单授权', '记录角色权限修改审计'],
+          technologies: ['Spring MVC', '@PreAuthorize', '@Transactional', 'MyBatis RolePermissionMapper', 'AuditLogService', 'Bean Validation'],
+          methodTitle: '角色菜单授权接口',
+          principle: '这个文件负责管理员端的角色权限维护。更新角色菜单时先校验角色和菜单是否存在，然后删除旧的角色菜单关系，再批量插入新的菜单授权，最后写入审计日志，保证权限调整可追溯。',
+          flow: ['接收角色 ID', '校验菜单编码', '删除旧授权', '写入新授权', '记录审计日志']
+        },
+        {
+          test: () => base === 'MenuController.java',
+          functions: ['根据当前登录用户角色加载菜单', '把平铺菜单组装成父子树', '为菜单接口提供异常兜底', '返回前端顶部导航需要的数据'],
+          technologies: ['Spring MVC', 'Spring Security Authentication', 'GrantedAuthority', 'MyBatis MenuMapper', 'JPA SysMenuRepository', '树形数据组装'],
+          methodTitle: '当前用户菜单树构建',
+          principle: '这个文件读取 Spring Security 中的角色权限，先通过 MenuMapper 查询角色可见菜单，再按 parentCode 组装成树。如果 Mapper 查询异常，会用 SysMenuRepository 返回完整菜单兜底，避免菜单接口失败导致页面没有功能入口。',
+          flow: ['读取角色', '查询菜单', '构建 code 映射', '挂载子菜单', '返回菜单树']
+        },
+        {
+          test: () => base === 'MenuMapper.java',
+          functions: ['查询全部菜单', '按角色编码查询可见菜单', '同时补齐父级菜单', '按排序字段输出菜单顺序'],
+          technologies: ['MyBatis 注解 SQL', '动态 SQL foreach', '角色菜单关联表', 'Record DTO', '驼峰字段映射'],
+          methodTitle: '角色菜单 SQL 查询',
+          principle: '这个 Mapper 直接对应数据库里的 sys_menu、sys_role_menu、sys_role 三张表。按角色查菜单时不仅查被授权的子菜单，也会把子菜单的父级菜单一起查出，这样前端才能显示完整的下拉菜单结构。',
+          flow: ['传入角色编码', '查询授权菜单', '补齐父级菜单', '按 sort_order 排序']
+        },
+        {
+          test: () => base === 'AdminUserController.java',
+          functions: ['后台用户分页查询', '创建用户账号', '重置用户密码', '维护用户角色', '写入用户操作审计'],
+          technologies: ['Spring MVC', '@PreAuthorize', 'BCryptPasswordEncoder', 'MyBatis AdminUserMapper', 'PageResponse', 'AuditLogService'],
+          methodTitle: '后台用户管理接口',
+          principle: '这个文件承接管理员端用户管理页面。它通过 Mapper 查询用户和角色，用 PasswordEncoder 处理密码哈希，修改用户或角色后写审计日志，保证账号管理不是只改数据库，而是有权限控制和操作记录。',
+          flow: ['管理员请求', '权限校验', '查询/写入用户', '维护角色关系', '记录审计']
+        },
+        {
+          test: () => base === 'AuditLogService.java',
+          functions: ['封装审计日志写入', '记录操作人', '记录动作类型', '记录目标对象和详情'],
+          technologies: ['Spring Service', 'MyBatis AuditLogMapper', 'Instant 时间戳', '统一审计模型'],
+          methodTitle: '审计记录写入',
+          principle: '这个服务被多个后台接口调用。它把操作人、动作、目标类型、目标 ID、详情和 traceId 统一写入审计表，用于追踪谁修改了课程、成绩、权限或审核结果。',
+          flow: ['业务接口完成修改', '调用 record', '整理目标 ID', '写入 audit_log']
+        },
+        {
+          test: () => base.endsWith('Mapper.java') || file.includes('/mapper/'),
+          functions: [`为${group || '对应模块'}提供数据库访问`, '封装查询 SQL 或写入 SQL', '把数据库行映射成 Java record', '支撑 Controller 或 Service 的业务流程'],
+          technologies: ['MyBatis', '@Mapper', '@Select/@Insert/@Update SQL', 'Record DTO', '数据库字段映射'],
+          methodTitle: 'Mapper 数据访问',
+          principle: `${base} 是真实的数据访问层文件。它不处理页面展示，也不保存登录状态，而是把业务需要的数据通过 SQL 从数据库查出来，或把 Controller/Service 传入的命令写入数据库。`,
+          flow: ['接收查询参数', '执行 SQL', '映射结果 record', '返回业务层']
+        },
+        {
+          test: () => base.endsWith('Controller.java'),
+          functions: [`提供${group || '对应模块'}的 REST 接口`, '接收前端请求参数', '调用 Mapper 或 Service 完成业务', '返回统一 ApiResponse'],
+          technologies: ['Spring MVC', '@RestController', '@RequestMapping', 'Authentication/Principal', 'ApiResponse', 'Bean Validation'],
+          methodTitle: 'Controller 接口入口',
+          principle: `${base} 是后端接口入口。它的真实职责是把前端 HTTP 请求转换成 Java 方法调用，完成身份校验、参数校验和业务调用，最后用 ApiResponse 返回给 Vue 前端。`,
+          flow: ['前端请求', 'Controller 接收', '校验身份/参数', '调用业务层', '返回 JSON']
+        },
+        {
+          test: () => base.endsWith('View.vue'),
+          functions: [`渲染${group || '对应模块'}页面`, '调用 API 文件获取数据', '使用 Element Plus 展示表格/表单', '处理用户点击、筛选、提交和刷新'],
+          technologies: ['Vue 3 Composition API', 'TypeScript', 'Element Plus', 'Axios API 封装', '响应式 ref/computed'],
+          methodTitle: 'Vue 页面交互',
+          principle: `${base} 是真实前端页面组件。它负责页面结构、加载状态、表格数据、表单提交和按钮事件，不直接操作数据库，而是通过 api 目录下的函数调用后端接口。`,
+          flow: ['页面挂载', '调用 API', '填充响应式数据', '用户操作', '刷新视图']
+        },
+        {
+          test: () => file.startsWith('frontend/src/api/'),
+          functions: [`封装${group || '对应模块'}前端请求`, '统一调用 Axios 实例', '定义 TypeScript 返回类型', '隐藏具体接口路径细节'],
+          technologies: ['TypeScript', 'Axios', 'ApiResponse 泛型', '前后端接口约定'],
+          methodTitle: '前端 API 封装',
+          principle: `${base} 是前端请求封装文件。页面组件不会直接写完整 URL，而是调用这里导出的函数；这些函数统一走 http.ts，所以可以自动携带 token 并统一处理 401/403。`,
+          flow: ['页面调用函数', 'Axios 发请求', '后端返回 ApiResponse', '页面读取 data']
+        }
+      ];
+      return profiles.find(profile => profile.test()) || {
+        functions: [`支撑${group || '项目'}中的 ${base} 代码职责`, '承接该模块的真实业务逻辑', '与项目分层结构配合工作'],
+        technologies: file.startsWith('frontend/')
+          ? ['Vue/TypeScript 前端工程', '模块化 import/export', 'Vite 构建']
+          : ['Java 17', 'Spring Boot 工程结构', '项目分层设计'],
+        methodTitle: `${base} 文件职责`,
+        principle: `${base} 属于“${group || '项目代码'}”。请结合下方完整源码查看具体类、方法和 import；此处根据文件路径给出模块职责说明。`,
+        flow: ['读取源码', '定位类/方法', '结合模块职责理解']
+      };
+    }
+    function fallbackAnalysis(file, group) {
+      const base = fileBase(file);
+      const profile = fileProfile(file, group);
+      return {
+        functions: profile.functions,
+        technologies: profile.technologies,
+        methods: [
+          {
+            id: 'main',
+            name: base,
+            title: profile.methodTitle,
+            lineIds: ['main-1', 'main-2', 'main-3'],
+            principle: profile.principle,
+            flow: profile.flow
+          }
+        ],
+        codeLines: [
+          { id: 'main-1', text: '// ' + base },
+          { id: 'main-2', text: '// 所属模块：' + (group || '项目代码') },
+          { id: 'main-3', text: '// 该文件可在右侧“本地源码链接预留”中打开查看完整源码。' }
+        ]
+      };
+    }
+    function renderList(items) {
+      if (!items || !items.length) return '<p class="muted">暂无单独配置。</p>';
+      return `<ul class="analysis-list">${items.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul>`;
+    }
+    function renderFeatureList(items) {
+      if (!items || !items.length) return '<p class="muted">暂无单独配置。</p>';
+      return `<ul class="analysis-list">${items.map((item, index) => `<li><button type="button" data-feature-index="${index}">${escapeHtml(item)}</button></li>`).join('')}</ul>`;
+    }
+    function featureTechText(feature, analysis) {
+      const tech = analysis.technologies || [];
+      const lower = String(feature || '').toLowerCase();
+      if (lower.includes('登录') || lower.includes('token') || lower.includes('认证')) {
+        return `“${feature}”主要使用 Spring Security 处理密码校验和认证上下文，使用 Redis 保存短期 token 与失败次数，使用 MyBatis 查询账号角色，前端通过 Pinia 和 Axios 保存并携带登录态。`;
+      }
+      if (lower.includes('权限') || lower.includes('角色') || lower.includes('菜单')) {
+        return `“${feature}”主要使用 Spring Security 的角色/权限模型，接口侧用 @PreAuthorize 做细粒度校验，数据库侧用角色、菜单、权限关联表保存授权关系，前端根据菜单数据控制入口展示。`;
+      }
+      if (lower.includes('抢课') || lower.includes('库存') || lower.includes('选课') || lower.includes('幂等')) {
+        return `“${feature}”主要使用 Spring MVC 接收请求，MyBatis 读取课程和学生数据，Redis 的 setIfAbsent 与 decrement 处理短锁、幂等和库存扣减，数据库最终保存选课结果。`;
+      }
+      if (lower.includes('成绩') || lower.includes('考试') || lower.includes('导入') || lower.includes('导出')) {
+        return `“${feature}”主要使用 Spring MVC 提供后台接口，@PreAuthorize 控制读写权限，Bean Validation 校验输入，MyBatis 写入成绩或考试数据，MultipartFile/CSV 完成导入导出，AuditLogService 记录操作。`;
+      }
+      if (lower.includes('通知') || lower.includes('公告')) {
+        return `“${feature}”主要使用 Spring MVC 发布接口、MyBatis 写公告和通知记录、PageResponse 做分页返回，并通过 NotificationService 把公告转成用户已读/未读通知。`;
+      }
+      if (lower.includes('教师') || lower.includes('任课') || lower.includes('评价')) {
+        return `“${feature}”主要使用 Spring Security 获取当前教师身份，TeacherMapper 按教师姓名和学期查询数据，前端 Vue 页面使用 Element Plus 表格展示任课、成绩、考试和评价结果。`;
+      }
+      if (lower.includes('前端') || lower.includes('页面') || lower.includes('状态')) {
+        return `“${feature}”主要使用 Vue 3 组件、Pinia 状态管理、Vue Router 路由守卫、Axios 拦截器和 Element Plus 组件来完成页面交互。`;
+      }
+      return `“${feature}”对应当前文件的真实职责。这里主要使用 ${tech.join('、') || '项目当前文件中引入的基础技术'}；具体代码可在下方完整源码中查看 import、注解、方法签名和调用关系。`;
+    }
+    function selectFeature(index) {
+      if (!currentAnalysis) return;
+      const feature = currentAnalysis.functions?.[Number(index)];
+      if (!feature) return;
+      $$('[data-feature-index]').forEach(btn => btn.classList.toggle('active', Number(btn.dataset.featureIndex) === Number(index)));
+      $('#featureTechExplain').innerHTML = `<h4>${escapeHtml(feature)} 使用的技术</h4><p>${escapeHtml(featureTechText(feature, currentAnalysis))}</p>`;
+    }
+    function renderTags(items, className = '') {
+      if (!items || !items.length) return '<span class="tag">无</span>';
+      return items.map(item => `<span class="tag ${className}">${escapeHtml(item)}</span>`).join('');
+    }
+    function renderCodeLines(lines) {
+      return `<div class="code-reader" id="fullCodeReader"><div class="code-reader-head"><span>完整源码显示区</span><span>正在准备源码……</span></div><pre>${lines.map((line, index) => {
+        const id = line.id ? ` data-line-id="${escapeAttr(line.id)}"` : '';
+        const no = String(index + 1).padStart(2, '0');
+        return `<span class="code-line"${id}><span class="line-no">${no}</span>${escapeHtml(line.text)}</span>`;
+      }).join('')}</pre></div><p class="source-status" id="fullCodeStatus">正在读取项目中的真实源码文件；如果直接双击 HTML 打开，浏览器可能会限制本地文件读取。</p>`;
+    }
+    function renderFullSource(file, sourceText) {
+      currentFullCodeLines = String(sourceText || '').replace(/\r\n/g, '\n').split('\n');
+      const reader = $('#fullCodeReader');
+      if (!reader) return;
+      reader.innerHTML = `<div class="code-reader-head"><span>完整源码：${escapeHtml(fileBase(file))}</span><span>${currentFullCodeLines.length} 行</span></div><pre>${currentFullCodeLines.map((text, index) => {
+        const no = String(index + 1).padStart(3, '0');
+        return `<span class="code-line" data-source-line="${index + 1}"><span class="line-no">${no}</span>${escapeHtml(text || ' ')}</span>`;
+      }).join('')}</pre>`;
+      const status = $('#fullCodeStatus');
+      if (status) status.textContent = '已加载完整源码。点击上方关键方法，会在下面完整源码中高亮对应方法或关键调用。';
+      if (currentSelectedMethodId) selectCodeMethod(currentSelectedMethodId, true);
+    }
+    async function loadFullSource(file) {
+      currentFullCodeLines = [];
+      const status = $('#fullCodeStatus');
+      if (status) status.textContent = '正在读取完整源码：' + file;
+      try {
+        const response = await fetch(localHref(file), { cache: 'no-store' });
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        const text = await response.text();
+        renderFullSource(file, text);
+      } catch (err) {
+        currentFullCodeLines = [];
+        const reader = $('#fullCodeReader');
+        if (reader) {
+          reader.innerHTML = `<div class="code-reader-head"><span>完整源码读取受限</span><span>${escapeHtml(fileBase(file))}</span></div><pre><span class="code-line"><span class="line-no">001</span>当前页面不是从项目根目录静态服务打开的，所以浏览器不能读取源码文件。</span><span class="code-line"><span class="line-no">002</span>请双击项目根目录的 start-preview.bat，或在项目根目录执行：</span><span class="code-line"><span class="line-no">003</span>npx http-server . -p 8090</span><span class="code-line"><span class="line-no">004</span>然后访问 http://localhost:8090/preview.html</span><span class="code-line"><span class="line-no">005</span>不要用前端项目地址 http://localhost:5173 打开 preview.html。</span><span class="code-line"><span class="line-no">006</span>目标文件：${escapeHtml(file)}</span></pre>`;
+        }
+        if (status) status.textContent = '未能读取完整源码。原因通常是直接用 file:// 打开页面，浏览器限制 fetch 本地文件。';
+      }
+    }
+    function methodSearchTerms(method) {
+      const id = method.id || '';
+      const name = method.name || '';
+      const file = currentCodeFile || '';
+      const baseName = fileBase(file).replace(/\.[^.]+$/, '');
+      const specific = {
+        'src/main/java/weidonglang/tianshiwebside/auth/AuthService.java': {
+          login: ['public LoginResponse login', 'LoginResponse login('],
+          failure: ['BusinessException invalidCredentials', 'invalidCredentials('],
+          token: ['saveAccessToken', 'saveRefreshToken']
+        },
+        'src/main/java/weidonglang/tianshiwebside/auth/AuthTokenStore.java': {
+          save: ['private void save(', 'saveAccessToken', 'saveRefreshToken'],
+          find: ['private Optional<String> find(', 'findAccessTokenOwner']
+        },
+        'src/main/java/weidonglang/tianshiwebside/security/BearerTokenAuthenticationFilter.java': {
+          filter: ['doFilterInternal(']
+        },
+        'src/main/java/weidonglang/tianshiwebside/course/grab/LocalCourseGrabService.java': {
+          grab: ['public CourseGrabResult grab', 'CourseGrabResult grab('],
+          stock: ['private boolean reserveStock', 'reserveStock('],
+          lock: ['private boolean tryLock', 'tryLock(']
+        },
+        'src/main/java/weidonglang/tianshiwebside/course/CourseSelectionController.java': {
+          offerings: ['CourseOfferingResponse>> offerings', 'offerings(Authentication'],
+          grab: ['grabWithRequestId', 'CourseGrabCommand']
+        },
+        'src/main/java/weidonglang/tianshiwebside/course/AdminCourseController.java': {
+          evictOfferingStock: ['evictOfferingStock', 'selection:offering']
+        },
+        'src/main/java/weidonglang/tianshiwebside/academic/AcademicAdminController.java': {
+          grade: ['createGrade(', 'updateGrade('],
+          exam: ['createExam(', 'updateExam('],
+          csv: ['importGradesCsv(']
+        },
+        'src/main/java/weidonglang/tianshiwebside/notice/AdminNoticeController.java': {
+          publish: ['publish(Principal', 'publish('],
+          stats: ['stats()', 'findNoticeStats']
+        },
+        'src/main/java/weidonglang/tianshiwebside/teacher/TeacherController.java': {
+          teacherName: ['teacherName(Authentication', 'private String teacherName'],
+          views: ['offerings(Authentication', 'grades(Authentication', 'exams(Authentication', 'evaluations(Authentication'],
+          saveGrade: ['saveGrade(Authentication', 'TeacherGradeRequest', 'upsertGrade']
+        },
+        'src/main/java/weidonglang/tianshiwebside/file/AdminFileController.java': {
+          files: ['files(', '@GetMapping'],
+          download: ['download(', 'ResponseEntity']
+        },
+        'src/main/java/weidonglang/tianshiwebside/admin/SystemMonitorController.java': {
+          redis: ['redisStatus', 'redisKeys', 'StringRedisTemplate'],
+          reports: ['loadTestReports', 'reportsDir', 'load-test']
+        },
+        'frontend/src/views/admin/FileAdminView.vue': {
+          load: ['loadFiles', 'fetchAdminFilesApi', 'el-pagination']
+        },
+        'frontend/src/views/admin/LoadTestReportsView.vue': {
+          loadReports: ['loadReports', 'loadTestReportsApi', 'html']
+        },
+        'frontend/src/views/admin/RedisMonitorView.vue': {
+          refresh: ['refresh', 'fetchRedisStatusApi', 'selection:offering']
+        },
+        'scripts/course_grab_panel.py': {
+          runLoadTest: ['def run_load_test', 'course-grab-load-test.js', 'REDIS_ENABLED'],
+          redisView: ['selection:*', 'refresh_redis']
+        },
+        'scripts/course-grab-load-test.js': {
+          run: ['async function main', 'writeReports', 'Course Grab Load Test Summary'],
+          redisMode: ['REDIS_ENABLED', 'Backend Redis mode']
+        },
+        'frontend/src/stores/auth.ts': {
+          login: ['async login(username', 'login(username'],
+          clear: ['clearSession()']
+        },
+        'frontend/src/api/http.ts': {
+          request: ['interceptors.request.use'],
+          response: ['interceptors.response.use']
+        }
+      };
+      if (specific[file] && specific[file][id]) return specific[file][id];
+      const candidates = new Set();
+      String(name).split('/').forEach(part => {
+        const clean = part.trim().replace(/\(.*$/, '').split('.').pop();
+        if (clean) candidates.add(clean);
+      });
+      if (method.title) candidates.add(method.title);
+      if (baseName) {
+        candidates.add(baseName);
+        candidates.add('class ' + baseName);
+        candidates.add('interface ' + baseName);
+        candidates.add('record ' + baseName);
+        candidates.add('const ' + baseName);
+      }
+      return Array.from(candidates).filter(Boolean);
+    }
+    function normalizeForSearch(value) {
+      return String(value || '').toLowerCase().replace(/\s+/g, '').replace(/[<>()[\]{};,'"`]/g, '');
+    }
+    function findSourceLineIndex(term) {
+      const raw = String(term || '').trim();
+      if (!raw) return -1;
+      const lowerTerm = raw.toLowerCase();
+      let idx = currentFullCodeLines.findIndex(line => line.toLowerCase().includes(lowerTerm));
+      if (idx >= 0) return idx;
+
+      const normalizedTerm = normalizeForSearch(raw);
+      if (!normalizedTerm) return -1;
+      idx = currentFullCodeLines.findIndex(line => normalizeForSearch(line).includes(normalizedTerm));
+      if (idx >= 0) return idx;
+
+      for (let i = 0; i < currentFullCodeLines.length; i++) {
+        const joined = normalizeForSearch(currentFullCodeLines.slice(i, Math.min(i + 4, currentFullCodeLines.length)).join(' '));
+        if (joined.includes(normalizedTerm)) return i;
+      }
+      return -1;
+    }
+    function collectBlockRange(startIndex) {
+      const result = new Set();
+      if (startIndex < 0) return result;
+      let first = startIndex;
+      while (first > 0) {
+        const previous = currentFullCodeLines[first - 1].trim();
+        if (previous.startsWith('@') || previous === '' || previous.startsWith('//')) first -= 1;
+        else break;
+      }
+      let braceDepth = 0;
+      let seenBrace = false;
+      const isVue = currentCodeFile.endsWith('.vue');
+      const maxLines = isVue ? 80 : 160;
+      for (let i = first; i < currentFullCodeLines.length && i < first + maxLines; i++) {
+        result.add(i + 1);
+        const line = currentFullCodeLines[i];
+        for (const ch of line) {
+          if (ch === '{') {
+            braceDepth++;
+            seenBrace = true;
+          }
+          if (ch === '}') braceDepth--;
+        }
+        if (seenBrace && braceDepth <= 0 && i > startIndex) break;
+        if (!seenBrace && i >= startIndex + 12) break;
+      }
+      return result;
+    }
+    function highlightFullSourceMethod(method) {
+      if (!currentFullCodeLines.length) return false;
+      const terms = methodSearchTerms(method).map(term => String(term || '').trim()).filter(Boolean);
+      const activeLines = new Set();
+      terms.forEach(term => {
+        const idx = findSourceLineIndex(term);
+        if (idx >= 0) {
+          const block = collectBlockRange(idx);
+          if (block.size) block.forEach(line => activeLines.add(line));
+          else activeLines.add(idx + 1);
+        }
+      });
+      if (!activeLines.size && currentFullCodeLines.length) {
+        const fallbackTerms = [fileBase(currentCodeFile).replace(/\.[^.]+$/, ''), 'export default', '@RestController', '@Mapper', 'class ', 'interface '];
+        for (const term of fallbackTerms) {
+          const idx = findSourceLineIndex(term);
+          if (idx >= 0) {
+            collectBlockRange(idx).forEach(line => activeLines.add(line));
+            break;
+          }
+        }
+      }
+      if (!activeLines.size) return false;
+      $$('.code-line[data-source-line]').forEach(line => {
+        activeLines.has(Number(line.dataset.sourceLine)) ? line.classList.add('active') : line.classList.remove('active');
+      });
+      const first = $('.code-line.active[data-source-line]');
+      if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+      return true;
+    }
+    function renderCodeAnalysisDetail(file, group) {
+      currentAnalysis = codeAnalysisData[file] || fallbackAnalysis(file, group);
+      const firstMethod = currentAnalysis.methods?.[0];
+      const methodButtons = (currentAnalysis.methods || []).map((method, index) =>
+        `<button class="method-chip${index === 0 ? ' active' : ''}" type="button" data-method-id="${escapeAttr(method.id)}">${escapeHtml(method.name)}</button>`
+      ).join('');
+      $('#codePlaceholder').innerHTML = `
+        <div class="analysis-grid">
+          <div class="analysis-block">
+            <h4>实现了项目中的什么功能</h4>
+            ${renderFeatureList(currentAnalysis.functions)}
+          </div>
+          <div class="analysis-block">
+            <h4>使用了什么技术</h4>
+            <div>${renderTags(currentAnalysis.technologies, 'purple')}</div>
+          </div>
+          ${currentAnalysis.redisKeys ? `<div class="analysis-block"><h4>Redis Key</h4><div>${renderTags(currentAnalysis.redisKeys, 'green')}</div></div>` : ''}
+          ${currentAnalysis.tables ? `<div class="analysis-block"><h4>关联数据表</h4><div>${renderTags(currentAnalysis.tables, 'orange')}</div></div>` : ''}
+          <div class="analysis-block">
+            <h4>关键函数 / 方法</h4>
+            <div class="method-toolbar">${methodButtons}</div>
+          </div>
+          ${renderCodeLines(currentAnalysis.codeLines || [])}
+        </div>
+      `;
+      if (firstMethod) {
+        selectCodeMethod(firstMethod.id);
+      } else {
+        $('#methodPrinciple').innerHTML = '<h4>方法原理</h4><p class="muted">这个文件暂无关键方法配置。</p>';
+      }
+      selectFeature(0);
+      loadFullSource(file);
+    }
+    function selectCodeMethod(methodId, keepScroll = false) {
+      if (!currentAnalysis) return;
+      const method = (currentAnalysis.methods || []).find(item => item.id === methodId);
+      if (!method) return;
+      currentSelectedMethodId = methodId;
+      $$('.method-chip').forEach(btn => btn.classList.toggle('active', btn.dataset.methodId === methodId));
+      const fullHighlighted = highlightFullSourceMethod(method);
+      if (!fullHighlighted) {
+        const activeIds = new Set(method.lineIds || []);
+        $$('.code-line').forEach(line => line.classList.toggle('active', activeIds.has(line.dataset.lineId)));
+      }
+      const flow = method.flow?.length
+        ? `<div class="flow-mini">${method.flow.map(step => `<span>${escapeHtml(step)}</span>`).join('')}</div>`
+        : '';
+      $('#methodPrinciple').innerHTML = `
+        <h4>${escapeHtml(method.title || method.name)} 的原理</h4>
+        <p>${escapeHtml(method.principle || '暂无原理说明。')}</p>
+        ${flow}
+      `;
+      if (!keepScroll && !fullHighlighted) {
+        const firstLine = $('.code-line.active');
+        if (firstLine) firstLine.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+      }
+    }
+    function codeFileButton(file, group, htmlLabel) {
+      const active = highlightedFiles.has(file) ? ' is-highlighted' : '';
+      return `<button class="file code-file${active}" type="button" data-file="${escapeAttr(file)}" data-group="${escapeAttr(group)}" title="点击后在本页面打开完整代码分析"><span>${htmlLabel}</span><small>${escapeHtml(group)} · 点击查看完整分析</small></button>`;
+    }
+    function renderCodeAtlas(query = '') {
+      const q = query.trim().toLowerCase();
+      const grouped = new Map();
+      codeItems.forEach(([group, file]) => {
+        const hay = (group + ' ' + file).toLowerCase();
+        if (q && !hay.includes(q)) return;
+        if (!grouped.has(group)) grouped.set(group, []);
+        grouped.get(group).push(file);
+      });
+      const atlas = $('#codeAtlas');
+      if (!grouped.size) {
+        atlas.innerHTML = '<div class="card plain-card"><p class="muted">没有匹配的代码文件。</p></div>';
+        return;
+      }
+      atlas.innerHTML = Array.from(grouped.entries()).map(([group, files]) => {
+        const htmlFiles = files.map(f => {
+          let safe = escapeHtml(f);
+          if (q) safe = safe.replace(new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'ig'), '<mark>$1</mark>');
+          return codeFileButton(f, group, safe);
+        }).join('');
+        return `<div class="card plain-card"><h4>${escapeHtml(group)}</h4><div class="code-list">${htmlFiles}</div></div>`;
+      }).join('');
+    }
+    function openCodeAnalysis(file, group = '') {
+      const item = codeIndex.get(file) || findCodeItemByText(file) || { file, group };
+      const finalFile = item.file || file;
+      const finalGroup = group || item.group || '项目代码';
+      currentCodeFile = finalFile;
+      currentFullCodeLines = [];
+      currentSelectedMethodId = '';
+      $('#code-analysis').classList.add('active');
+      $('#codeDetailTitle').textContent = fileBase(finalFile) + '｜完整代码分析';
+      $('#codeDetailLead').innerHTML = `所属模块：<strong>${escapeHtml(finalGroup)}</strong>。这里会展示该文件实现的功能、使用技术、关键方法原理，并在下方读取完整源码进行高亮定位。`;
+      $('#codeDetailFileName').textContent = fileBase(finalFile);
+      $('#codeDetailPath').textContent = finalFile;
+      $('#openLocalCode').href = localHref(finalFile);
+      $('#openLocalCode').setAttribute('title', '将本 HTML 放在项目根目录时，该相对链接可以指向本地源码文件');
+      renderCodeAnalysisDetail(finalFile, finalGroup);
+      highlightedFiles = new Set([finalFile]);
+      renderCodeAtlas($('#codeSearch').value || '');
+      requestAnimationFrame(() => {
+        $('#code-analysis').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    }
+    function highlightFilesByKeywords(raw) {
+      const keys = String(raw || '').split('|').map(s => s.trim()).filter(Boolean);
+      highlightedFiles = new Set();
+      codeItems.forEach(([group, file]) => {
+        const hay = (group + ' ' + file + ' ' + fileBase(file)).toLowerCase();
+        if (keys.some(k => hay.includes(k.toLowerCase()))) highlightedFiles.add(file);
+      });
+      $('#codeSearch').value = '';
+      renderCodeAtlas('');
+      $$('.resp-chip').forEach(b => b.classList.toggle('active', b.dataset.highlight === raw));
+      $('#code').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      setTimeout(() => {
+        const first = $('.file.is-highlighted');
+        if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 260);
+    }
+    function upgradeStaticFiles() {
+      $$('.file').forEach(el => {
+        if (el.dataset.upgraded) return;
+        el.dataset.upgraded = '1';
+        const item = findCodeItemByText(el.textContent);
+        if (item) {
+          el.dataset.file = item.file;
+          el.dataset.group = item.group;
+          el.setAttribute('role', 'button');
+          el.setAttribute('tabindex', '0');
+          el.setAttribute('title', '点击后在本页面打开完整代码分析');
+        }
+      });
+    }
+    renderCodeAtlas();
+    upgradeStaticFiles();
+    $('#codeSearch').addEventListener('input', e => {
+      highlightedFiles = new Set();
+      renderCodeAtlas(e.target.value);
+    });
+    document.addEventListener('click', e => {
+      const featureBtn = e.target.closest('[data-feature-index]');
+      if (featureBtn) {
+        selectFeature(featureBtn.dataset.featureIndex);
+        return;
+      }
+      const methodBtn = e.target.closest('[data-method-id]');
+      if (methodBtn) {
+        selectCodeMethod(methodBtn.dataset.methodId);
+        return;
+      }
+      const resp = e.target.closest('[data-highlight]');
+      if (resp) {
+        highlightFilesByKeywords(resp.dataset.highlight);
+        return;
+      }
+      const direct = e.target.closest('[data-code-file]');
+      if (direct) {
+        openCodeAnalysis(direct.dataset.codeFile, '分工汇总表');
+        return;
+      }
+      const fileEl = e.target.closest('.file[data-file]');
+      if (fileEl) {
+        openCodeAnalysis(fileEl.dataset.file, fileEl.dataset.group || '项目代码');
+      }
+    });
+    document.addEventListener('keydown', e => {
+      if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('.file[data-file]')) {
+        e.preventDefault();
+        openCodeAnalysis(e.target.dataset.file, e.target.dataset.group || '项目代码');
+      }
+    });
+    $('#copyCodePath').addEventListener('click', async () => {
+      if (!currentCodeFile) return;
+      try {
+        await navigator.clipboard.writeText(currentCodeFile);
+        $('#copyCodePath').textContent = '已复制';
+        setTimeout(() => $('#copyCodePath').textContent = '复制相对路径', 1100);
+      } catch (err) {
+        alert(currentCodeFile);
+      }
+    });
+    $('#backToCodeAtlas').addEventListener('click', () => $('#code').scrollIntoView({ behavior: 'smooth', block: 'start' }));
+
+    const modalBackdrop = $('#modalBackdrop');
+    const modalTitle = $('#modalTitle');
+    const modalBody = $('#modalBody');
+    function openModal(key) {
+      const data = modalData[key];
+      if (!data) return;
+      modalTitle.textContent = data.title;
+      modalBody.innerHTML = data.html;
+      modalBackdrop.classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+    function closeModal() {
+      modalBackdrop.classList.remove('open');
+      document.body.style.overflow = '';
+    }
+    $$('[data-open-modal]').forEach(btn => btn.addEventListener('click', () => openModal(btn.dataset.openModal)));
+    $('#modalClose').addEventListener('click', closeModal);
+    modalBackdrop.addEventListener('click', e => { if (e.target === modalBackdrop) closeModal(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+    const revealObserver = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('in');
+          revealObserver.unobserve(entry.target);
+        }
+      });
+    }, { threshold: .12 });
+    $$('.reveal').forEach(el => revealObserver.observe(el));
+
+    const countObserver = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (!entry.isIntersecting) return;
+        const el = entry.target;
+        const target = Number(el.dataset.count || 0);
+        const start = performance.now();
+        const duration = 900;
+        function tick(now) {
+          const p = Math.min(1, (now - start) / duration);
+          el.textContent = Math.round(target * (1 - Math.pow(1 - p, 3))) + (target === 30 ? '+' : '');
+          if (p < 1) requestAnimationFrame(tick);
+        }
+        requestAnimationFrame(tick);
+        countObserver.unobserve(el);
+      });
+    }, { threshold: .6 });
+    $$('[data-count]').forEach(el => countObserver.observe(el));
+
+    function updateProgress() {
+      const doc = document.documentElement;
+      const scrollTop = doc.scrollTop || document.body.scrollTop;
+      const scrollHeight = doc.scrollHeight - doc.clientHeight;
+      $('#progressBar').style.width = (scrollHeight > 0 ? (scrollTop / scrollHeight) * 100 : 0) + '%';
+      const sections = ['chapters','members','redis','flows','code','code-analysis','summary'];
+      let current = 'chapters';
+      for (const id of sections) {
+        const el = document.getElementById(id);
+        if (el && el.getBoundingClientRect().top < 130) current = id;
+      }
+      $$('.nav a').forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#' + current));
+    }
+    document.addEventListener('scroll', updateProgress, { passive: true });
+    updateProgress();
+
+    $('#toTop').addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+    $('#themeToggle').addEventListener('click', () => {
+      const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+      document.documentElement.setAttribute('data-theme', dark ? 'light' : 'dark');
+      $('#themeToggle').textContent = dark ? '🌙' : '☀️';
+    });
+  </script>
+</body>
+</html>

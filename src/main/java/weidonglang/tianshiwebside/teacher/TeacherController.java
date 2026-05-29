@@ -1,0 +1,213 @@
+package weidonglang.tianshiwebside.teacher;
+
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.*;
+import weidonglang.tianshiwebside.academic.mapper.AcademicAdminMapper;
+import weidonglang.tianshiwebside.academic.mapper.AcademicAdminMapper.ExamAdminRow;
+import weidonglang.tianshiwebside.common.api.ApiResponse;
+import weidonglang.tianshiwebside.common.error.BusinessException;
+import weidonglang.tianshiwebside.common.error.ErrorCode;
+import weidonglang.tianshiwebside.evaluation.mapper.EvaluationSummaryRow;
+import weidonglang.tianshiwebside.teacher.mapper.TeacherMapper;
+import weidonglang.tianshiwebside.teacher.mapper.TeacherMapper.TeacherGradeEntryRow;
+import weidonglang.tianshiwebside.teacher.mapper.TeacherMapper.TeacherOfferingRow;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDateTime;
+import java.util.List;
+
+/**
+ * 教师端业务接口。
+ *
+ * 教师登录后可以查看本人任课教学班、录入或修改学生成绩、维护考试安排、查看评价结果。
+ * 所有查询和写入都会按当前教师身份过滤，避免教师操作不属于自己的课程。
+ */
+@RestController
+@RequestMapping("/api/teacher")
+public class TeacherController {
+    private final TeacherMapper teacherMapper;
+
+    public TeacherController(TeacherMapper teacherMapper) {
+        this.teacherMapper = teacherMapper;
+    }
+
+    /**
+     * 查询当前教师本学期任课教学班。
+     *
+     * 教师端工作台和成绩录入页面会使用这个列表作为课程筛选条件。
+     */
+    @GetMapping("/offerings")
+    public ApiResponse<List<TeacherOfferingRow>> offerings(Authentication authentication, @RequestParam(required = false) String term) {
+        return ApiResponse.success(teacherMapper.findOfferings(teacherName(authentication), normalize(term)));
+    }
+
+    /**
+     * 分页查询教师可录入成绩的学生名单。
+     *
+     * 分页是为了防止一个教学班或压测数据较多时页面卡顿；教师只能看到自己教学班下的学生。
+     */
+    @GetMapping("/grades")
+    public ApiResponse<PageResponse<TeacherGradeEntryRow>> grades(
+            Authentication authentication,
+            @RequestParam(required = false) String term,
+            @RequestParam(required = false) Long offeringId,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "50") int size
+    ) {
+        String teacherName = teacherName(authentication);
+        int safePage = Math.max(page, 1);
+        int safeSize = Math.max(10, Math.min(size, 200));
+        int offset = (safePage - 1) * safeSize;
+        String normalizedKeyword = keyword == null || keyword.isBlank() ? null : "%" + keyword.trim() + "%";
+        List<TeacherGradeEntryRow> records = teacherMapper.findGradeEntries(
+                teacherName,
+                normalize(term),
+                offeringId,
+                normalizedKeyword,
+                safeSize,
+                offset
+        );
+        long total = teacherMapper.countGradeEntries(teacherName, normalize(term), offeringId, normalizedKeyword);
+        return ApiResponse.success(new PageResponse<>(records, safePage, safeSize, total));
+    }
+
+    /**
+     * 保存教师录入或修改的成绩。
+     *
+     * 后端会校验教学班归属、成绩是否锁定，并自动计算绩点，防止教师越权修改其他课程成绩。
+     */
+    @PostMapping("/grades")
+    public ApiResponse<Void> saveGrade(Authentication authentication, @Valid @RequestBody TeacherGradeRequest request) {
+        String teacherName = teacherName(authentication);
+        Long studentId = teacherMapper.findOwnedSelectedStudentId(teacherName, request.offeringId(), request.studentNo().trim());
+        Long courseId = teacherMapper.findOwnedOfferingCourseId(teacherName, request.offeringId());
+        if (studentId == null || courseId == null) {
+            throw new BusinessException(ErrorCode.FORBIDDEN, "只能录入本人教学班中已选课学生的成绩");
+        }
+        Long gradeId = request.gradeId();
+        if (gradeId == null) {
+            gradeId = teacherMapper.findOwnedGradeId(teacherName, request.offeringId(), studentId, courseId, request.term().trim());
+        } else if (teacherMapper.countOwnedGrade(teacherName, gradeId) == 0) {
+            throw new BusinessException(ErrorCode.FORBIDDEN, "只能修改本人任课课程的成绩");
+        }
+        if (gradeId != null && teacherMapper.countLockedGrade(gradeId) > 0) {
+            throw new BusinessException(ErrorCode.CONFLICT, "成绩已锁定，不能修改");
+        }
+        AcademicAdminMapper.GradeCommand command = new AcademicAdminMapper.GradeCommand(
+                gradeId,
+                studentId,
+                courseId,
+                request.term().trim(),
+                request.score(),
+                calculateGradePoint(request.score()),
+                request.examType().trim(),
+                request.gradeStatus().trim(),
+                false
+        );
+        if (gradeId == null) {
+            teacherMapper.insertGrade(command);
+        } else {
+            teacherMapper.updateGrade(command);
+        }
+        return ApiResponse.success();
+    }
+
+    /**
+     * 查询教师本人课程的考试安排。
+     */
+    @GetMapping("/exams")
+    public ApiResponse<List<ExamAdminRow>> exams(Authentication authentication, @RequestParam(required = false) String term) {
+        return ApiResponse.success(teacherMapper.findExams(teacherName(authentication), normalize(term)));
+    }
+
+    @PostMapping("/exams")
+    public ApiResponse<Void> createExam(Authentication authentication, @Valid @RequestBody TeacherExamRequest request) {
+        String teacherName = teacherName(authentication);
+        ensureOwnedOffering(teacherName, request.offeringId());
+        teacherMapper.insertExam(toExamCommand(null, request));
+        return ApiResponse.success();
+    }
+
+    @PutMapping("/exams/{examId}")
+    public ApiResponse<Void> updateExam(Authentication authentication, @PathVariable Long examId, @Valid @RequestBody TeacherExamRequest request) {
+        String teacherName = teacherName(authentication);
+        ensureOwnedExam(teacherName, examId);
+        ensureOwnedOffering(teacherName, request.offeringId());
+        teacherMapper.updateExam(toExamCommand(examId, request));
+        return ApiResponse.success();
+    }
+
+    @DeleteMapping("/exams/{examId}")
+    public ApiResponse<Void> deleteExam(Authentication authentication, @PathVariable Long examId) {
+        String teacherName = teacherName(authentication);
+        ensureOwnedExam(teacherName, examId);
+        teacherMapper.deleteExam(examId);
+        return ApiResponse.success();
+    }
+
+    @GetMapping("/evaluations")
+    public ApiResponse<List<EvaluationSummaryRow>> evaluations(Authentication authentication, @RequestParam(required = false) String term) {
+        return ApiResponse.success(teacherMapper.findEvaluationSummaries(teacherName(authentication), normalize(term)));
+    }
+
+    private String teacherName(Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED);
+        }
+        String displayName = teacherMapper.findDisplayNameByUsername(authentication.getName());
+        if (displayName == null || displayName.isBlank()) {
+            throw new BusinessException(ErrorCode.NOT_FOUND, "教师账号不存在");
+        }
+        return displayName;
+    }
+
+    private String normalize(String term) {
+        return term == null || term.isBlank() ? null : term.trim();
+    }
+
+    private void ensureOwnedOffering(String teacherName, Long offeringId) {
+        if (teacherMapper.countOwnedOffering(teacherName, offeringId) == 0) {
+            throw new BusinessException(ErrorCode.FORBIDDEN, "只能维护本人任课教学班的考试安排");
+        }
+    }
+
+    private void ensureOwnedExam(String teacherName, Long examId) {
+        if (teacherMapper.countOwnedExam(teacherName, examId) == 0) {
+            throw new BusinessException(ErrorCode.FORBIDDEN, "只能维护本人任课教学班的考试安排");
+        }
+    }
+
+    private AcademicAdminMapper.ExamCommand toExamCommand(Long id, TeacherExamRequest request) {
+        return new AcademicAdminMapper.ExamCommand(id, request.offeringId(), request.examTime(), request.room().trim(),
+                request.seatNo().trim(), request.examType().trim(), request.status().trim(),
+                request.invigilator() == null ? null : request.invigilator().trim());
+    }
+
+    public record TeacherExamRequest(@NotNull Long offeringId, @NotNull LocalDateTime examTime, @NotBlank String room,
+                                     @NotBlank String seatNo, @NotBlank String examType, @NotBlank String status,
+                                     String invigilator) {
+    }
+
+    public record TeacherGradeRequest(Long gradeId, @NotNull Long offeringId, @NotBlank String studentNo,
+                                      @NotBlank String term, @NotNull @Min(0) @Max(100) Integer score,
+                                      @NotBlank String examType, @NotBlank String gradeStatus) {
+    }
+
+    public record PageResponse<T>(List<T> records, int page, int size, long total) {
+    }
+
+    private BigDecimal calculateGradePoint(int score) {
+        if (score < 60) {
+            return BigDecimal.ZERO.setScale(2);
+        }
+        BigDecimal point = BigDecimal.valueOf(score - 50).divide(BigDecimal.TEN, 2, RoundingMode.HALF_UP);
+        return point.min(BigDecimal.valueOf(5.00)).setScale(2, RoundingMode.HALF_UP);
+    }
+}

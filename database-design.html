@@ -1,0 +1,1625 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>数据库设计与键值关系说明</title>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --panel: #ffffff;
+      --ink: #182235;
+      --muted: #667085;
+      --line: #dbe3ef;
+      --primary: #176b87;
+      --primary-2: #0f4d63;
+      --green: #1f8a5b;
+      --orange: #c77722;
+      --red: #b54747;
+      --blue-soft: #e8f4f8;
+      --green-soft: #e9f7ef;
+      --orange-soft: #fff2e1;
+      --radius: 8px;
+      --shadow: 0 16px 42px rgba(24, 34, 53, .10);
+      --mono: Consolas, "JetBrains Mono", "Courier New", monospace;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 12% 8%, rgba(23, 107, 135, .13), transparent 28%),
+        linear-gradient(180deg, #eef5f9 0%, var(--bg) 48%, #edf2f8 100%);
+      font-family: "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
+      line-height: 1.75;
+    }
+
+    header {
+      padding: 46px min(6vw, 72px) 34px;
+      color: #fff;
+      background:
+        linear-gradient(120deg, rgba(15, 77, 99, .98), rgba(23, 107, 135, .93)),
+        linear-gradient(45deg, rgba(199, 119, 34, .34), transparent);
+      box-shadow: var(--shadow);
+    }
+
+    header h1 {
+      margin: 14px 0 12px;
+      font-size: clamp(30px, 4vw, 52px);
+      line-height: 1.12;
+      letter-spacing: 0;
+    }
+
+    header p {
+      max-width: 960px;
+      color: rgba(255, 255, 255, .82);
+      margin: 0;
+      font-size: 16px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      gap: 8px;
+      align-items: center;
+      padding: 6px 12px;
+      border: 1px solid rgba(255, 255, 255, .26);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, .10);
+      color: rgba(255, 255, 255, .88);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      padding: 12px min(6vw, 72px);
+      border-bottom: 1px solid var(--line);
+      background: rgba(255, 255, 255, .92);
+      backdrop-filter: blur(12px);
+    }
+
+    nav a {
+      color: var(--primary-2);
+      text-decoration: none;
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 999px;
+      padding: 7px 12px;
+      font-weight: 800;
+      font-size: 13px;
+    }
+
+    .answer-desk {
+      width: min(1240px, 92vw);
+      margin: 18px auto 0;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, .94);
+      box-shadow: var(--shadow);
+      padding: 18px;
+    }
+
+    .answer-desk-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: flex-start;
+      margin-bottom: 12px;
+    }
+
+    .answer-desk-head h2 {
+      margin: 0 0 4px;
+      font-size: 22px;
+    }
+
+    .answer-desk-head p {
+      margin: 0;
+      max-width: 760px;
+    }
+
+    .search-line {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto auto;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .search-line input {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 11px 15px;
+      font: inherit;
+      color: var(--ink);
+      background: #fff;
+      outline: none;
+    }
+
+    .search-line input:focus {
+      border-color: rgba(23, 107, 135, .62);
+      box-shadow: 0 0 0 4px rgba(23, 107, 135, .10);
+    }
+
+    .desk-button {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #fff;
+      color: var(--primary-2);
+      padding: 10px 13px;
+      cursor: pointer;
+      font-weight: 900;
+    }
+
+    .desk-button:hover {
+      border-color: var(--primary);
+      background: var(--blue-soft);
+    }
+
+    .quick-grid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .quick-card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+      padding: 12px;
+      text-align: left;
+      cursor: pointer;
+      color: var(--ink);
+    }
+
+    .quick-card strong {
+      display: block;
+      color: var(--primary-2);
+      margin-bottom: 3px;
+    }
+
+    .quick-card span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .quick-card:hover {
+      border-color: rgba(23, 107, 135, .55);
+      transform: translateY(-1px);
+      box-shadow: 0 10px 22px rgba(24, 34, 53, .08);
+    }
+
+    .result-panel {
+      display: none;
+      margin-top: 12px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #f8fbfd;
+      overflow: hidden;
+    }
+
+    .result-panel.active { display: block; }
+
+    .result-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+      color: var(--primary-2);
+      font-weight: 900;
+    }
+
+    .result-list {
+      display: grid;
+      max-height: 280px;
+      overflow: auto;
+    }
+
+    .result-item {
+      border: 0;
+      border-bottom: 1px solid var(--line);
+      background: transparent;
+      padding: 10px 12px;
+      text-align: left;
+      cursor: pointer;
+      color: var(--ink);
+    }
+
+    .result-item:last-child { border-bottom: 0; }
+
+    .result-item strong {
+      display: block;
+      color: var(--primary-2);
+    }
+
+    .result-item span {
+      display: block;
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 2px;
+    }
+
+    .result-item:hover { background: #eef7fa; }
+
+    .spotlight {
+      animation: pulseFocus 1.8s ease;
+      outline: 3px solid rgba(199, 119, 34, .45);
+      outline-offset: 3px;
+    }
+
+    @keyframes pulseFocus {
+      0% { box-shadow: 0 0 0 0 rgba(199, 119, 34, .45); }
+      100% { box-shadow: 0 0 0 18px rgba(199, 119, 34, 0); }
+    }
+
+    main {
+      width: min(1240px, 92vw);
+      margin: 0 auto;
+      padding: 28px 0 56px;
+    }
+
+    section {
+      margin-top: 22px;
+      background: rgba(255, 255, 255, .9);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      padding: 24px;
+    }
+
+    h2 {
+      margin: 0 0 10px;
+      font-size: 26px;
+      line-height: 1.25;
+    }
+
+    h3 {
+      margin: 0 0 10px;
+      font-size: 19px;
+    }
+
+    h4 {
+      margin: 0 0 8px;
+      font-size: 16px;
+    }
+
+    p { color: var(--muted); }
+    code {
+      font-family: var(--mono);
+      font-size: .92em;
+      color: #0f4d63;
+      background: #eef7fa;
+      border: 1px solid #cde5ee;
+      border-radius: 5px;
+      padding: 1px 5px;
+    }
+
+    .grid {
+      display: grid;
+      gap: 14px;
+    }
+
+    .two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+      padding: 16px;
+    }
+
+    .card p { margin: 0; }
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 4px 9px;
+      margin: 4px 6px 0 0;
+      background: var(--blue-soft);
+      color: var(--primary-2);
+      border: 1px solid #cde5ee;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .tag.green { background: var(--green-soft); color: var(--green); border-color: #ccebd9; }
+    .tag.orange { background: var(--orange-soft); color: var(--orange); border-color: #f0d6ae; }
+    .tag.red { background: #fff0f0; color: var(--red); border-color: #f0c9c9; }
+
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+      margin-top: 12px;
+    }
+
+    table {
+      width: 100%;
+      min-width: 850px;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+
+    th, td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+      text-align: left;
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background: #f7fafc;
+      color: var(--primary-2);
+      font-weight: 900;
+    }
+
+    tr:last-child td { border-bottom: 0; }
+
+    .schema {
+      display: grid;
+      gap: 14px;
+    }
+
+    .schema-card {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fff;
+      overflow: hidden;
+    }
+
+    .schema-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      align-items: flex-start;
+      padding: 14px 16px;
+      background: linear-gradient(90deg, #f7fbfd, #fff);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .schema-head strong {
+      font-family: var(--mono);
+      font-size: 17px;
+      color: var(--primary-2);
+    }
+
+    .schema-head span {
+      display: block;
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 2px;
+    }
+
+    .schema-body { padding: 14px 16px 16px; }
+
+    .rel {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .rel span {
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 4px 9px;
+      background: #f8fafc;
+      font-family: var(--mono);
+      font-size: 12px;
+      color: #344054;
+    }
+
+    .flow {
+      display: grid;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .flow-step {
+      display: grid;
+      grid-template-columns: 210px 1fr;
+      gap: 14px;
+      align-items: center;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+      padding: 12px 14px;
+    }
+
+    .flow-step strong {
+      color: var(--primary-2);
+    }
+
+    .note {
+      border-left: 4px solid var(--primary);
+      background: #f1f8fb;
+      border-radius: 8px;
+      padding: 12px 14px;
+      color: var(--muted);
+      margin-top: 12px;
+    }
+
+    .warn {
+      border-left-color: var(--orange);
+      background: #fff8ec;
+    }
+
+    .diagram {
+      display: grid;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .diagram-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .node {
+      border: 1px solid #cde5ee;
+      background: #f5fbfd;
+      color: var(--primary-2);
+      border-radius: 999px;
+      padding: 7px 11px;
+      font-weight: 900;
+      font-size: 13px;
+    }
+
+    .arrow { color: var(--muted); font-weight: 900; }
+
+    footer {
+      text-align: center;
+      color: var(--muted);
+      padding: 24px 0 36px;
+      font-size: 13px;
+    }
+
+    @media (max-width: 900px) {
+      .two, .three, .four { grid-template-columns: 1fr; }
+      .quick-grid { grid-template-columns: 1fr; }
+      .search-line { grid-template-columns: 1fr; }
+      .answer-desk-head { display: block; }
+      section { padding: 18px; }
+      .flow-step { grid-template-columns: 1fr; }
+      table { min-width: 760px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <span class="eyebrow">天津天狮学院教学综合信息服务平台 · 数据库设计说明</span>
+    <h1>数据库表结构、主键外键与 Redis 键值关系讲解</h1>
+    <p>
+      本页面用于答辩或代码讲解时说明项目的数据层设计。内容根据
+      <code>src/main/resources/db/migration</code> 下的 Flyway 脚本整理，覆盖用户权限、学生、课程选课、成绩考试、通知公告、评价反馈、文件材料和 Redis 抢课缓存。
+    </p>
+  </header>
+
+  <nav>
+    <a href="#overview">总体设计</a>
+    <a href="#core">核心表</a>
+    <a href="#relations">主外键关系</a>
+    <a href="#business">业务链路</a>
+    <a href="#redis">Redis 键值</a>
+    <a href="#redis-lesson">Redis 知识讲解</a>
+    <a href="#indexes">索引约束</a>
+    <a href="#dictionary">状态字典</a>
+  </nav>
+
+  <div class="answer-desk" id="answerDesk">
+    <div class="answer-desk-head">
+      <div>
+        <h2>答辩快速检索台</h2>
+        <p>输入表名、字段名、外键名、Redis key 或业务关键词，页面会自动列出匹配位置。适合老师突然问“选课表怎么防重复”“权限表怎么关联”“Redis key 在哪里”。</p>
+      </div>
+      <span class="tag orange" id="searchCount">待检索</span>
+    </div>
+
+    <div class="search-line">
+      <input id="smartSearch" type="search" placeholder="例如：course_selection、student_id、外键、Redis、幂等、成绩锁定、通知已读" />
+      <button class="desk-button" type="button" id="clearSearch">清空</button>
+      <button class="desk-button" type="button" id="printPage">打印/导出 PDF</button>
+    </div>
+
+    <div class="quick-grid">
+      <button class="quick-card" type="button" data-query="course_selection 选课 防止重复" data-target="core">
+        <strong>选课表怎么设计</strong>
+        <span>定位 course_selection、唯一键和选课链路。</span>
+      </button>
+      <button class="quick-card" type="button" data-query="sys_user_role sys_role_menu sys_role_permission 权限" data-target="relations">
+        <strong>权限表怎么关联</strong>
+        <span>定位用户、角色、菜单、接口权限。</span>
+      </button>
+      <button class="quick-card" type="button" data-query="selection:offering Redis 库存 回滚" data-target="redis">
+        <strong>Redis 如何防超卖</strong>
+        <span>定位库存 key、数据库落库和回滚说明。</span>
+      </button>
+      <button class="quick-card" type="button" data-query="Redis 从零 内存 key value TTL 三人分工" data-target="redis-lesson">
+        <strong>Redis 从零怎么讲</strong>
+        <span>定位 Redis 基础知识和三人使用方式。</span>
+      </button>
+      <button class="quick-card" type="button" data-query="academic_grade locked grade_status 成绩" data-target="core">
+        <strong>成绩锁定怎么做</strong>
+        <span>定位成绩状态、锁定字段和唯一键。</span>
+      </button>
+      <button class="quick-card" type="button" data-query="user_notification read_flag notice 通知" data-target="core">
+        <strong>通知已读未读</strong>
+        <span>定位公告表、通知表和 read_flag。</span>
+      </button>
+    </div>
+
+    <div class="result-panel" id="resultPanel">
+      <div class="result-head">
+        <span>检索结果</span>
+        <span id="resultSummary">0 条</span>
+      </div>
+      <div class="result-list" id="resultList"></div>
+    </div>
+  </div>
+
+  <main>
+    <section id="overview">
+      <h2>一、总体数据库设计</h2>
+      <p>
+        项目数据库使用 MySQL，表结构由 Flyway 管理。Flyway 的好处是每一次数据库结构变化都有版本文件记录，别人启动项目时可以自动建表，避免手动执行一堆 SQL。
+      </p>
+      <div class="note">
+        <strong>答辩讲法：</strong>
+        我们的数据层不是简单堆表，而是按“用户权限域、教务业务域、通知审计域、扩展信息域”拆分。
+        主链路是 <code>sys_user → student → course_selection → course_offering → course</code>，
+        这条线能解释学生登录、选课、课表、考试和成绩查询的大部分业务。
+      </div>
+      <div class="grid four">
+        <div class="card">
+          <h3>用户权限域</h3>
+          <p>保存登录账号、角色、菜单、接口权限和角色绑定关系，是系统鉴权的基础。</p>
+          <span class="tag">sys_user</span><span class="tag">sys_role</span><span class="tag">sys_permission</span>
+        </div>
+        <div class="card">
+          <h3>教务业务域</h3>
+          <p>保存学生、课程、教学班、选课记录、成绩和考试安排，是教务平台的核心。</p>
+          <span class="tag green">student</span><span class="tag green">course</span><span class="tag green">course_selection</span>
+        </div>
+        <div class="card">
+          <h3>通知与审计域</h3>
+          <p>保存首页公告、个人通知和关键操作日志，用于消息提醒和问题追踪。</p>
+          <span class="tag orange">notice</span><span class="tag orange">user_notification</span><span class="tag orange">operation_audit_log</span>
+        </div>
+        <div class="card">
+          <h3>扩展信息域</h3>
+          <p>保存教学评价、学业预警、毕业审核、教学反馈、论文成绩和申请材料。</p>
+          <span class="tag red">teaching_evaluation</span><span class="tag red">thesis_grade</span>
+        </div>
+      </div>
+
+      <div class="note">
+        <strong>设计主线：</strong>
+        <code>sys_user</code> 表负责登录账号，<code>student</code> 表通过 <code>user_id</code> 关联账号；
+        学生通过 <code>course_selection</code> 选择 <code>course_offering</code>；
+        教学班再关联 <code>course</code>。成绩、考试、评价、通知等模块围绕这些核心表展开。
+      </div>
+    </section>
+
+    <section id="core">
+      <h2>二、核心数据表详细说明</h2>
+      <div class="schema">
+        <article class="schema-card">
+          <div class="schema-head">
+            <div><strong>sys_user</strong><span>系统用户账号表</span></div>
+            <span class="tag">用户权限域</span>
+          </div>
+          <div class="schema-body">
+            <p>保存所有能登录系统的账号，包括学生、教师、管理员和开发者账号。</p>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>字段</th><th>含义</th><th>键/约束</th><th>说明</th></tr></thead>
+                <tbody>
+                  <tr><td><code>id</code></td><td>用户主键</td><td>PK</td><td>所有和用户相关的表都可以通过它关联。</td></tr>
+                  <tr><td><code>username</code></td><td>登录账号</td><td>UK: <code>uk_sys_user_username</code></td><td>系统登录账号，支持学号、工号或管理员账号。</td></tr>
+                  <tr><td><code>password_hash</code></td><td>加密密码</td><td>NOT NULL</td><td>后端用 BCrypt 校验，数据库不保存明文密码。</td></tr>
+                  <tr><td><code>display_name</code></td><td>显示姓名</td><td>NOT NULL</td><td>页面展示和教师姓名反查会用到。</td></tr>
+                  <tr><td><code>status</code></td><td>账号状态</td><td>NOT NULL</td><td>控制账号是否正常可用。</td></tr>
+                  <tr><td><code>last_login_at</code></td><td>最后登录时间</td><td>可空</td><td>记录最近一次登录。</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </article>
+
+        <article class="schema-card">
+          <div class="schema-head">
+            <div><strong>sys_role / sys_user_role</strong><span>角色表与用户角色关联表</span></div>
+            <span class="tag">RBAC</span>
+          </div>
+          <div class="schema-body">
+            <p>
+              <code>sys_role</code> 定义角色，如学生、教师、管理员、开发者。
+              <code>sys_user_role</code> 是中间表，实现一个用户可以拥有多个角色。
+            </p>
+            <div class="rel">
+              <span>sys_user_role.user_id → sys_user.id</span>
+              <span>sys_user_role.role_id → sys_role.id</span>
+              <span>PK(user_id, role_id)</span>
+            </div>
+            <div class="note">
+              组合主键 <code>(user_id, role_id)</code> 可以防止同一个用户重复绑定同一个角色。
+            </div>
+          </div>
+        </article>
+
+        <article class="schema-card">
+          <div class="schema-head">
+            <div><strong>sys_menu / sys_role_menu</strong><span>菜单表与角色菜单表</span></div>
+            <span class="tag">菜单权限</span>
+          </div>
+          <div class="schema-body">
+            <p>
+              <code>sys_menu</code> 保存前端菜单的编码、标题、路径、图标、父级编码和排序。
+              <code>sys_role_menu</code> 决定某个角色可以看到哪些菜单。
+            </p>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>字段</th><th>作用</th><th>约束</th></tr></thead>
+                <tbody>
+                  <tr><td><code>sys_menu.code</code></td><td>菜单唯一编码</td><td>UK: <code>uk_sys_menu_code</code></td></tr>
+                  <tr><td><code>sys_menu.path</code></td><td>前端路由路径</td><td>NOT NULL</td></tr>
+                  <tr><td><code>sys_menu.parent_code</code></td><td>父菜单编码</td><td>用于多级菜单展示</td></tr>
+                  <tr><td><code>sys_role_menu.role_id</code></td><td>角色 ID</td><td>FK → <code>sys_role.id</code></td></tr>
+                  <tr><td><code>sys_role_menu.menu_id</code></td><td>菜单 ID</td><td>FK → <code>sys_menu.id</code></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </article>
+
+        <article class="schema-card">
+          <div class="schema-head">
+            <div><strong>sys_permission / sys_role_permission</strong><span>接口权限表与角色权限表</span></div>
+            <span class="tag">接口级权限</span>
+          </div>
+          <div class="schema-body">
+            <p>
+              菜单权限只决定页面能不能看见，接口权限决定后端 API 能不能调用。
+              例如 <code>GRADE_WRITE</code> 控制成绩录入，<code>EXAM_WRITE</code> 控制考试维护。
+            </p>
+            <div class="rel">
+              <span>sys_permission.code 唯一</span>
+              <span>sys_role_permission.role_id → sys_role.id</span>
+              <span>sys_role_permission.permission_id → sys_permission.id</span>
+              <span>PK(role_id, permission_id)</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="schema-card">
+          <div class="schema-head">
+            <div><strong>student</strong><span>学生基础信息表</span></div>
+            <span class="tag green">学生域</span>
+          </div>
+          <div class="schema-body">
+            <p>学生表保存学号、学院、专业、班级、年级、学籍状态和联系方式。</p>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>字段</th><th>含义</th><th>键/约束</th><th>说明</th></tr></thead>
+                <tbody>
+                  <tr><td><code>id</code></td><td>学生主键</td><td>PK</td><td>成绩、选课、反馈等表都关联它。</td></tr>
+                  <tr><td><code>user_id</code></td><td>登录用户 ID</td><td>FK → <code>sys_user.id</code>，UK: <code>uk_student_user</code></td><td>一个登录账号最多对应一个学生档案。</td></tr>
+                  <tr><td><code>student_no</code></td><td>学号</td><td>UK: <code>uk_student_student_no</code></td><td>学生业务身份编号。</td></tr>
+                  <tr><td><code>college</code></td><td>学院</td><td>NOT NULL</td><td>如信息科学与工程学院。</td></tr>
+                  <tr><td><code>major</code></td><td>专业</td><td>NOT NULL</td><td>如计算机科学与技术、人工智能。</td></tr>
+                  <tr><td><code>class_name</code></td><td>班级</td><td>NOT NULL</td><td>用于班级课表和班级信息查询。</td></tr>
+                  <tr><td><code>phone/email/address</code></td><td>联系方式</td><td>可空</td><td>学生个人信息页可维护。</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </article>
+
+        <article class="schema-card">
+          <div class="schema-head">
+            <div><strong>course / course_offering</strong><span>课程表与教学班表</span></div>
+            <span class="tag green">课程域</span>
+          </div>
+          <div class="schema-body">
+            <p>
+              <code>course</code> 是课程基础信息，保存课程编号、名称、学分和类别。
+              <code>course_offering</code> 是具体开课教学班，保存教师、学期、容量、上课时间、教室和选课时间窗口。
+            </p>
+            <div class="rel">
+              <span>course.code 唯一</span>
+              <span>course_offering.course_id → course.id</span>
+              <span>idx_course_offering_term(term)</span>
+            </div>
+            <div class="note">
+              答辩时要区分：<code>course_id</code> 是课程基础 ID，<code>offering_id</code> 是教学班 ID。
+              压测和抢课使用的是 <code>offering_id</code>，因为同一门课程可以开多个教学班。
+            </div>
+          </div>
+        </article>
+
+        <article class="schema-card">
+          <div class="schema-head">
+            <div><strong>course_selection</strong><span>选课记录表</span></div>
+            <span class="tag green">抢课核心</span>
+          </div>
+          <div class="schema-body">
+            <p>保存学生选择某个教学班的结果，是抢课最终落库的核心表。</p>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>字段</th><th>含义</th><th>键/约束</th><th>说明</th></tr></thead>
+                <tbody>
+                  <tr><td><code>id</code></td><td>选课记录主键</td><td>PK</td><td>每条选课记录唯一。</td></tr>
+                  <tr><td><code>student_id</code></td><td>学生 ID</td><td>FK → <code>student.id</code></td><td>谁选了课。</td></tr>
+                  <tr><td><code>offering_id</code></td><td>教学班 ID</td><td>FK → <code>course_offering.id</code></td><td>选的是哪个教学班。</td></tr>
+                  <tr><td><code>selected_at</code></td><td>选课时间</td><td>NOT NULL</td><td>记录成功选课时间。</td></tr>
+                  <tr><td><code>(student_id, offering_id)</code></td><td>学生和教学班组合</td><td>UK: <code>uk_course_selection_student_offering</code></td><td>防止同一学生重复选择同一个教学班。</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </article>
+
+        <article class="schema-card">
+          <div class="schema-head">
+            <div><strong>academic_grade</strong><span>成绩表</span></div>
+            <span class="tag orange">成绩域</span>
+          </div>
+          <div class="schema-body">
+            <p>
+              保存学生某门课程在某学期、某考试类型下的成绩。
+              V4 迁移为该表增加了 <code>grade_status</code> 和 <code>locked</code>，支持发布、锁定、补考、重修、缓考等状态。
+            </p>
+            <div class="rel">
+              <span>student_id → student.id</span>
+              <span>course_id → course.id</span>
+              <span>UK(student_id, course_id, term, exam_type)</span>
+              <span>locked 防止成绩锁定后被修改</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="schema-card">
+          <div class="schema-head">
+            <div><strong>exam_schedule</strong><span>考试安排表</span></div>
+            <span class="tag orange">考试域</span>
+          </div>
+          <div class="schema-body">
+            <p>
+              保存教学班的考试时间、考场、座位、考试类型、状态和监考教师。
+              学生考试安排查询通过选课记录关联到教学班，再关联考试安排。
+            </p>
+            <div class="rel">
+              <span>course_offering_id → course_offering.id</span>
+              <span>UK(course_offering_id, exam_time)</span>
+              <span>invigilator 由 V4 添加</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="schema-card">
+          <div class="schema-head">
+            <div><strong>notice / user_notification</strong><span>公告表与用户通知表</span></div>
+            <span class="tag orange">通知域</span>
+          </div>
+          <div class="schema-body">
+            <p>
+              <code>notice</code> 保存管理员发布的公告内容；
+              <code>user_notification</code> 保存发给具体用户的通知，并记录已读未读状态。
+            </p>
+            <div class="rel">
+              <span>user_notification.user_id → sys_user.id</span>
+              <span>idx_user_notification_user_read(user_id, read_flag)</span>
+              <span>read_flag 标记已读未读</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="schema-card">
+          <div class="schema-head">
+            <div><strong>student_status_change_application / status_change_attachment</strong><span>学籍异动申请与材料附件</span></div>
+            <span class="tag red">申请域</span>
+          </div>
+          <div class="schema-body">
+            <p>
+              学生提交休学、复学、转专业等学籍异动申请后，记录在
+              <code>student_status_change_application</code>。
+              上传的证明材料记录在 <code>status_change_attachment</code>。
+            </p>
+            <div class="rel">
+              <span>student_status_change_application.student_id → student.id</span>
+              <span>status_change_attachment.application_id → student_status_change_application.id</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="schema-card">
+          <div class="schema-head">
+            <div><strong>teaching_evaluation</strong><span>教学评价表</span></div>
+            <span class="tag red">评价域</span>
+          </div>
+          <div class="schema-body">
+            <p>
+              保存学生对某个教学班的教学评价，包括教学、内容、互动、总体评分和文字评价。
+            </p>
+            <div class="rel">
+              <span>student_id → student.id</span>
+              <span>offering_id → course_offering.id</span>
+              <span>UK(student_id, offering_id)</span>
+              <span>idx_teaching_evaluation_offering(offering_id)</span>
+            </div>
+            <div class="note">
+              唯一键 <code>(student_id, offering_id)</code> 可以防止一个学生对同一个教学班重复评价。
+            </div>
+          </div>
+        </article>
+
+        <article class="schema-card">
+          <div class="schema-head">
+            <div><strong>信息中心扩展表</strong><span>学业预警、毕业审核、教学计划、反馈、论文成绩</span></div>
+            <span class="tag red">信息查询域</span>
+          </div>
+          <div class="schema-body">
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>表名</th><th>作用</th><th>关键外键/索引</th></tr></thead>
+                <tbody>
+                  <tr><td><code>academic_warning</code></td><td>学业预警查询</td><td><code>student_id → student.id</code></td></tr>
+                  <tr><td><code>graduation_audit</code></td><td>毕业审核结果核查</td><td><code>student_id → student.id</code></td></tr>
+                  <tr><td><code>teaching_plan_item</code></td><td>教学执行计划查看</td><td><code>idx_teaching_plan_major_grade(major, grade, term)</code></td></tr>
+                  <tr><td><code>teaching_feedback</code></td><td>教学信息反馈</td><td><code>student_id → student.id</code>，<code>idx_teaching_feedback_student</code></td></tr>
+                  <tr><td><code>thesis_grade</code></td><td>论文成绩查看</td><td><code>student_id → student.id</code></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section id="relations">
+      <h2>三、主键、外键与表关系总览</h2>
+      <p>下面按业务关系说明各表如何连接。箭头左边是外键字段，右边是被引用的主键。</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>关系</th><th>外键</th><th>引用</th><th>业务含义</th></tr></thead>
+          <tbody>
+            <tr><td>用户-学生</td><td><code>student.user_id</code></td><td><code>sys_user.id</code></td><td>一个学生档案对应一个登录账号。</td></tr>
+            <tr><td>用户-角色</td><td><code>sys_user_role.user_id</code></td><td><code>sys_user.id</code></td><td>用户拥有角色。</td></tr>
+            <tr><td>角色-用户</td><td><code>sys_user_role.role_id</code></td><td><code>sys_role.id</code></td><td>角色可被多个用户拥有。</td></tr>
+            <tr><td>角色-菜单</td><td><code>sys_role_menu.role_id</code></td><td><code>sys_role.id</code></td><td>角色能看到哪些菜单。</td></tr>
+            <tr><td>菜单-角色</td><td><code>sys_role_menu.menu_id</code></td><td><code>sys_menu.id</code></td><td>菜单授权给哪些角色。</td></tr>
+            <tr><td>角色-权限</td><td><code>sys_role_permission.role_id</code></td><td><code>sys_role.id</code></td><td>角色拥有哪些接口权限。</td></tr>
+            <tr><td>权限-角色</td><td><code>sys_role_permission.permission_id</code></td><td><code>sys_permission.id</code></td><td>接口权限授权给角色。</td></tr>
+            <tr><td>课程-教学班</td><td><code>course_offering.course_id</code></td><td><code>course.id</code></td><td>一门课程可以开多个教学班。</td></tr>
+            <tr><td>学生-选课</td><td><code>course_selection.student_id</code></td><td><code>student.id</code></td><td>学生选择教学班。</td></tr>
+            <tr><td>教学班-选课</td><td><code>course_selection.offering_id</code></td><td><code>course_offering.id</code></td><td>记录某教学班被哪些学生选择。</td></tr>
+            <tr><td>学生-成绩</td><td><code>academic_grade.student_id</code></td><td><code>student.id</code></td><td>成绩属于某个学生。</td></tr>
+            <tr><td>课程-成绩</td><td><code>academic_grade.course_id</code></td><td><code>course.id</code></td><td>成绩对应某门课程。</td></tr>
+            <tr><td>教学班-考试</td><td><code>exam_schedule.course_offering_id</code></td><td><code>course_offering.id</code></td><td>考试安排属于具体教学班。</td></tr>
+            <tr><td>学生-评价</td><td><code>teaching_evaluation.student_id</code></td><td><code>student.id</code></td><td>学生提交教学评价。</td></tr>
+            <tr><td>教学班-评价</td><td><code>teaching_evaluation.offering_id</code></td><td><code>course_offering.id</code></td><td>评价对象是具体教学班。</td></tr>
+            <tr><td>用户-通知</td><td><code>user_notification.user_id</code></td><td><code>sys_user.id</code></td><td>通知发给具体登录用户。</td></tr>
+            <tr><td>学生-申请</td><td><code>student_status_change_application.student_id</code></td><td><code>student.id</code></td><td>学生提交学籍异动申请。</td></tr>
+            <tr><td>申请-附件</td><td><code>status_change_attachment.application_id</code></td><td><code>student_status_change_application.id</code></td><td>申请可以上传证明材料。</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="diagram">
+        <h3>核心 E-R 关系简图</h3>
+        <div class="diagram-row">
+          <span class="node">sys_user</span><span class="arrow">→</span><span class="node">student</span><span class="arrow">→</span><span class="node">course_selection</span><span class="arrow">→</span><span class="node">course_offering</span><span class="arrow">→</span><span class="node">course</span>
+        </div>
+        <div class="diagram-row">
+          <span class="node">student</span><span class="arrow">→</span><span class="node">academic_grade</span><span class="arrow">→</span><span class="node">course</span>
+          <span class="arrow">；</span>
+          <span class="node">course_offering</span><span class="arrow">→</span><span class="node">exam_schedule</span>
+        </div>
+        <div class="diagram-row">
+          <span class="node">sys_role</span><span class="arrow">↔</span><span class="node">sys_user_role</span><span class="arrow">↔</span><span class="node">sys_user</span>
+          <span class="arrow">；</span>
+          <span class="node">sys_role</span><span class="arrow">↔</span><span class="node">sys_role_menu</span><span class="arrow">↔</span><span class="node">sys_menu</span>
+        </div>
+      </div>
+    </section>
+
+    <section id="business">
+      <h2>四、核心业务链路如何落到数据库</h2>
+      <div class="flow">
+        <div class="flow-step">
+          <strong>登录与权限</strong>
+          <span><code>sys_user</code> 校验账号密码 → <code>sys_user_role</code> 找角色 → <code>sys_role_menu</code> 找菜单 → <code>sys_role_permission</code> 找接口权限。</span>
+        </div>
+        <div class="flow-step">
+          <strong>学生选课</strong>
+          <span><code>student</code> 找当前学生 → <code>course_offering</code> 找可选教学班 → <code>course_selection</code> 写入选课记录。</span>
+        </div>
+        <div class="flow-step">
+          <strong>抢课防超卖</strong>
+          <span>Redis 先扣 <code>selection:offering:{offeringId}:remaining</code> → 数据库再写 <code>course_selection</code> → 写库失败则回滚 Redis 库存。</span>
+        </div>
+        <div class="flow-step">
+          <strong>成绩录入</strong>
+          <span>教师或管理员选择学生和课程 → 写入或更新 <code>academic_grade</code> → <code>locked</code> 控制是否允许修改。</span>
+        </div>
+        <div class="flow-step">
+          <strong>考试安排</strong>
+          <span>管理员维护 <code>exam_schedule</code> → 学生通过自己的 <code>course_selection</code> 找到相关考试。</span>
+        </div>
+        <div class="flow-step">
+          <strong>通知公告</strong>
+          <span>管理员发布 <code>notice</code> → 系统为用户生成 <code>user_notification</code> → 前端展示已读/未读。</span>
+        </div>
+        <div class="flow-step">
+          <strong>学籍申请</strong>
+          <span>学生提交 <code>student_status_change_application</code> → 上传材料写入 <code>status_change_attachment</code> → 管理员审核。</span>
+        </div>
+      </div>
+    </section>
+
+    <section id="redis">
+      <h2>五、Redis 键值对设计</h2>
+      <p>Redis 不替代 MySQL，MySQL 是最终数据源。Redis 在项目中用于高并发抢课、请求幂等、短锁和状态监控。</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>负责人</th><th>Redis Key</th><th>Value</th><th>TTL/生命周期</th><th>作用</th><th>关联数据库表</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>魏语石</td>
+              <td><code>selection:offering:{offeringId}:remaining</code></td>
+              <td>整数，表示教学班剩余名额</td>
+              <td>有过期时间；管理员修改教学班后主动删除</td>
+              <td>抢课库存缓存、并发扣减、满员快速判断、防超卖、失败回滚。</td>
+              <td><code>course_offering</code>、<code>course_selection</code></td>
+            </tr>
+            <tr>
+              <td>郭凤圣</td>
+              <td><code>selection:request:{requestId}</code></td>
+              <td>请求处理状态或处理结果</td>
+              <td>短期保存，避免重复提交</td>
+              <td>防止同一次抢课请求因为重复点击或网络重试被执行多次。</td>
+              <td><code>course_selection</code></td>
+            </tr>
+            <tr>
+              <td>敖东磊</td>
+              <td><code>selection:grab:lock:{offeringId}:{username}</code></td>
+              <td>锁标记，通常是处理中状态</td>
+              <td>很短 TTL，例如几秒</td>
+              <td>限制同一学生短时间内重复抢同一教学班，避免重复进入核心逻辑。</td>
+              <td><code>sys_user</code>、<code>student</code>、<code>course_offering</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="note">
+        <strong>Redis 和数据库的一致性说明：</strong>
+        抢课时 Redis 负责快速扣减库存，数据库负责最终保存选课记录。
+        如果 Redis 扣减成功但数据库写入失败，系统会把 Redis 库存加回去。
+        如果 Redis 不可用，系统可以退回数据库兜底逻辑，功能不崩溃，只是性能会下降。
+      </div>
+      <div class="note warn">
+        <strong>老师问“为什么不用 Redis 直接当数据库？”时可以这样答：</strong>
+        Redis 只适合做高并发下的快速判断和临时状态控制，最终选课结果必须落到 MySQL 的
+        <code>course_selection</code> 表，因为 MySQL 有外键、唯一约束、事务和持久化能力。
+        所以本项目采用“Redis 抗并发，MySQL 保结果”的设计。
+      </div>
+    </section>
+
+    <section id="redis-lesson">
+      <h2>六、Redis 知识从零讲解与成员应用</h2>
+      <p>
+        这一页适合答辩时从零解释 Redis：先讲 Redis 是什么，再讲为什么项目需要 Redis，最后按三个人的分工说明 Redis 知识是怎么落到代码和业务里的。
+      </p>
+
+      <div class="note">
+        <strong>30 秒开场讲法：</strong>
+        Redis 是一个基于内存的 key-value 数据库，读写速度比普通数据库查询更快，适合保存临时状态、热点数据、库存计数、短期锁和请求幂等标记。
+        在我们的项目里，MySQL 负责最终数据，Redis 负责高并发抢课过程中的快速判断和临时控制。
+      </div>
+
+      <div class="grid three">
+        <div class="card">
+          <h3>1. Redis 是什么</h3>
+          <p>
+            Redis 可以理解为一个很快的“内存字典”。普通数据库保存的是表、行、列；
+            Redis 保存的是 <code>key -> value</code>。
+          </p>
+          <span class="tag">key-value</span>
+          <span class="tag">内存读写</span>
+          <span class="tag">高性能</span>
+        </div>
+        <div class="card">
+          <h3>2. Redis 为什么快</h3>
+          <p>
+            Redis 主要把数据放在内存中，适合频繁读写的小数据。
+            抢课时每个请求如果都查 MySQL，数据库压力会很大；先查 Redis 可以更快判断库存和重复请求。
+          </p>
+          <span class="tag green">内存</span>
+          <span class="tag green">减少数据库压力</span>
+        </div>
+        <div class="card">
+          <h3>3. Redis 不是万能的</h3>
+          <p>
+            Redis 适合做临时状态和加速层，但最终选课结果仍然要写入 MySQL。
+            因为 MySQL 有事务、外键、唯一约束和持久化能力。
+          </p>
+          <span class="tag orange">MySQL 保结果</span>
+          <span class="tag orange">Redis 抗并发</span>
+        </div>
+      </div>
+
+      <h3>Redis 基础概念</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>概念</th><th>通俗解释</th><th>本项目里的例子</th><th>答辩说法</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>key</code></td>
+              <td>Redis 里的名字，类似字典的索引。</td>
+              <td><code>selection:offering:1:remaining</code></td>
+              <td>我们用有规律的 key 表示某个教学班的剩余名额。</td>
+            </tr>
+            <tr>
+              <td><code>value</code></td>
+              <td>key 对应保存的值。</td>
+              <td><code>82</code></td>
+              <td>库存 key 的 value 是剩余座位数。</td>
+            </tr>
+            <tr>
+              <td><code>TTL</code></td>
+              <td>过期时间，到时间后 Redis 自动删除。</td>
+              <td>短锁 3 秒或 5 秒后自动释放。</td>
+              <td>短锁不能一直存在，所以必须设置较短过期时间。</td>
+            </tr>
+            <tr>
+              <td><code>INCR/DECR</code></td>
+              <td>对数字做加一或减一操作。</td>
+              <td>抢课时扣减课程库存。</td>
+              <td>高并发抢课时先用 Redis 原子扣减库存，减少数据库压力。</td>
+            </tr>
+            <tr>
+              <td><code>SETNX</code></td>
+              <td>只有 key 不存在时才设置成功。</td>
+              <td>设置短锁、设置请求处理中标记。</td>
+              <td>用 SETNX 可以判断是否已经有人或同一个请求正在处理。</td>
+            </tr>
+            <tr>
+              <td>缓存击穿/未命中</td>
+              <td>Redis 里没有数据，需要回数据库查询。</td>
+              <td>库存 key 不存在时，根据 MySQL 容量和已选人数重新计算。</td>
+              <td>Redis 没命中时会回到数据库计算，再把结果写回 Redis。</td>
+            </tr>
+            <tr>
+              <td>降级</td>
+              <td>Redis 不可用时，不让系统直接崩溃。</td>
+              <td>Redis 连接失败时走数据库兜底。</td>
+              <td>Redis 是加速层，不是唯一链路，所以系统可以退回 MySQL。</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Redis 常见数据结构怎么理解</h3>
+      <p>
+        Redis 不只有字符串，但本项目为了保持课程设计清晰，主要使用最容易讲明白的 String 类型。
+        下面这些结构是 Redis 的基础知识，答辩时可以说明“我们当前主要用 String，其他结构属于可扩展方向”。
+      </p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>数据结构</th><th>通俗理解</th><th>适合场景</th><th>本项目是否使用</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>String</code></td>
+              <td>一个 key 对应一个简单值，可以是数字、文本、JSON 字符串。</td>
+              <td>库存数量、短锁标记、请求处理结果。</td>
+              <td>已使用。库存、幂等、短锁都可以用 String 表达。</td>
+            </tr>
+            <tr>
+              <td><code>Hash</code></td>
+              <td>一个 key 下面有多个字段，类似一行对象。</td>
+              <td>缓存用户资料、课程详情、教学班详情。</td>
+              <td>可扩展。以后可以缓存教学班详情。</td>
+            </tr>
+            <tr>
+              <td><code>List</code></td>
+              <td>有顺序的列表，可以从左边或右边插入弹出。</td>
+              <td>消息队列、任务队列、最近操作记录。</td>
+              <td>当前未使用。</td>
+            </tr>
+            <tr>
+              <td><code>Set</code></td>
+              <td>无重复集合。</td>
+              <td>保存某课程已抢到的学生集合、去重集合。</td>
+              <td>可扩展。当前去重主要由 MySQL 唯一键和 Redis 幂等 key 完成。</td>
+            </tr>
+            <tr>
+              <td><code>Sorted Set</code></td>
+              <td>带分数排序的集合。</td>
+              <td>排行榜、优先级队列。</td>
+              <td>当前未使用。</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>本项目为什么选择 String 类型</h3>
+      <div class="grid three">
+        <div class="card">
+          <h3>库存是数字</h3>
+          <p>
+            <code>selection:offering:{offeringId}:remaining</code> 的值就是剩余名额，例如 <code>82</code>。
+            数字可以直接用 Redis 的 decrement/increment 进行扣减和回滚。
+          </p>
+        </div>
+        <div class="card">
+          <h3>短锁是标记</h3>
+          <p>
+            <code>selection:grab:lock:{offeringId}:{username}</code> 只需要表示“这个学生正在处理这个课程请求”，值可以很简单，关键是必须设置 TTL。
+          </p>
+        </div>
+        <div class="card">
+          <h3>幂等是结果</h3>
+          <p>
+            <code>selection:request:{requestId}</code> 可以保存处理中状态，也可以保存处理结果。
+            同一个 requestId 再来时，就能知道是否已经处理过。
+          </p>
+        </div>
+      </div>
+
+      <h3>Redis 命令和项目代码的对应关系</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Redis 操作</th><th>项目里对应的业务</th><th>为什么这样用</th><th>讲解重点</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>GET</code></td>
+              <td>读取库存 key、读取请求结果、读取短锁状态。</td>
+              <td>判断 Redis 中是否已有缓存或状态。</td>
+              <td>先读 Redis，命中就可以少访问数据库。</td>
+            </tr>
+            <tr>
+              <td><code>SET</code></td>
+              <td>写入库存值、写入请求处理结果。</td>
+              <td>把数据库计算出的临时结果放入 Redis。</td>
+              <td>Redis 保存的是加速数据，不是最终选课结果。</td>
+            </tr>
+            <tr>
+              <td><code>SETNX</code></td>
+              <td>设置短锁、设置 requestId 处理中标记。</td>
+              <td>只有 key 不存在时才成功，适合防重复处理。</td>
+              <td>同一学生重复点击时，第二次设置会失败，从而被拦截。</td>
+            </tr>
+            <tr>
+              <td><code>DECR</code></td>
+              <td>抢课时扣减教学班库存。</td>
+              <td>Redis 对单个数字 key 的扣减是原子操作，适合高并发库存。</td>
+              <td>库存小于 0 就说明已经满员，直接返回 FULL。</td>
+            </tr>
+            <tr>
+              <td><code>INCR</code></td>
+              <td>数据库写入失败时回滚库存。</td>
+              <td>Redis 扣了库存但 MySQL 没写成功，需要补回来。</td>
+              <td>这就是缓存和数据库一致性的处理。</td>
+            </tr>
+            <tr>
+              <td><code>EXPIRE / TTL</code></td>
+              <td>控制短锁和幂等 key 的过期时间。</td>
+              <td>临时状态不能永久存在。</td>
+              <td>短锁 TTL 很短；幂等结果可以稍微长一点。</td>
+            </tr>
+            <tr>
+              <td><code>DEL</code></td>
+              <td>管理员修改教学班后清理库存 key。</td>
+              <td>课程容量变了，旧缓存就不能继续用。</td>
+              <td>删除后下次抢课会重新按 MySQL 计算库存。</td>
+            </tr>
+            <tr>
+              <td><code>PING</code></td>
+              <td>Redis 状态监控页检测连接。</td>
+              <td>确认 Redis 是否可用。</td>
+              <td>答辩现场可以展示 PONG 或连接正常。</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Redis 与 MySQL 的职责边界</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>问题</th><th>Redis 负责</th><th>MySQL 负责</th><th>为什么要分开</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>课程是否还有名额</td>
+              <td>快速扣减剩余库存。</td>
+              <td>保存课程容量和最终选课记录。</td>
+              <td>Redis 快，MySQL 稳。</td>
+            </tr>
+            <tr>
+              <td>请求是否重复</td>
+              <td>保存 requestId 处理状态。</td>
+              <td>通过唯一键防止重复选课。</td>
+              <td>Redis 提前拦截，MySQL 最终兜底。</td>
+            </tr>
+            <tr>
+              <td>学生是否正在重复提交</td>
+              <td>短锁限制几秒内重复进入。</td>
+              <td>保存用户、学生和选课记录。</td>
+              <td>短锁是临时控制，不应该写入数据库。</td>
+            </tr>
+            <tr>
+              <td>系统是否可恢复</td>
+              <td>Redis 断开时可以放弃加速。</td>
+              <td>保留完整业务数据。</td>
+              <td>Redis 不应成为系统唯一数据源。</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Redis 抢课完整时序</h3>
+      <div class="flow">
+        <div class="flow-step">
+          <strong>1. 学生点击抢课</strong>
+          <span>前端生成 <code>requestId</code>，请求带上教学班 ID 和登录 token。</span>
+        </div>
+        <div class="flow-step">
+          <strong>2. 后端检查幂等 key</strong>
+          <span>检查 <code>selection:request:{requestId}</code> 是否已经存在；存在就说明这个请求处理过或正在处理。</span>
+        </div>
+        <div class="flow-step">
+          <strong>3. 设置学生短锁</strong>
+          <span>尝试写入 <code>selection:grab:lock:{offeringId}:{username}</code>，并设置几秒 TTL，防止短时间重复点击。</span>
+        </div>
+        <div class="flow-step">
+          <strong>4. 读取或预热库存</strong>
+          <span>如果 <code>selection:offering:{offeringId}:remaining</code> 不存在，就根据 <code>course_offering.capacity</code> 和 <code>course_selection</code> 已选人数计算。</span>
+        </div>
+        <div class="flow-step">
+          <strong>5. Redis 扣减库存</strong>
+          <span>对库存 key 做扣减。如果结果小于 0，说明已经满员，回补并返回 FULL。</span>
+        </div>
+        <div class="flow-step">
+          <strong>6. MySQL 最终落库</strong>
+          <span>写入 <code>course_selection</code>。如果写入失败，说明数据库约束或容量校验没通过，需要回滚 Redis 库存。</span>
+        </div>
+        <div class="flow-step">
+          <strong>7. 缓存请求结果</strong>
+          <span>把本次 requestId 的处理结果写入 Redis，后续同一个 requestId 再来时直接返回。</span>
+        </div>
+      </div>
+
+      <h3>三个人分别怎么使用 Redis 知识</h3>
+      <div class="grid three">
+        <article class="card">
+          <h3>魏语石：库存 key 与原子扣减</h3>
+          <p>
+            魏语石负责把 Redis 用在抢课库存控制上。每个教学班都有一个库存 key：
+            <code>selection:offering:{offeringId}:remaining</code>。
+            例如 <code>selection:offering:1:remaining</code> 表示教学班 1 的剩余名额。
+          </p>
+          <div class="rel">
+            <span>用到知识：key-value</span>
+            <span>用到知识：数字扣减</span>
+            <span>用到知识：缓存回滚</span>
+          </div>
+          <div class="note">
+            <strong>讲解口径：</strong>
+            抢课时系统先扣 Redis 库存，如果扣完小于 0，说明课程满员，直接返回 FULL。
+            如果 Redis 扣减成功但 MySQL 写入失败，就把 Redis 库存加回来，保证缓存和数据库不矛盾。
+          </div>
+          <p>
+            对应数据库：<code>course_offering.capacity</code> 表示容量，
+            <code>course_selection</code> 表示已选记录。
+          </p>
+        </article>
+
+        <article class="card">
+          <h3>郭凤圣：requestId 与请求幂等</h3>
+          <p>
+            郭凤圣负责把 Redis 用在重复提交控制上。前端每次抢课生成一个唯一的
+            <code>requestId</code>，后端用它组成 Redis key：
+            <code>selection:request:{requestId}</code>。
+          </p>
+          <div class="rel">
+            <span>用到知识：SETNX</span>
+            <span>用到知识：幂等</span>
+            <span>用到知识：TTL</span>
+          </div>
+          <div class="note">
+            <strong>讲解口径：</strong>
+            用户可能因为网络卡顿连续点击抢课。如果每次点击都进数据库，就可能造成重复处理。
+            所以我们把 requestId 写入 Redis，同一个 requestId 再次提交时，系统直接返回已有处理结果。
+          </div>
+          <p>
+            对应前端：选课页面生成 requestId。
+            对应后端：抢课服务判断请求是否已经处理。
+          </p>
+        </article>
+
+        <article class="card">
+          <h3>敖东磊：短锁、TTL 与运行监控</h3>
+          <p>
+            敖东磊负责把 Redis 用在短锁和运行状态展示上。
+            短锁 key 是 <code>selection:grab:lock:{offeringId}:{username}</code>，
+            用来限制同一学生短时间重复抢同一门课。
+          </p>
+          <div class="rel">
+            <span>用到知识：短锁</span>
+            <span>用到知识：TTL</span>
+            <span>用到知识：PING/key 扫描</span>
+          </div>
+          <div class="note">
+            <strong>讲解口径：</strong>
+            短锁不是为了长期锁住用户，而是为了拦住几秒内的重复提交。
+            Redis 监控页还能显示连接状态、PING 结果、key 数量、TTL 和缓存值，方便答辩现场证明 Redis 真的在工作。
+          </div>
+          <p>
+            对应页面：Redis 状态监控页、压测历史报告页、Python 压测面板。
+          </p>
+        </article>
+      </div>
+
+      <h3>从零讲 Redis 到项目落地的完整流程</h3>
+      <div class="flow">
+        <div class="flow-step">
+          <strong>第一步：理解 key-value</strong>
+          <span>Redis 用 key 找 value。本项目用 <code>selection:offering:1:remaining</code> 找到教学班 1 的剩余名额。</span>
+        </div>
+        <div class="flow-step">
+          <strong>第二步：理解 TTL</strong>
+          <span>临时状态不能永久保存，请求幂等 key 和短锁 key 都要设置过期时间。</span>
+        </div>
+        <div class="flow-step">
+          <strong>第三步：理解并发扣减</strong>
+          <span>很多学生同时抢课时，Redis 先扣库存，库存不足就快速拒绝。</span>
+        </div>
+        <div class="flow-step">
+          <strong>第四步：理解最终一致</strong>
+          <span>Redis 扣库存只是第一步，最终结果必须写入 MySQL 的 <code>course_selection</code>。</span>
+        </div>
+        <div class="flow-step">
+          <strong>第五步：理解降级</strong>
+          <span>Redis 不通时系统不会崩溃，会退回数据库兜底，只是性能会下降。</span>
+        </div>
+      </div>
+
+      <div class="note warn">
+        <strong>容易被问到的问题：</strong>
+        如果老师问“Redis 里面的数据清空了怎么办”，可以回答：
+        Redis 是缓存和临时状态层，库存 key 不存在时可以根据 MySQL 的教学班容量和已选人数重新计算；
+        最终业务数据保存在 MySQL，所以 Redis 清空不会导致选课结果丢失。
+      </div>
+    </section>
+
+    <section id="indexes">
+      <h2>七、唯一约束与索引设计</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>约束/索引</th><th>所在表</th><th>字段</th><th>设计目的</th></tr></thead>
+          <tbody>
+            <tr><td><code>uk_sys_user_username</code></td><td><code>sys_user</code></td><td><code>username</code></td><td>保证登录账号唯一。</td></tr>
+            <tr><td><code>uk_sys_role_code</code></td><td><code>sys_role</code></td><td><code>code</code></td><td>保证角色编码唯一。</td></tr>
+            <tr><td><code>uk_sys_menu_code</code></td><td><code>sys_menu</code></td><td><code>code</code></td><td>保证菜单编码唯一。</td></tr>
+            <tr><td><code>uk_sys_permission_code</code></td><td><code>sys_permission</code></td><td><code>code</code></td><td>保证权限编码唯一。</td></tr>
+            <tr><td><code>uk_student_user</code></td><td><code>student</code></td><td><code>user_id</code></td><td>一个用户只对应一个学生档案。</td></tr>
+            <tr><td><code>uk_student_student_no</code></td><td><code>student</code></td><td><code>student_no</code></td><td>保证学号唯一。</td></tr>
+            <tr><td><code>uk_course_code</code></td><td><code>course</code></td><td><code>code</code></td><td>保证课程编号唯一。</td></tr>
+            <tr><td><code>uk_course_selection_student_offering</code></td><td><code>course_selection</code></td><td><code>student_id, offering_id</code></td><td>防止一个学生重复选择同一教学班。</td></tr>
+            <tr><td><code>uk_academic_grade</code></td><td><code>academic_grade</code></td><td><code>student_id, course_id, term, exam_type</code></td><td>防止同一学生同一课程同一考试类型重复成绩。</td></tr>
+            <tr><td><code>uk_exam_schedule_offering_time</code></td><td><code>exam_schedule</code></td><td><code>course_offering_id, exam_time</code></td><td>防止同一教学班同一时间重复考试安排。</td></tr>
+            <tr><td><code>uk_teaching_evaluation_student_offering</code></td><td><code>teaching_evaluation</code></td><td><code>student_id, offering_id</code></td><td>防止重复评价。</td></tr>
+            <tr><td><code>idx_course_offering_term</code></td><td><code>course_offering</code></td><td><code>term</code></td><td>加快按学期查询教学班。</td></tr>
+            <tr><td><code>idx_user_notification_user_read</code></td><td><code>user_notification</code></td><td><code>user_id, read_flag</code></td><td>加快查询某用户未读通知。</td></tr>
+            <tr><td><code>idx_registration_application_status</code></td><td><code>student_registration_application</code></td><td><code>status</code></td><td>加快管理员按审核状态筛选申请。</td></tr>
+            <tr><td><code>idx_teaching_plan_major_grade</code></td><td><code>teaching_plan_item</code></td><td><code>major, grade, term</code></td><td>加快按专业、年级、学期查询教学计划。</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="dictionary">
+      <h2>八、常见状态字段和业务含义</h2>
+      <div class="grid two">
+        <div class="card">
+          <h3>学生与申请状态</h3>
+          <p><code>student.status</code> 表示学籍状态，如在读、休学等。</p>
+          <p><code>student_status_change_application.status</code> 和 <code>student_registration_application.status</code> 表示申请审核状态，如已提交、审核中、已通过、已驳回。</p>
+        </div>
+        <div class="card">
+          <h3>成绩状态</h3>
+          <p><code>academic_grade.grade_status</code> 表示成绩状态，如已发布、补考、重修、缓考。</p>
+          <p><code>academic_grade.locked</code> 表示成绩是否锁定，锁定后一般不允许继续修改。</p>
+        </div>
+        <div class="card">
+          <h3>通知状态</h3>
+          <p><code>user_notification.read_flag</code> 表示通知是否已读。</p>
+          <p><code>read_at</code> 记录用户阅读通知的时间。</p>
+        </div>
+        <div class="card">
+          <h3>反馈和论文状态</h3>
+          <p><code>teaching_feedback.status</code> 表示反馈处理进度。</p>
+          <p><code>thesis_grade.status</code> 表示论文成绩或论文流程状态。</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    版权所有 Copyright 2004-2026 魏语石　天津天狮学院教学综合信息服务平台　版本 V-9.0
+  </footer>
+  <script>
+    const $ = (selector, root = document) => root.querySelector(selector);
+    const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
+
+    const searchInput = $('#smartSearch');
+    const resultPanel = $('#resultPanel');
+    const resultList = $('#resultList');
+    const resultSummary = $('#resultSummary');
+    const searchCount = $('#searchCount');
+
+    function normalize(value) {
+      return String(value || '').toLowerCase().replace(/\s+/g, ' ').trim();
+    }
+
+    function titleForElement(element) {
+      const section = element.closest('section');
+      const sectionTitle = section?.querySelector('h2')?.textContent?.trim() || '数据库设计';
+      const localTitle = element.querySelector('strong, h3, h4, th, td')?.textContent?.trim();
+      if (element.matches('tr')) {
+        const cells = $$('td, th', element).map(cell => cell.textContent.trim()).filter(Boolean);
+        return cells.slice(0, 2).join(' / ') || sectionTitle;
+      }
+      return localTitle ? `${sectionTitle} / ${localTitle}` : sectionTitle;
+    }
+
+    function snippetForElement(element, keyword) {
+      const text = element.textContent.replace(/\s+/g, ' ').trim();
+      if (!keyword) return text.slice(0, 120);
+      const lower = text.toLowerCase();
+      const index = lower.indexOf(keyword.toLowerCase());
+      if (index < 0) return text.slice(0, 140);
+      const start = Math.max(0, index - 45);
+      const end = Math.min(text.length, index + keyword.length + 90);
+      return (start > 0 ? '...' : '') + text.slice(start, end) + (end < text.length ? '...' : '');
+    }
+
+    function searchableElements() {
+      const selectors = [
+        'section',
+        '.schema-card',
+        '.card',
+        '.flow-step',
+        '.note',
+        'tbody tr',
+        '.diagram-row'
+      ];
+      const elements = selectors.flatMap(selector => $$(selector));
+      return Array.from(new Set(elements)).filter(element => {
+        if (element.closest('.answer-desk')) return false;
+        return element.textContent.trim().length > 0;
+      });
+    }
+
+    function clearSpotlight() {
+      $$('.spotlight').forEach(element => element.classList.remove('spotlight'));
+    }
+
+    function focusElement(element) {
+      clearSpotlight();
+      element.classList.add('spotlight');
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setTimeout(() => element.classList.remove('spotlight'), 2200);
+    }
+
+    function runSearch(query) {
+      const q = normalize(query);
+      if (!q) {
+        resultPanel.classList.remove('active');
+        resultList.innerHTML = '';
+        resultSummary.textContent = '0 条';
+        searchCount.textContent = '待检索';
+        return;
+      }
+
+      const words = q.split(' ').filter(Boolean);
+      const matches = searchableElements()
+        .map(element => {
+          const text = normalize(element.textContent);
+          const score = words.reduce((total, word) => total + (text.includes(word) ? 1 : 0), 0);
+          return { element, score, text };
+        })
+        .filter(item => item.score > 0)
+        .sort((a, b) => b.score - a.score || a.text.length - b.text.length)
+        .slice(0, 30);
+
+      resultPanel.classList.add('active');
+      resultSummary.textContent = `${matches.length} 条`;
+      searchCount.textContent = matches.length ? `找到 ${matches.length} 条` : '未找到';
+      searchCount.className = matches.length ? 'tag green' : 'tag red';
+
+      if (!matches.length) {
+        resultList.innerHTML = '<div class="result-item"><strong>没有匹配结果</strong><span>换一个关键词试试，例如 student、course_selection、外键、Redis、TTL、locked。</span></div>';
+        return;
+      }
+
+      resultList.innerHTML = matches.map((item, index) => `
+        <button class="result-item" type="button" data-result-index="${index}">
+          <strong>${titleForElement(item.element)}</strong>
+          <span>${snippetForElement(item.element, words[0])}</span>
+        </button>
+      `).join('');
+
+      $$('[data-result-index]', resultList).forEach(button => {
+        button.addEventListener('click', () => {
+          const item = matches[Number(button.dataset.resultIndex)];
+          if (item) focusElement(item.element);
+        });
+      });
+    }
+
+    searchInput.addEventListener('input', event => runSearch(event.target.value));
+
+    $('#clearSearch').addEventListener('click', () => {
+      searchInput.value = '';
+      runSearch('');
+      searchInput.focus();
+    });
+
+    $('#printPage').addEventListener('click', () => window.print());
+
+    $$('.quick-card').forEach(button => {
+      button.addEventListener('click', () => {
+        const query = button.dataset.query || '';
+        const target = button.dataset.target;
+        searchInput.value = query;
+        runSearch(query);
+        const targetElement = target ? document.getElementById(target) : null;
+        if (targetElement) {
+          setTimeout(() => focusElement(targetElement), 80);
+        }
+      });
+    });
+
+    window.addEventListener('keydown', event => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        searchInput.focus();
+        searchInput.select();
+      }
+      if (event.key === 'Escape') {
+        clearSpotlight();
+        searchInput.value = '';
+        runSearch('');
+      }
+    });
+  </script>
+</body>
+</html>

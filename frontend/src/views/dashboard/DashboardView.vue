@@ -1,0 +1,230 @@
+<script setup lang="ts">
+// 系统首页仪表盘。
+// 进入系统后根据当前用户角色展示课程、通知、公告、课表和快捷入口。
+// 学生会额外加载个人课表，管理员和教师则更多展示管理/教学相关入口。
+import { computed, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
+import {
+  Bell,
+  BookOpen,
+  CalendarClock,
+  ClipboardList,
+  FilePenLine,
+  GraduationCap,
+  Megaphone,
+  Settings,
+  UserRound,
+} from 'lucide-vue-next'
+import { fetchDashboardOverviewApi, type DashboardOverview } from '@/api/dashboard'
+import { homeNoticesApi, markNotificationReadApi, myNotificationsApi, type Notice, type Notification } from '@/api/notice'
+import { personalScheduleApi, type ScheduleEntry } from '@/api/schedule'
+import { useAuthStore } from '@/stores/auth'
+import { useMenuStore } from '@/stores/menu'
+import type { MenuItem } from '@/api/menu'
+
+const router = useRouter()
+const auth = useAuthStore()
+const menu = useMenuStore()
+const loading = ref(false)
+const overview = ref<DashboardOverview>({
+  courseCount: 0,
+  pendingEvaluationCount: 0,
+  examCount: 0,
+  earnedCredits: 0,
+  recentEvents: [],
+})
+const notices = ref<Notice[]>([])
+const notifications = ref<Notification[]>([])
+const schedules = ref<ScheduleEntry[]>([])
+const isStudent = computed(() => auth.user?.roles.includes('STUDENT') ?? false)
+const isAdmin = computed(() => auth.user?.roles.includes('ADMIN') ?? false)
+const isTeacher = computed(() => auth.user?.roles.includes('TEACHER') ?? false)
+
+const days = [
+  { label: '周一', value: 1 },
+  { label: '周二', value: 2 },
+  { label: '周三', value: 3 },
+  { label: '周四', value: 4 },
+  { label: '周五', value: 5 },
+]
+const slots = ['1-2', '3-4', '5-6', '7-8']
+
+const statCards = computed(() => [
+  { label: '本学期课程', value: overview.value.courseCount, suffix: '门' },
+  { label: '待完成评价', value: overview.value.pendingEvaluationCount, suffix: '项' },
+  { label: '考试安排', value: overview.value.examCount, suffix: '场' },
+  { label: '已获学分', value: overview.value.earnedCredits, suffix: '分' },
+])
+
+const roleStatCards = computed(() => [
+  { label: isAdmin.value ? '教学班数量' : '本学期课程', value: overview.value.courseCount, suffix: isAdmin.value ? '个' : '门' },
+  { label: isTeacher.value ? '待维护事项' : '待完成评价', value: overview.value.pendingEvaluationCount, suffix: '项' },
+  { label: '考试安排', value: overview.value.examCount, suffix: '场' },
+  { label: isStudent.value ? '已获学分' : '管理权限', value: isStudent.value ? overview.value.earnedCredits : 1, suffix: isStudent.value ? '分' : '组' },
+])
+
+const quickApps = computed(() => {
+  const leafs = flattenMenus(menu.items).filter((item) => item.path !== '/dashboard')
+  const priority = [
+    '/student/profile',
+    '/course/selection',
+    '/schedule/personal',
+    '/information/weekly-schedule',
+    '/grade/query',
+    '/exam/query',
+    '/evaluation',
+    '/information/feedback',
+  ]
+  return leafs
+    .sort((a, b) => priorityScore(a.path, priority) - priorityScore(b.path, priority))
+    .slice(0, 8)
+})
+
+const userRoleText = computed(() => {
+  const roles = auth.user?.roles ?? []
+  if (roles.includes('ADMIN')) return '管理员'
+  if (roles.includes('TEACHER')) return '教师'
+  return '学生'
+})
+
+onMounted(async () => {
+  loading.value = true
+  try {
+    await menu.loadMenus()
+    const [dashboard, noticeResponse, notificationResponse] = await Promise.all([
+      fetchDashboardOverviewApi(),
+      homeNoticesApi({ page: 1, size: 6 }),
+      myNotificationsApi({ read: false, page: 1, size: 6 }),
+    ])
+    overview.value = dashboard
+    notices.value = noticeResponse.data.records
+    notifications.value = notificationResponse.data.records
+    schedules.value = isStudent.value ? (await personalScheduleApi()).data : []
+  } finally {
+    loading.value = false
+  }
+})
+
+async function markRead(row: Notification) {
+  await markNotificationReadApi(row.id)
+  notifications.value = notifications.value.filter((item) => item.id !== row.id)
+}
+
+function go(path: string) {
+  router.push(path)
+}
+
+function coursesAt(dayOfWeek: number, slot: string) {
+  return schedules.value.filter((item) => item.dayOfWeek === dayOfWeek && item.slot === slot)
+}
+
+function flattenMenus(items: MenuItem[]): MenuItem[] {
+  return items.flatMap((item) => (item.children?.length ? flattenMenus(item.children) : [item]))
+}
+
+function priorityScore(path: string, priority: string[]) {
+  const index = priority.indexOf(path)
+  return index === -1 ? 1000 : index
+}
+</script>
+
+<template>
+  <section class="portal-home" v-loading="loading">
+    <aside class="portal-apps">
+      <div class="portal-panel-title">
+        <h2>我的应用</h2>
+        <Settings :size="18" />
+      </div>
+      <div class="app-list">
+        <button v-for="app in quickApps" :key="app.code" class="app-link" type="button" @click="go(app.path)">
+          <BookOpen v-if="app.path.includes('course')" :size="18" />
+          <CalendarClock v-else-if="app.path.includes('schedule') || app.path.includes('exam')" :size="18" />
+          <ClipboardList v-else-if="app.path.includes('grade')" :size="18" />
+          <FilePenLine v-else-if="app.path.includes('status') || app.path.includes('registration')" :size="18" />
+          <Megaphone v-else-if="app.path.includes('notice')" :size="18" />
+          <UserRound v-else :size="18" />
+          <span>{{ app.title }}</span>
+        </button>
+      </div>
+    </aside>
+
+    <section class="portal-main-grid">
+      <article class="profile-strip">
+        <div class="avatar-circle">
+          <UserRound :size="58" />
+        </div>
+        <div>
+          <h1>{{ auth.user?.displayName ?? '学生用户' }} <span>{{ userRoleText }}</span></h1>
+          <p>{{ auth.user?.username ?? '未登录用户' }}　信息科学与工程学院 2023级软件工程</p>
+        </div>
+      </article>
+
+      <section class="summary-strip">
+        <article v-for="item in roleStatCards" :key="item.label">
+          <span>{{ item.label }}</span>
+          <strong>{{ item.value }}<small>{{ item.suffix }}</small></strong>
+        </article>
+      </section>
+
+      <article class="portal-card wide">
+        <div class="portal-panel-title">
+          <h2>本周课表</h2>
+          <CalendarClock :size="18" />
+        </div>
+        <div class="home-schedule">
+          <div class="home-schedule-head">节次</div>
+          <div v-for="day in days" :key="day.value" class="home-schedule-head">{{ day.label }}</div>
+          <template v-for="slot in slots" :key="slot">
+            <div class="home-schedule-slot">{{ slot }}节</div>
+            <div v-for="day in days" :key="`${day.value}-${slot}`" class="home-schedule-cell">
+              <article v-for="course in coursesAt(day.value, slot)" :key="`${course.courseCode}-${course.classroom}`">
+                <strong>{{ course.courseName }}</strong>
+                <span>{{ course.teacherName }} · {{ course.classroom }}</span>
+              </article>
+            </div>
+          </template>
+        </div>
+      </article>
+
+      <article class="portal-card">
+        <div class="portal-panel-title">
+          <h2>首页公告</h2>
+          <Megaphone :size="18" />
+        </div>
+        <div class="portal-list">
+          <button v-for="notice in notices" :key="notice.id" type="button" class="portal-list-row">
+            <span>{{ notice.title }}</span>
+            <small>{{ notice.category }}</small>
+          </button>
+          <el-empty v-if="!notices.length" description="暂无公告" :image-size="70" />
+        </div>
+      </article>
+
+      <article class="portal-card">
+        <div class="portal-panel-title">
+          <h2>未读通知</h2>
+          <Bell :size="18" />
+        </div>
+        <div class="portal-list">
+          <button v-for="item in notifications" :key="item.id" type="button" class="portal-list-row action-row">
+            <span>{{ item.title }}</span>
+            <el-button type="primary" link @click.stop="markRead(item)">已读</el-button>
+          </button>
+          <el-empty v-if="!notifications.length" description="暂无未读通知" :image-size="70" />
+        </div>
+      </article>
+
+      <article class="portal-card wide">
+        <div class="portal-panel-title">
+          <h2>近期事项</h2>
+          <GraduationCap :size="18" />
+        </div>
+        <el-table :data="overview.recentEvents" empty-text="暂无近期事项">
+          <el-table-column prop="type" label="类型" width="120" />
+          <el-table-column prop="title" label="事项" />
+          <el-table-column prop="eventTime" label="日期" width="180" />
+        </el-table>
+      </article>
+    </section>
+  </section>
+</template>

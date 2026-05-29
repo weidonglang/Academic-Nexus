@@ -1,0 +1,11 @@
+package weidonglang.tianshiwebside.student;
+
+public enum RegistrationApplicationType {
+    MINOR_MAJOR_REGISTRATION,
+    RETAKE_REGISTRATION,
+    INTERNAL_CREDIT_SUBSTITUTION,
+    EXTERNAL_CREDIT_SUBSTITUTION,
+    SCORE_BONUS,
+    STREAM_MAJOR_CONFIRMATION,
+    MAJOR_DIRECTION_CONFIRMATION
+}

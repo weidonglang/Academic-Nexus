@@ -1,0 +1,166 @@
+# 项目启动说明
+
+本文档说明如何启动教学综合信息服务平台的后端、前端、Redis 和压测工具。
+
+## 推荐方式：MySQL + demo profile
+
+适合正式演示。使用 MySQL 数据库，并自动初始化学院、专业、班级、学生、教师、管理员、课程、成绩、考试、公告等演示数据。
+
+### 1. 准备 MySQL 数据库
+
+先确认 MySQL 已启动，然后执行：
+
+```sql
+CREATE DATABASE IF NOT EXISTS tianshiwebside
+  DEFAULT CHARACTER SET utf8mb4
+  COLLATE utf8mb4_unicode_ci;
+```
+
+本机数据库账号、密码请使用自己的 MySQL 配置。不要把个人数据库密码写入文档或提交到代码仓库。
+
+可以在 IDEA 环境变量里覆盖：
+
+```text
+DB_USERNAME=你的MySQL用户名
+DB_PASSWORD=你的MySQL密码
+```
+
+### 2. IDEA 启动后端
+
+打开 `Run/Debug Configurations`，选择 `TianshiwebsideApplication`。
+
+```text
+Active profiles: demo
+Program arguments: --server.port=8080
+```
+
+启动成功时会看到：
+
+```text
+Tomcat started on port 8080
+Started TianshiwebsideApplication
+```
+
+第一次启动时，Flyway 会自动建表，`DataInitializer` 会自动灌入演示数据。
+
+### 3. 启动前端
+
+```powershell
+cd E:\javacode\tianshiwebside\frontend
+npm install
+npm run dev
+```
+
+访问：
+
+```text
+http://localhost:5173
+```
+
+前端开发配置在 `frontend/.env.development`：
+
+```env
+VITE_DEV_PORT=5173
+VITE_API_PROXY_TARGET=http://localhost:8080
+```
+
+## 登录账号
+
+演示账号由系统初始化数据提供。为了避免文档中明文展示账号和密码，请向项目负责人获取演示账号。
+
+如果需要新增、重置或禁用账号，请登录管理员后台的“用户与角色”页面维护。
+
+## H2 备用方式
+
+适合不想安装 MySQL 时临时演示。数据会在每次后端重启后重新生成。
+
+IDEA 配置：
+
+```text
+Active profiles: dev
+Program arguments: --server.port=8080
+```
+
+## Redis 单机模式
+
+默认启动使用单机 Redis：
+
+```text
+localhost:6379
+```
+
+检查方式：
+
+```powershell
+Test-NetConnection localhost -Port 6379
+```
+
+如果显示：
+
+```text
+TcpTestSucceeded : True
+```
+
+说明 Redis 可以被后端连接。
+
+## Redis 集群模式
+
+如果需要切换到 Redis Cluster，启用额外 profile：
+
+```text
+Active profiles: demo,redis-cluster
+```
+
+并配置集群节点环境变量：
+
+```powershell
+$env:REDIS_CLUSTER_NODES="192.168.1.10:7000,192.168.1.10:7001,192.168.1.10:7002"
+```
+
+当前答辩演示建议使用单机 Redis，链路更简单，也更容易讲清楚。
+
+## 静态演示页
+
+```powershell
+.\start-preview.ps1
+```
+
+访问：
+
+```text
+http://localhost:8090/preview.html
+```
+
+## 压测面板
+
+```powershell
+.\start-load-panel.bat
+```
+
+压测面板不会再预填账号密码。运行压测前需要手动填写管理员账号、管理员密码和压测学生密码。
+
+常用流程：
+
+1. 刷新课程。
+2. 选择教学班。
+3. 填写压测所需账号信息。
+4. 选择是否开启 Redis 缓存。
+5. 选择 `random` 模式。
+6. 开始压测。
+7. 查看 `reports/` 目录下生成的 HTML 报告。
+
+## 一键脚本
+
+开发机本地启动：
+
+```powershell
+.\start-project.ps1
+```
+
+分发包启动：
+
+```powershell
+.\start-demo.ps1
+```
+
+脚本会提示输入本机 MySQL 账号密码，不会在控制台直接输出演示账号密码。

@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>接口总览文档</title>
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --panel: #fff;
+      --ink: #182235;
+      --muted: #667085;
+      --line: #dbe3ef;
+      --primary: #176b87;
+      --green: #1f8a5b;
+      --orange: #c77722;
+      --red: #b54747;
+      --shadow: 0 16px 42px rgba(24,34,53,.1);
+      --mono: Consolas, "JetBrains Mono", "Courier New", monospace;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: linear-gradient(180deg, #eef5f9, var(--bg));
+      font-family: "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
+      line-height: 1.7;
+    }
+    header {
+      padding: 42px min(6vw,72px) 30px;
+      background: linear-gradient(120deg, #0f4d63, #176b87);
+      color: #fff;
+    }
+    h1 { margin: 12px 0; font-size: clamp(30px,4vw,50px); line-height: 1.12; }
+    header p { max-width: 920px; color: rgba(255,255,255,.82); }
+    code {
+      font-family: var(--mono);
+      border: 1px solid #cde5ee;
+      background: #eef7fa;
+      color: #0f4d63;
+      border-radius: 5px;
+      padding: 1px 5px;
+    }
+    .toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      display: grid;
+      grid-template-columns: minmax(0,1fr) auto auto;
+      gap: 10px;
+      padding: 12px min(6vw,72px);
+      border-bottom: 1px solid var(--line);
+      background: rgba(255,255,255,.94);
+      backdrop-filter: blur(12px);
+    }
+    input, select, button {
+      font: inherit;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 9px 12px;
+      background: #fff;
+      color: var(--ink);
+    }
+    button { cursor: pointer; font-weight: 900; color: #0f4d63; }
+    main {
+      width: min(1240px,92vw);
+      margin: 0 auto;
+      padding: 24px 0 52px;
+    }
+    .note {
+      border-left: 4px solid var(--primary);
+      background: #f1f8fb;
+      border-radius: 8px;
+      padding: 12px 14px;
+      color: var(--muted);
+      margin-bottom: 18px;
+    }
+    .group {
+      margin-top: 18px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .group-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 16px;
+      background: #f8fbfd;
+      border-bottom: 1px solid var(--line);
+    }
+    .group-head h2 { margin: 0; font-size: 21px; }
+    .group-head p { margin: 3px 0 0; color: var(--muted); }
+    .count {
+      display: inline-flex;
+      align-items: center;
+      align-self: flex-start;
+      border-radius: 999px;
+      padding: 4px 9px;
+      background: #e8f4f8;
+      color: #0f4d63;
+      border: 1px solid #cde5ee;
+      font-weight: 900;
+      font-size: 13px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+    th, td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+    }
+    th { color: #0f4d63; background: #fff; }
+    tr:last-child td { border-bottom: 0; }
+    .method {
+      display: inline-flex;
+      min-width: 62px;
+      justify-content: center;
+      border-radius: 999px;
+      padding: 2px 8px;
+      font-family: var(--mono);
+      font-weight: 900;
+      color: #fff;
+      font-size: 12px;
+    }
+    .GET { background: var(--green); }
+    .POST { background: var(--primary); }
+    .PUT { background: var(--orange); }
+    .DELETE { background: var(--red); }
+    .hidden { display: none; }
+    footer { text-align: center; color: var(--muted); padding: 24px; }
+    @media (max-width: 800px) {
+      .toolbar { grid-template-columns: 1fr; }
+      table { min-width: 760px; }
+      .table-wrap { overflow-x: auto; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div>天津天狮学院教学综合信息服务平台 · API 接口总览</div>
+    <h1>后端接口清单与答辩说明</h1>
+    <p>
+      Vue 本身不自带后端接口文档。本页面是根据 Spring Boot Controller 的
+      <code>@RequestMapping</code>、<code>@GetMapping</code>、<code>@PostMapping</code>、
+      <code>@PutMapping</code>、<code>@DeleteMapping</code> 整理出的本地静态接口总览。
+    </p>
+  </header>
+
+  <div class="toolbar">
+    <input id="search" type="search" placeholder="搜索接口、模块、路径，例如：登录、成绩、Redis、/api/admin/users" />
+    <select id="methodFilter">
+      <option value="">全部方法</option>
+      <option value="GET">GET</option>
+      <option value="POST">POST</option>
+      <option value="PUT">PUT</option>
+      <option value="DELETE">DELETE</option>
+    </select>
+    <button id="printBtn" type="button">打印/导出 PDF</button>
+  </div>
+
+  <main>
+    <div class="note">
+      <strong>答辩口径：</strong>
+      前端 Vue 通过 Axios 调用这些后端接口，后端统一返回 <code>ApiResponse</code>。
+      管理员接口大多在 <code>/api/admin/**</code> 下，学生个人接口多用 <code>/api/students/me/**</code>，
+      教师端接口集中在 <code>/api/teacher/**</code>。
+    </div>
+
+    <section class="group" data-group="认证与菜单">
+      <div class="group-head"><div><h2>认证与菜单</h2><p>登录、退出、当前用户、动态菜单。</p></div><span class="count">5 个</span></div>
+      <div class="table-wrap"><table><thead><tr><th>方法</th><th>接口</th><th>说明</th></tr></thead><tbody>
+        <tr><td><span class="method POST">POST</span></td><td><code>/api/auth/login</code></td><td>账号密码登录，返回 token 和用户信息。</td></tr>
+        <tr><td><span class="method POST">POST</span></td><td><code>/api/auth/logout</code></td><td>退出登录，清理当前会话。</td></tr>
+        <tr><td><span class="method GET">GET</span></td><td><code>/api/me</code></td><td>查询当前登录用户信息。</td></tr>
+        <tr><td><span class="method GET">GET</span></td><td><code>/api/menus</code></td><td>根据当前角色返回可见菜单。</td></tr>
+        <tr><td><span class="method GET">GET</span></td><td><code>/api/dashboard/me</code></td><td>当前用户首页仪表盘数据。</td></tr>
+      </tbody></table></div>
+    </section>
+
+    <section class="group" data-group="学生个人与申请">
+      <div class="group-head"><div><h2>学生个人与申请</h2><p>个人信息、学籍异动、报名类申请和材料上传。</p></div><span class="count">10 个</span></div>
+      <div class="table-wrap"><table><thead><tr><th>方法</th><th>接口</th><th>说明</th></tr></thead><tbody>
+        <tr><td><span class="method GET">GET</span></td><td><code>/api/students/me/profile</code></td><td>查询个人信息。</td></tr>
+        <tr><td><span class="method PUT">PUT</span></td><td><code>/api/students/me/profile</code></td><td>修改联系方式等个人信息。</td></tr>
+        <tr><td><span class="method GET">GET</span></td><td><code>/api/students/me/status-changes</code></td><td>查询本人学籍异动申请。</td></tr>
+        <tr><td><span class="method POST">POST</span></td><td><code>/api/students/me/status-changes</code></td><td>提交学籍异动申请。</td></tr>
+        <tr><td><span class="method GET">GET</span></td><td><code>/api/students/me/status-changes/{applicationId}/attachments</code></td><td>查询申请附件。</td></tr>
+        <tr><td><span class="method POST">POST</span></td><td><code>/api/students/me/status-changes/{applicationId}/attachments</code></td><td>上传申请材料。</td></tr>
+        <tr><td><span class="method GET">GET</span></td><td><code>/api/students/me/registration-applications</code></td><td>查询报名类申请。</td></tr>
+        <tr><td><span class="method POST">POST</span></td><td><code>/api/students/me/registration-applications</code></td><td>提交微专业、重修等报名申请。</td></tr>
+        <tr><td><span class="method GET">GET</span></td><td><code>/api/schedules/me/personal</code></td><td>个人课表。</td></tr>
+        <tr><td><span class="method GET">GET</span></td><td><code>/api/grades/me</code></td><td>本人课程成绩。</td></tr>
+      </tbody></table></div>
+    </section>
+
+    <section class="group" data-group="选课抢课">
+      <div class="group-head"><div><h2>选课抢课</h2><p>可选课程、已选课程、普通选课、Redis 抢课和退课。</p></div><span class="count">6 个</span></div>
+      <div class="table-wrap"><table><thead><tr><th>方法</th><th>接口</th><th>说明</th></tr></thead><tbody>
+        <tr><td><span class="method GET">GET</span></td><td><code>/api/course-selection/offerings</code></td><td>分页查询可选教学班。</td></tr>
+        <tr><td><span class="method GET">GET</span></td><td><code>/api/course-selection/selected</code></td><td>分页查询已选课程。</td></tr>
+        <tr><td><span class="method POST">POST</span></td><td><code>/api/course-selection/offerings/{offeringId}</code></td><td>普通选课。</td></tr>
+        <tr><td><span class="method POST">POST</span></td><td><code>/api/course-selection/grab/offerings/{offeringId}</code></td><td>按教学班抢课。</td></tr>
+        <tr><td><span class="method POST">POST</span></td><td><code>/api/course-selection/grab</code></td><td>携带 requestId 的抢课入口。</td></tr>
+        <tr><td><span class="method DELETE">DELETE</span></td><td><code>/api/course-selection/selected/{selectionId}</code></td><td>退课。</td></tr>
+      </tbody></table></div>
+    </section>
+
+    <section class="group" data-group="教师端">
+      <div class="group-head"><div><h2>教师端</h2><p>任课课程、成绩录入、考试维护、评价结果。</p></div><span class="count">8 个</span></div>
+      <div class="table-wrap"><table><thead><tr><th>方法</th><th>接口</th><th>说明</th></tr></thead><tbody>
+        <tr><td><span class="method GET">GET</span></td><td><code>/api/teacher/offerings</code></td><td>教师任课教学班。</td></tr>
+        <tr><td><span class="method GET">GET</span></td><td><code>/api/teacher/grades</code></td><td>教师成绩分页查询。</td></tr>
+        <tr><td><span class="method POST">POST</span></td><td><code>/api/teacher/grades</code></td><td>教师录入或修改本人课程成绩。</td></tr>
+        <tr><td><span class="method GET">GET</span></td><td><code>/api/teacher/exams</code></td><td>教师考试安排。</td></tr>
+        <tr><td><span class="method POST">POST</span></td><td><code>/api/teacher/exams</code></td><td>教师新增考试安排。</td></tr>
+        <tr><td><span class="method PUT">PUT</span></td><td><code>/api/teacher/exams/{examId}</code></td><td>教师修改考试安排。</td></tr>
+        <tr><td><span class="method DELETE">DELETE</span></td><td><code>/api/teacher/exams/{examId}</code></td><td>教师删除考试安排。</td></tr>
+        <tr><td><span class="method GET">GET</span></td><td><code>/api/teacher/evaluations</code></td><td>查看教学评价结果。</td></tr>
+      </tbody></table></div>
+    </section>
+
+    <section class="group" data-group="管理员后台">
+      <div class="group-head"><div><h2>管理员后台</h2><p>用户、角色权限、课程、成绩、考试、通知、审核、文件、Redis 监控。</p></div><span class="count">38+ 个</span></div>
+      <div class="table-wrap"><table><thead><tr><th>方法</th><th>接口</th><th>说明</th></tr></thead><tbody>
+        <tr><td><span class="method GET">GET</span></td><td><code>/api/admin/users</code></td><td>分页查询用户。</td></tr>
+        <tr><td><span class="method POST">POST</span></td><td><code>/api/admin/users</code></td><td>新增用户。</td></tr>
+        <tr><td><span class="method PUT">PUT</span></td><td><code>/api/admin/users/{userId}</code></td><td>修改用户。</td></tr>
+        <tr><td><span class="method PUT">PUT</span></td><td><code>/api/admin/users/{userId}/roles</code></td><td>分配用户角色。</td></tr>
+        <tr><td><span class="method PUT">PUT</span></td><td><code>/api/admin/users/{userId}/password</code></td><td>重置密码。</td></tr>
+        <tr><td><span class="method DELETE">DELETE</span></td><td><code>/api/admin/users/{userId}</code></td><td>删除用户。</td></tr>
+        <tr><td><span class="method GET">GET</span></td><td><code>/api/admin/role-permissions/roles</code></td><td>角色列表。</td></tr>
+        <tr><td><span class="method GET">GET</span></td><td><code>/api/admin/role-permissions/menus</code></td><td>菜单列表。</td></tr>
+        <tr><td><span class="method GET">GET</span></td><td><code>/api/admin/role-permissions/roles/{roleId}/menus</code></td><td>角色已分配菜单。</td></tr>
+        <tr><td><span class="method PUT">PUT</span></td><td><code>/api/admin/role-permissions/roles/{roleId}/menus</code></td><td>保存角色菜单权限。</td></tr>
+        <tr><td><span class="method GET">GET</span></td><td><code>/api/admin/courses</code></td><td>课程列表。</td></tr>
+        <tr><td><span class="method POST">POST</span></td><td><code>/api/admin/courses</code></td><td>新增课程。</td></tr>
+        <tr><td><span class="method PUT">PUT</span></td><td><code>/api/admin/courses/{courseId}</code></td><td>修改课程。</td></tr>
+        <tr><td><span class="method DELETE">DELETE</span></td><td><code>/api/admin/courses/{courseId}</code></td><td>删除课程。</td></tr>
+        <tr><td><span class="method GET">GET</span></td><td><code>/api/admin/course-offerings</code></td><td>教学班列表。</td></tr>
+        <tr><td><span class="method POST">POST</span></td><td><code>/api/admin/course-offerings</code></td><td>新增教学班。</td></tr>
+        <tr><td><span class="method PUT">PUT</span></td><td><code>/api/admin/course-offerings/{offeringId}</code></td><td>修改教学班并清理 Redis 库存缓存。</td></tr>
+        <tr><td><span class="method DELETE">DELETE</span></td><td><code>/api/admin/course-offerings/{offeringId}</code></td><td>删除教学班。</td></tr>
+        <tr><td><span class="method GET">GET</span></td><td><code>/api/admin/academic/grades</code></td><td>成绩后台查询。</td></tr>
+        <tr><td><span class="method POST">POST</span></td><td><code>/api/admin/academic/grades</code></td><td>后台录入成绩。</td></tr>
+        <tr><td><span class="method PUT">PUT</span></td><td><code>/api/admin/academic/grades/{gradeId}</code></td><td>后台修改成绩。</td></tr>
+        <tr><td><span class="method GET">GET</span></td><td><code>/api/admin/academic/exams</code></td><td>考试安排后台查询。</td></tr>
+        <tr><td><span class="method POST">POST</span></td><td><code>/api/admin/academic/exams</code></td><td>新增考试安排。</td></tr>
+        <tr><td><span class="method PUT">PUT</span></td><td><code>/api/admin/academic/exams/{examId}</code></td><td>修改考试安排。</td></tr>
+        <tr><td><span class="method DELETE">DELETE</span></td><td><code>/api/admin/academic/exams/{examId}</code></td><td>删除考试安排。</td></tr>
+        <tr><td><span class="method POST">POST</span></td><td><code>/api/admin/notices</code></td><td>发布公告。</td></tr>
+        <tr><td><span class="method GET">GET</span></td><td><code>/api/admin/notices/stats</code></td><td>公告统计。</td></tr>
+        <tr><td><span class="method GET">GET</span></td><td><code>/api/admin/status-changes</code></td><td>学籍异动审核列表。</td></tr>
+        <tr><td><span class="method POST">POST</span></td><td><code>/api/admin/status-changes/{applicationId}/review</code></td><td>审核学籍异动。</td></tr>
+        <tr><td><span class="method GET">GET</span></td><td><code>/api/admin/registration-applications</code></td><td>报名申请审核列表。</td></tr>
+        <tr><td><span class="method POST">POST</span></td><td><code>/api/admin/registration-applications/{applicationId}/review</code></td><td>审核报名申请。</td></tr>
+        <tr><td><span class="method GET">GET</span></td><td><code>/api/admin/evaluations/summaries</code></td><td>教学评价统计。</td></tr>
+        <tr><td><span class="method GET">GET</span></td><td><code>/api/admin/evaluations/records</code></td><td>教学评价明细。</td></tr>
+        <tr><td><span class="method GET">GET</span></td><td><code>/api/admin/audit-logs</code></td><td>操作日志。</td></tr>
+        <tr><td><span class="method GET">GET</span></td><td><code>/api/admin/files</code></td><td>文件管理列表。</td></tr>
+        <tr><td><span class="method GET">GET</span></td><td><code>/api/admin/files/{attachmentId}/download</code></td><td>下载文件。</td></tr>
+        <tr><td><span class="method DELETE">DELETE</span></td><td><code>/api/admin/files/{attachmentId}</code></td><td>删除文件。</td></tr>
+        <tr><td><span class="method GET">GET</span></td><td><code>/api/admin/redis-monitor</code></td><td>Redis 状态监控。</td></tr>
+        <tr><td><span class="method POST">POST</span></td><td><code>/api/admin/redis-monitor/prewarm-stock</code></td><td>预热 Redis 库存。</td></tr>
+        <tr><td><span class="method GET">GET</span></td><td><code>/api/admin/load-test-reports</code></td><td>压测历史报告。</td></tr>
+      </tbody></table></div>
+    </section>
+
+    <section class="group" data-group="信息查询与通知">
+      <div class="group-head"><div><h2>信息查询与通知</h2><p>考试、教室、通知、教学计划、学业预警等。</p></div><span class="count">18 个</span></div>
+      <div class="table-wrap"><table><thead><tr><th>方法</th><th>接口</th><th>说明</th></tr></thead><tbody>
+        <tr><td><span class="method GET">GET</span></td><td><code>/api/exams/me</code></td><td>本人考试安排。</td></tr>
+        <tr><td><span class="method GET">GET</span></td><td><code>/api/classrooms/free</code></td><td>空闲教室查询。</td></tr>
+        <tr><td><span class="method GET">GET</span></td><td><code>/api/notices/home</code></td><td>首页公告。</td></tr>
+        <tr><td><span class="method GET">GET</span></td><td><code>/api/notifications/me</code></td><td>我的通知。</td></tr>
+        <tr><td><span class="method PUT">PUT</span></td><td><code>/api/notifications/me/{id}/read</code></td><td>标记通知已读。</td></tr>
+        <tr><td><span class="method GET">GET</span></td><td><code>/api/information/academic-warnings/me</code></td><td>学业预警。</td></tr>
+        <tr><td><span class="method GET">GET</span></td><td><code>/api/information/graduation-audit/me</code></td><td>毕业审核。</td></tr>
+        <tr><td><span class="method GET">GET</span></td><td><code>/api/information/class-schedules</code></td><td>班级课表。</td></tr>
+        <tr><td><span class="method GET">GET</span></td><td><code>/api/information/course-rosters</code></td><td>选课名单。</td></tr>
+        <tr><td><span class="method GET">GET</span></td><td><code>/api/information/offering-options</code></td><td>教学班选项。</td></tr>
+        <tr><td><span class="method GET">GET</span></td><td><code>/api/information/academic-progress/me</code></td><td>学业情况。</td></tr>
+        <tr><td><span class="method GET">GET</span></td><td><code>/api/information/teaching-plan</code></td><td>教学执行计划。</td></tr>
+        <tr><td><span class="method GET">GET</span></td><td><code>/api/information/weekly-schedule/me</code></td><td>周课表。</td></tr>
+        <tr><td><span class="method GET">GET</span></td><td><code>/api/information/thesis-grade/me</code></td><td>论文成绩。</td></tr>
+        <tr><td><span class="method GET">GET</span></td><td><code>/api/information/feedback/me</code></td><td>我的教学反馈。</td></tr>
+        <tr><td><span class="method POST">POST</span></td><td><code>/api/information/feedback/me</code></td><td>提交教学反馈。</td></tr>
+        <tr><td><span class="method GET">GET</span></td><td><code>/api/evaluations/tasks</code></td><td>教学评价任务。</td></tr>
+        <tr><td><span class="method POST">POST</span></td><td><code>/api/evaluations/tasks/{offeringId}</code></td><td>提交教学评价。</td></tr>
+      </tbody></table></div>
+    </section>
+  </main>
+
+  <footer>版权所有 Copyright 2004-2026 魏语石　天津天狮学院教学综合信息服务平台　版本 V-9.0</footer>
+
+  <script>
+    const search = document.getElementById('search');
+    const methodFilter = document.getElementById('methodFilter');
+    const rows = Array.from(document.querySelectorAll('tbody tr'));
+    const groups = Array.from(document.querySelectorAll('.group'));
+
+    function applyFilter() {
+      const q = search.value.trim().toLowerCase();
+      const method = methodFilter.value;
+      rows.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        const rowMethod = row.querySelector('.method')?.textContent.trim();
+        const visible = (!q || text.includes(q)) && (!method || rowMethod === method);
+        row.classList.toggle('hidden', !visible);
+      });
+      groups.forEach(group => {
+        const visibleRows = Array.from(group.querySelectorAll('tbody tr')).some(row => !row.classList.contains('hidden'));
+        group.classList.toggle('hidden', !visibleRows);
+      });
+    }
+
+    search.addEventListener('input', applyFilter);
+    methodFilter.addEventListener('change', applyFilter);
+    document.getElementById('printBtn').addEventListener('click', () => window.print());
+  </script>
+</body>
+</html>
