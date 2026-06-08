@@ -5,15 +5,29 @@ import { fetchExamsApi, type ExamSchedule } from '@/api/academic'
 
 const loading = ref(false)
 const exams = ref<ExamSchedule[]>([])
+const page = ref(1)
+const size = ref(10)
+const total = ref(0)
 
-onMounted(async () => {
+onMounted(loadExams)
+
+async function loadExams() {
   loading.value = true
   try {
-    exams.value = await fetchExamsApi()
+    const response = await fetchExamsApi({ page: page.value, size: size.value })
+    exams.value = response.records
+    page.value = response.page
+    size.value = response.size
+    total.value = response.total
   } finally {
     loading.value = false
   }
-})
+}
+
+function handleSizeChange() {
+  page.value = 1
+  void loadExams()
+}
 </script>
 
 <template>
@@ -33,5 +47,15 @@ onMounted(async () => {
         </template>
       </el-table-column>
     </el-table>
+    <el-pagination
+      v-model:current-page="page"
+      v-model:page-size="size"
+      class="table-pagination"
+      layout="total, sizes, prev, pager, next"
+      :page-sizes="[10, 20, 50, 100]"
+      :total="total"
+      @current-change="loadExams"
+      @size-change="handleSizeChange"
+    />
   </section>
 </template>

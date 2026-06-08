@@ -52,7 +52,11 @@ export const useMenuStore = defineStore('menu', {
 // 说明：兜底菜单只影响前端展示，真正的接口权限仍由后端 Spring Security 和权限注解控制。
 function fallbackMenus(roles: string[]): MenuItem[] {
   const normalized = new Set(roles)
-  const common: MenuItem[] = [item('dashboard', '首页', '/dashboard', 'LayoutDashboard')]
+  const common: MenuItem[] = [
+    item('dashboard', '首页', '/dashboard', 'LayoutDashboard'),
+    item('ai-assistant', '智能教务助手', '/ai/assistant', 'Bot'),
+    item('ai-chat', 'AI 聊天', '/ai/chat', 'MessagesSquare'),
+  ]
   const student: MenuItem[] = [
     tree('student', '学生信息', '/student', 'UserRound', [
       item('student-profile', '个人信息', '/student/profile', 'IdCard'),
@@ -78,6 +82,7 @@ function fallbackMenus(roles: string[]): MenuItem[] {
       item('info-class-schedule', '班级课表查询', '/information/class-schedule', 'CalendarRange'),
       item('info-roster', '选课名单查询', '/information/course-roster', 'ListChecks'),
       item('info-academic-progress', '学业情况查询', '/information/academic-progress', 'GraduationCap'),
+      item('ai-academic-profile', '学业画像', '/ai/academic-profile', 'Radar'),
       item('info-teaching-plan', '教学执行计划', '/information/teaching-plan', 'BookOpenText'),
       item('teaching-feedback', '教学信息反馈', '/information/feedback', 'MessageCircle'),
     ]),
@@ -114,6 +119,8 @@ function fallbackMenus(roles: string[]): MenuItem[] {
       item('admin-redis-monitor', 'Redis状态监控', '/admin/redis-monitor', 'DatabaseZap'),
       item('admin-load-test-reports', '压测历史报告', '/admin/load-test-reports', 'ChartColumnBig'),
       item('admin-database-browser', '数据库只读浏览', '/admin/database-browser', 'TableProperties'),
+      item('admin-ai-sql', '自然语言查库', '/admin/ai-sql', 'Sparkles'),
+      item('admin-ai-logs', 'AI调用日志', '/admin/ai-logs', 'ScrollText'),
     ]),
   ]
 

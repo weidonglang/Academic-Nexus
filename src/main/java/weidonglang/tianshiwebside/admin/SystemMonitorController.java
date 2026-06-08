@@ -20,6 +20,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import weidonglang.tianshiwebside.common.api.ApiResponse;
+import weidonglang.tianshiwebside.common.api.PageResponse;
+import weidonglang.tianshiwebside.common.api.Pagination;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -105,9 +107,14 @@ public class SystemMonitorController {
      * 说明：读取 reports 目录下的 load-test JSON 报告，提取请求数、成功数、
      * Redis 状态、吞吐量和延迟指标，供管理端历史报告页面展示。
      */
-    public ApiResponse<List<LoadTestReportRow>> loadTestReports() throws IOException {
+    public ApiResponse<PageResponse<LoadTestReportRow>> loadTestReports(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) throws IOException {
         if (!Files.isDirectory(reportDir)) {
-            return ApiResponse.success(List.of());
+            int safePage = Pagination.safePage(page);
+            int safeSize = Pagination.safeSize(size);
+            return ApiResponse.success(new PageResponse<>(List.of(), safePage, safeSize, 0));
         }
         List<LoadTestReportRow> rows = new ArrayList<>();
         try (var stream = Files.list(reportDir)) {
@@ -120,7 +127,7 @@ public class SystemMonitorController {
                 rows.add(readReportRow(jsonFile));
             }
         }
-        return ApiResponse.success(rows);
+        return ApiResponse.success(Pagination.slice(rows, page, size));
     }
 
     @PostMapping("/redis-monitor/prewarm-stock")

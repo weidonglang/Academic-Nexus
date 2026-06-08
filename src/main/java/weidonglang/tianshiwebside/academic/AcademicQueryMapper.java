@@ -24,8 +24,20 @@ public interface AcademicQueryMapper {
             join course c on c.id = ag.course_id
             where u.username = #{username}
             order by ag.term desc, c.code asc
+            limit #{size} offset #{offset}
             """)
-    List<GradeRecordRow> findGradesByUsername(@Param("username") String username);
+    List<GradeRecordRow> findGradesByUsername(@Param("username") String username,
+                                               @Param("size") int size,
+                                               @Param("offset") int offset);
+
+    @Select("""
+            select count(*)
+            from academic_grade ag
+            join student s on s.id = ag.student_id
+            join sys_user u on u.id = s.user_id
+            where u.username = #{username}
+            """)
+    long countGradesByUsername(@Param("username") String username);
 
     @Select("""
             select
@@ -45,8 +57,22 @@ public interface AcademicQueryMapper {
             join sys_user u on u.id = s.user_id
             where u.username = #{username}
             order by es.exam_time asc
+            limit #{size} offset #{offset}
             """)
-    List<ExamScheduleRow> findExamsByUsername(@Param("username") String username);
+    List<ExamScheduleRow> findExamsByUsername(@Param("username") String username,
+                                              @Param("size") int size,
+                                              @Param("offset") int offset);
+
+    @Select("""
+            select count(*)
+            from exam_schedule es
+            join course_offering co on co.id = es.course_offering_id
+            join course_selection cs on cs.offering_id = co.id
+            join student s on s.id = cs.student_id
+            join sys_user u on u.id = s.user_id
+            where u.username = #{username}
+            """)
+    long countExamsByUsername(@Param("username") String username);
 
     @Select("""
             <script>

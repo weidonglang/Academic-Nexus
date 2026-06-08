@@ -1,5 +1,6 @@
 package weidonglang.tianshiwebside.evaluation;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -8,11 +9,13 @@ import jakarta.validation.constraints.Size;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import weidonglang.tianshiwebside.common.api.ApiResponse;
+import weidonglang.tianshiwebside.common.cache.QueryCacheService;
 import weidonglang.tianshiwebside.common.error.BusinessException;
 import weidonglang.tianshiwebside.common.error.ErrorCode;
 import weidonglang.tianshiwebside.evaluation.mapper.EvaluationTaskRow;
 import weidonglang.tianshiwebside.evaluation.mapper.TeachingEvaluationMapper;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 
@@ -26,9 +29,11 @@ import java.util.List;
 @RequestMapping("/api/evaluations")
 public class TeachingEvaluationController {
     private final TeachingEvaluationMapper evaluationMapper;
+    private final QueryCacheService queryCacheService;
 
-    public TeachingEvaluationController(TeachingEvaluationMapper evaluationMapper) {
+    public TeachingEvaluationController(TeachingEvaluationMapper evaluationMapper, QueryCacheService queryCacheService) {
         this.evaluationMapper = evaluationMapper;
+        this.queryCacheService = queryCacheService;
     }
 
     /**
@@ -38,7 +43,14 @@ public class TeachingEvaluationController {
      */
     @GetMapping("/tasks")
     public ApiResponse<List<EvaluationTaskRow>> tasks(Authentication authentication) {
-        return ApiResponse.success(evaluationMapper.findTasksByUsername(authenticatedUsername(authentication)));
+        String username = authenticatedUsername(authentication);
+        return ApiResponse.success(queryCacheService.get(
+                "query:evaluations:tasks:" + username,
+                Duration.ofSeconds(20),
+                new TypeReference<List<EvaluationTaskRow>>() {
+                },
+                () -> evaluationMapper.findTasksByUsername(username)
+        ));
     }
 
     /**
@@ -73,6 +85,9 @@ public class TeachingEvaluationController {
                 request.comment() == null ? null : request.comment().trim(),
                 Instant.now()
         ));
+        queryCacheService.evictByPrefix("query:evaluations:");
+        queryCacheService.evictByPrefix("query:teacher:evaluations:");
+        queryCacheService.evictByPrefix("query:dashboard:" + username);
         return ApiResponse.success();
     }
 

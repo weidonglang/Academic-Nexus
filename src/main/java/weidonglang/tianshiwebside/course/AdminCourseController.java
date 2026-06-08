@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import com.fasterxml.jackson.core.type.TypeReference;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import weidonglang.tianshiwebside.audit.AuditLogService;
 import weidonglang.tianshiwebside.common.api.ApiResponse;
+import weidonglang.tianshiwebside.common.cache.QueryCacheService;
 import weidonglang.tianshiwebside.common.error.BusinessException;
 import weidonglang.tianshiwebside.common.error.ErrorCode;
 import weidonglang.tianshiwebside.course.mapper.AdminCourseMapper;
@@ -19,6 +21,7 @@ import weidonglang.tianshiwebside.course.mapper.AdminCourseOfferingRow;
 import weidonglang.tianshiwebside.course.mapper.AdminCourseRow;
 
 import java.time.Instant;
+import java.time.Duration;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
@@ -28,11 +31,18 @@ public class AdminCourseController {
     private final AdminCourseMapper adminCourseMapper;
     private final StringRedisTemplate redisTemplate;
     private final AuditLogService auditLogService;
+    private final QueryCacheService queryCacheService;
 
-    public AdminCourseController(AdminCourseMapper adminCourseMapper, StringRedisTemplate redisTemplate, AuditLogService auditLogService) {
+    public AdminCourseController(
+            AdminCourseMapper adminCourseMapper,
+            StringRedisTemplate redisTemplate,
+            AuditLogService auditLogService,
+            QueryCacheService queryCacheService
+    ) {
         this.adminCourseMapper = adminCourseMapper;
         this.redisTemplate = redisTemplate;
         this.auditLogService = auditLogService;
+        this.queryCacheService = queryCacheService;
     }
 
     @GetMapping("/courses")
@@ -42,7 +52,13 @@ public class AdminCourseController {
      * 课程是教学班的基础数据，一个课程可以在不同学期拆成多个教学班。
      */
     public ApiResponse<List<AdminCourseRow>> courses() {
-        return ApiResponse.success(adminCourseMapper.findCourses());
+        return ApiResponse.success(queryCacheService.get(
+                "query:admin:courses:all",
+                Duration.ofSeconds(30),
+                new TypeReference<List<AdminCourseRow>>() {
+                },
+                adminCourseMapper::findCourses
+        ));
     }
 
     @GetMapping(value = "/courses/export-csv", produces = "text/csv;charset=UTF-8")
@@ -74,6 +90,7 @@ public class AdminCourseController {
             adminCourseMapper.insertCourse(command);
             auditLogService.record(authentication.getName(), "IMPORT_COURSE", "COURSE", command.getId(), parts[0].trim(), null);
         }
+        evictCourseCaches();
         return ApiResponse.success();
     }
 
@@ -94,6 +111,7 @@ public class AdminCourseController {
                 request.category().trim()
         );
         adminCourseMapper.insertCourse(command);
+        evictCourseCaches();
         return ApiResponse.success(adminCourseMapper.findCourseById(command.getId()));
     }
 
@@ -123,6 +141,7 @@ public class AdminCourseController {
         );
         command.setId(courseId);
         adminCourseMapper.updateCourse(command);
+        evictCourseCaches();
         auditLogService.record(authentication.getName(), "UPDATE_COURSE", "COURSE", courseId, code, null);
         return ApiResponse.success(adminCourseMapper.findCourseById(courseId));
     }
@@ -142,6 +161,7 @@ public class AdminCourseController {
             throw new BusinessException(ErrorCode.CONFLICT, "该课程已有教学班，不能直接删除");
         }
         adminCourseMapper.deleteCourse(courseId);
+        evictCourseCaches();
         auditLogService.record(authentication.getName(), "DELETE_COURSE", "COURSE", courseId, course.code(), null);
         return ApiResponse.success();
     }
@@ -154,7 +174,13 @@ public class AdminCourseController {
      */
     public ApiResponse<List<AdminCourseOfferingRow>> offerings(@RequestParam(required = false) String term) {
         String normalizedTerm = term == null || term.isBlank() ? null : term.trim();
-        return ApiResponse.success(adminCourseMapper.findOfferings(normalizedTerm));
+        return ApiResponse.success(queryCacheService.get(
+                "query:admin:course-offerings:" + (normalizedTerm == null ? "all" : normalizedTerm),
+                Duration.ofSeconds(20),
+                new TypeReference<List<AdminCourseOfferingRow>>() {
+                },
+                () -> adminCourseMapper.findOfferings(normalizedTerm)
+        ));
     }
 
     @PostMapping("/course-offerings")
@@ -168,6 +194,7 @@ public class AdminCourseController {
         validateOfferingRequest(request, 0);
         AdminCourseMapper.CourseOfferingCommand command = toCommand(null, request);
         adminCourseMapper.insertOffering(command);
+        evictCourseCaches();
         auditLogService.record(authentication.getName(), "CREATE_COURSE_OFFERING", "COURSE_OFFERING", command.getId(), request.term(), null);
         return ApiResponse.success(adminCourseMapper.findOfferingById(command.getId()));
     }
@@ -195,6 +222,7 @@ public class AdminCourseController {
             throw new BusinessException(ErrorCode.NOT_FOUND, "教学班不存在");
         }
         evictOfferingStock(offeringId);
+        evictCourseCaches();
         auditLogService.record(authentication.getName(), "UPDATE_COURSE_OFFERING", "COURSE_OFFERING", offeringId,
                 "capacity=" + request.capacity() + ", classroom=" + request.classroom(), null);
         return ApiResponse.success(adminCourseMapper.findOfferingById(offeringId));
@@ -219,6 +247,7 @@ public class AdminCourseController {
             throw new BusinessException(ErrorCode.CONFLICT, "教学班已被其他业务引用，不能删除");
         }
         evictOfferingStock(offeringId);
+        evictCourseCaches();
         return ApiResponse.success();
     }
 
@@ -256,6 +285,16 @@ public class AdminCourseController {
         } catch (RuntimeException ignored) {
             // Redis is optional in local development; database state remains authoritative.
         }
+    }
+
+    private void evictCourseCaches() {
+        queryCacheService.evictByPrefix("query:admin:courses:");
+        queryCacheService.evictByPrefix("query:admin:course-offerings:");
+        queryCacheService.evictByPrefix("query:course-selection:");
+        queryCacheService.evictByPrefix("query:teacher:");
+        queryCacheService.evictByPrefix("query:schedule:");
+        queryCacheService.evictByPrefix("query:information:");
+        queryCacheService.evictByPrefix("query:dashboard:");
     }
 
     public record CourseCreateRequest(

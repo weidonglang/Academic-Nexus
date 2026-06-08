@@ -23,6 +23,14 @@ const grades = ref<GradeRecord[]>([])
 const selectedCourses = ref<CourseSelection[]>([])
 const teachingPlan = ref<TeachingPlan[]>([])
 const statusChanges = ref<StatusChangeApplication[]>([])
+const gradePage = ref(1)
+const gradeSize = ref(10)
+const selectionPage = ref(1)
+const selectionSize = ref(10)
+const planPage = ref(1)
+const planSize = ref(10)
+const statusPage = ref(1)
+const statusSize = ref(10)
 
 const form = reactive<UpdateStudentProfileRequest>({
   phone: '',
@@ -92,6 +100,10 @@ const gradeSummary = computed(() => {
     averagePoint: credit ? (weightedPoint / credit).toFixed(2) : '-',
   }
 })
+const pagedGrades = computed(() => grades.value.slice((gradePage.value - 1) * gradeSize.value, gradePage.value * gradeSize.value))
+const pagedSelectedCourses = computed(() => selectedCourses.value.slice((selectionPage.value - 1) * selectionSize.value, selectionPage.value * selectionSize.value))
+const pagedTeachingPlan = computed(() => teachingPlan.value.slice((planPage.value - 1) * planSize.value, planPage.value * planSize.value))
+const pagedStatusChanges = computed(() => statusChanges.value.slice((statusPage.value - 1) * statusSize.value, statusPage.value * statusSize.value))
 
 onMounted(loadProfile)
 
@@ -100,17 +112,17 @@ async function loadProfile() {
   try {
     const [profileResponse, gradeResponse, selectedResponse, statusResponse] = await Promise.all([
       studentProfileApi(),
-      fetchGradesApi(),
-      selectedCoursesApi(),
-      statusChangeApplicationsApi(),
+      fetchGradesApi({ page: 1, size: 100 }),
+      selectedCoursesApi({ page: 1, size: 100 }),
+      statusChangeApplicationsApi({ page: 1, size: 100 }),
     ])
     profile.value = profileResponse.data
     form.phone = profileResponse.data.phone ?? ''
     form.email = profileResponse.data.email ?? ''
     form.address = profileResponse.data.address ?? ''
-    grades.value = gradeResponse
+    grades.value = gradeResponse.records
     selectedCourses.value = selectedResponse.data.records
-    statusChanges.value = statusResponse.data
+    statusChanges.value = statusResponse.data.records
     teachingPlan.value = (await teachingPlanApi({
       major: profileResponse.data.major,
       grade: profileResponse.data.grade,
@@ -139,6 +151,22 @@ function formatDateTime(value?: string) {
 function maskIdByStudentNo(studentNo: string) {
   if (!studentNo) return ''
   return `120102${studentNo.slice(-6).padStart(8, '0')}****`
+}
+
+function handleGradeSizeChange() {
+  gradePage.value = 1
+}
+
+function handleSelectionSizeChange() {
+  selectionPage.value = 1
+}
+
+function handlePlanSizeChange() {
+  planPage.value = 1
+}
+
+function handleStatusSizeChange() {
+  statusPage.value = 1
 }
 </script>
 
@@ -271,7 +299,7 @@ function maskIdByStudentNo(studentNo: string) {
           <span>已获学分：{{ gradeSummary.credit }}</span>
           <span>平均绩点：{{ gradeSummary.averagePoint }}</span>
         </section>
-        <el-table :data="grades" empty-text="暂无成绩">
+        <el-table :data="pagedGrades" empty-text="暂无成绩">
           <el-table-column prop="term" label="学期" width="140" />
           <el-table-column prop="courseCode" label="课程号" width="110" />
           <el-table-column prop="courseName" label="课程名称" min-width="160" />
@@ -281,10 +309,19 @@ function maskIdByStudentNo(studentNo: string) {
           <el-table-column prop="gradePoint" label="绩点" width="80" />
           <el-table-column prop="examType" label="考试类型" width="120" />
         </el-table>
+        <el-pagination
+          v-model:current-page="gradePage"
+          v-model:page-size="gradeSize"
+          class="table-pagination"
+          layout="total, sizes, prev, pager, next"
+          :page-sizes="[10, 20, 50, 100]"
+          :total="grades.length"
+          @size-change="handleGradeSizeChange"
+        />
       </el-tab-pane>
 
       <el-tab-pane label="选课信息" name="selection">
-        <el-table :data="selectedCourses" empty-text="暂无选课">
+        <el-table :data="pagedSelectedCourses" empty-text="暂无选课">
           <el-table-column prop="courseCode" label="课程号" width="110" />
           <el-table-column prop="courseName" label="课程名称" min-width="160" />
           <el-table-column prop="credit" label="学分" width="80" />
@@ -295,10 +332,19 @@ function maskIdByStudentNo(studentNo: string) {
             <template #default="{ row }">{{ formatDateTime(row.selectedAt) }}</template>
           </el-table-column>
         </el-table>
+        <el-pagination
+          v-model:current-page="selectionPage"
+          v-model:page-size="selectionSize"
+          class="table-pagination"
+          layout="total, sizes, prev, pager, next"
+          :page-sizes="[10, 20, 50, 100]"
+          :total="selectedCourses.length"
+          @size-change="handleSelectionSizeChange"
+        />
       </el-tab-pane>
 
       <el-tab-pane label="培养方案" name="plan">
-        <el-table :data="teachingPlan" empty-text="暂无培养方案">
+        <el-table :data="pagedTeachingPlan" empty-text="暂无培养方案">
           <el-table-column prop="term" label="学期" width="140" />
           <el-table-column prop="courseCode" label="课程号" width="110" />
           <el-table-column prop="courseName" label="课程名称" min-width="160" />
@@ -306,10 +352,19 @@ function maskIdByStudentNo(studentNo: string) {
           <el-table-column prop="courseType" label="课程类别" width="130" />
           <el-table-column prop="assessmentType" label="考核方式" width="120" />
         </el-table>
+        <el-pagination
+          v-model:current-page="planPage"
+          v-model:page-size="planSize"
+          class="table-pagination"
+          layout="total, sizes, prev, pager, next"
+          :page-sizes="[10, 20, 50, 100]"
+          :total="teachingPlan.length"
+          @size-change="handlePlanSizeChange"
+        />
       </el-tab-pane>
 
       <el-tab-pane label="学籍异动" name="status">
-        <el-table :data="statusChanges" empty-text="暂无学籍异动">
+        <el-table :data="pagedStatusChanges" empty-text="暂无学籍异动">
           <el-table-column label="类型" width="120">
             <template #default="{ row }">{{ typeText[row.type as StatusChangeType] }}</template>
           </el-table-column>
@@ -322,6 +377,15 @@ function maskIdByStudentNo(studentNo: string) {
           </el-table-column>
           <el-table-column prop="reviewComment" label="审核意见" min-width="160" />
         </el-table>
+        <el-pagination
+          v-model:current-page="statusPage"
+          v-model:page-size="statusSize"
+          class="table-pagination"
+          layout="total, sizes, prev, pager, next"
+          :page-sizes="[10, 20, 50, 100]"
+          :total="statusChanges.length"
+          @size-change="handleStatusSizeChange"
+        />
       </el-tab-pane>
 
       <el-tab-pane label="学习简历" name="resume">

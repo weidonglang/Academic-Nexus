@@ -18,6 +18,10 @@ const pattern = ref('selection:*')
 const limit = ref(200)
 const data = ref<RedisMonitorResponse | null>(null)
 const apiError = ref('')
+const stockPage = ref(1)
+const stockSize = ref(10)
+const keyPage = ref(1)
+const keySize = ref(10)
 
 // 魏语石负责的库存 key：selection:offering:{offeringId}:remaining。
 // 前端用这个正则把 Redis key 列表中的教学班库存缓存筛选出来。
@@ -26,6 +30,8 @@ const requestKeys = computed(() => (data.value?.keys ?? []).filter((item) => ite
 const lockKeys = computed(() => (data.value?.keys ?? []).filter((item) => item.key.startsWith('selection:grab:lock:')))
 const sampleRequest = computed(() => requestKeys.value[0])
 const sampleLock = computed(() => lockKeys.value[0])
+const pagedStockChecks = computed(() => (data.value?.stockChecks ?? []).slice((stockPage.value - 1) * stockSize.value, stockPage.value * stockSize.value))
+const pagedKeys = computed(() => (data.value?.keys ?? []).slice((keyPage.value - 1) * keySize.value, keyPage.value * keySize.value))
 
 const ttlSummary = computed(() => {
   const keys = data.value?.keys ?? []
@@ -40,6 +46,8 @@ onMounted(loadData)
 async function loadData() {
   loading.value = true
   apiError.value = ''
+  stockPage.value = 1
+  keyPage.value = 1
   try {
     data.value = (await redisMonitorApi({ pattern: pattern.value.trim() || 'selection:*', limit: limit.value })).data
     if (!data.value.reachable) {
@@ -51,6 +59,14 @@ async function loadData() {
   } finally {
     loading.value = false
   }
+}
+
+function handleStockSizeChange() {
+  stockPage.value = 1
+}
+
+function handleKeySizeChange() {
+  keyPage.value = 1
 }
 
 async function prewarmStock() {
@@ -158,7 +174,7 @@ function lockOwner(row?: RedisKeyRow) {
         <h2>Redis 库存扣减检测</h2>
       </div>
       <p>负责抢课库存缓存、并发扣减、防超卖，以及数据库写入失败后的 Redis 库存回滚。没有 Redis Key 时也会显示数据库库存状态，点击“预热库存”后即可生成真实 Redis 库存 Key。</p>
-      <el-table :data="data?.stockChecks ?? []" size="small" empty-text="暂无教学班库存数据">
+      <el-table :data="pagedStockChecks" size="small" empty-text="暂无教学班库存数据">
         <el-table-column prop="offeringId" label="教学班 ID" width="96" />
         <el-table-column prop="key" label="Redis 库存 Key" min-width="260" show-overflow-tooltip />
         <el-table-column label="Redis 剩余" width="110">
@@ -177,6 +193,15 @@ function lockOwner(row?: RedisKeyRow) {
           </template>
         </el-table-column>
       </el-table>
+      <el-pagination
+        v-model:current-page="stockPage"
+        v-model:page-size="stockSize"
+        class="table-pagination compact-pagination"
+        layout="total, sizes, prev, pager, next"
+        :page-sizes="[10, 20, 50, 100]"
+        :total="data?.stockChecks.length ?? 0"
+        @size-change="handleStockSizeChange"
+      />
     </article>
 
     <article class="work-panel owner-card">
@@ -244,7 +269,7 @@ function lockOwner(row?: RedisKeyRow) {
       <h2>Redis 缓存键明细</h2>
       <span>{{ data?.keys.length ?? 0 }} 条</span>
     </div>
-    <el-table :data="data?.keys ?? []" empty-text="暂无 Redis 缓存键">
+    <el-table :data="pagedKeys" empty-text="暂无 Redis 缓存键">
       <el-table-column prop="key" label="Key" min-width="300" show-overflow-tooltip />
       <el-table-column label="类型" width="120">
         <template #default="{ row }">
@@ -259,6 +284,15 @@ function lockOwner(row?: RedisKeyRow) {
       </el-table-column>
       <el-table-column prop="value" label="Value" min-width="180" show-overflow-tooltip />
     </el-table>
+    <el-pagination
+      v-model:current-page="keyPage"
+      v-model:page-size="keySize"
+      class="table-pagination"
+      layout="total, sizes, prev, pager, next"
+      :page-sizes="[10, 20, 50, 100]"
+      :total="data?.keys.length ?? 0"
+      @size-change="handleKeySizeChange"
+    />
   </section>
 </template>
 

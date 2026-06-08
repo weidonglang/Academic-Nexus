@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import PageHeader from '@/components/PageHeader.vue'
 import {
@@ -20,6 +20,9 @@ const term = ref(DEFAULT_TERM)
 const rows = ref<AdminExam[]>([])
 const offerings = ref<TeacherOffering[]>([])
 const editing = ref<AdminExam | null>(null)
+const page = ref(1)
+const size = ref(10)
+const pagedRows = computed(() => rows.value.slice((page.value - 1) * size.value, page.value * size.value))
 
 const form = reactive<AdminExamPayload>({
   offeringId: 0,
@@ -45,6 +48,15 @@ async function loadData() {
   } finally {
     loading.value = false
   }
+}
+
+function search() {
+  page.value = 1
+  void loadData()
+}
+
+function handleSizeChange() {
+  page.value = 1
 }
 
 function openCreate() {
@@ -127,12 +139,12 @@ function resolveErrorMessage(error: unknown, fallback: string) {
   <section class="admin-toolbar">
     <div class="admin-actions">
       <el-input v-model="term" class="term-input" placeholder="学期" />
-      <el-button @click="loadData">查询</el-button>
+      <el-button @click="search">查询</el-button>
       <el-button type="primary" @click="openCreate">新增考试</el-button>
     </div>
   </section>
   <section v-loading="loading" class="work-panel">
-    <el-table :data="rows" empty-text="暂无考试安排">
+    <el-table :data="pagedRows" empty-text="暂无考试安排">
       <el-table-column prop="courseName" label="课程" min-width="150" />
       <el-table-column prop="examTime" label="考试时间" width="180" />
       <el-table-column prop="room" label="考场" width="130" />
@@ -147,6 +159,15 @@ function resolveErrorMessage(error: unknown, fallback: string) {
         </template>
       </el-table-column>
     </el-table>
+    <el-pagination
+      v-model:current-page="page"
+      v-model:page-size="size"
+      class="table-pagination"
+      layout="total, sizes, prev, pager, next"
+      :page-sizes="[10, 20, 50, 100]"
+      :total="rows.length"
+      @size-change="handleSizeChange"
+    />
   </section>
 
   <el-dialog v-model="dialogVisible" :title="editing ? '编辑考试' : '新增考试'" width="560px">

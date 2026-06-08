@@ -1,28 +1,40 @@
 package weidonglang.tianshiwebside.evaluation;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import weidonglang.tianshiwebside.common.api.ApiResponse;
+import weidonglang.tianshiwebside.common.cache.QueryCacheService;
 import weidonglang.tianshiwebside.evaluation.mapper.EvaluationRecordRow;
 import weidonglang.tianshiwebside.evaluation.mapper.EvaluationSummaryRow;
 import weidonglang.tianshiwebside.evaluation.mapper.TeachingEvaluationMapper;
 
+import java.time.Duration;
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/admin/evaluations")
 public class AdminTeachingEvaluationController {
     private final TeachingEvaluationMapper evaluationMapper;
+    private final QueryCacheService queryCacheService;
 
-    public AdminTeachingEvaluationController(TeachingEvaluationMapper evaluationMapper) {
+    public AdminTeachingEvaluationController(TeachingEvaluationMapper evaluationMapper, QueryCacheService queryCacheService) {
         this.evaluationMapper = evaluationMapper;
+        this.queryCacheService = queryCacheService;
     }
 
     @GetMapping("/summaries")
     public ApiResponse<List<EvaluationSummaryRow>> summaries(@RequestParam(required = false) String term) {
-        return ApiResponse.success(evaluationMapper.findSummaries(normalizeTerm(term)));
+        String normalizedTerm = normalizeTerm(term);
+        return ApiResponse.success(queryCacheService.get(
+                "query:evaluations:admin:summaries:" + (normalizedTerm == null ? "all" : normalizedTerm),
+                Duration.ofSeconds(20),
+                new TypeReference<List<EvaluationSummaryRow>>() {
+                },
+                () -> evaluationMapper.findSummaries(normalizedTerm)
+        ));
     }
 
     @GetMapping("/records")
@@ -30,7 +42,14 @@ public class AdminTeachingEvaluationController {
             @RequestParam(required = false) String term,
             @RequestParam(required = false) Long offeringId
     ) {
-        return ApiResponse.success(evaluationMapper.findRecords(normalizeTerm(term), offeringId));
+        String normalizedTerm = normalizeTerm(term);
+        return ApiResponse.success(queryCacheService.get(
+                "query:evaluations:admin:records:" + (normalizedTerm == null ? "all" : normalizedTerm) + ":" + (offeringId == null ? "all" : offeringId),
+                Duration.ofSeconds(20),
+                new TypeReference<List<EvaluationRecordRow>>() {
+                },
+                () -> evaluationMapper.findRecords(normalizedTerm, offeringId)
+        ));
     }
 
     @GetMapping(value = "/export-csv", produces = "text/csv;charset=UTF-8")

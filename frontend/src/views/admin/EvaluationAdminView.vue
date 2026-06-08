@@ -15,6 +15,12 @@ const term = ref(DEFAULT_TERM)
 const selectedOfferingId = ref<number | undefined>()
 const summaries = ref<EvaluationSummary[]>([])
 const records = ref<EvaluationRecord[]>([])
+const summaryPage = ref(1)
+const summarySize = ref(10)
+const recordPage = ref(1)
+const recordSize = ref(10)
+const pagedSummaries = computed(() => summaries.value.slice((summaryPage.value - 1) * summarySize.value, summaryPage.value * summarySize.value))
+const pagedRecords = computed(() => records.value.slice((recordPage.value - 1) * recordSize.value, recordPage.value * recordSize.value))
 
 const submittedTotal = computed(() => summaries.value.reduce((total, item) => total + item.submittedCount, 0))
 const selectedTotal = computed(() => summaries.value.reduce((total, item) => total + item.selectedCount, 0))
@@ -43,12 +49,28 @@ async function loadData() {
 
 async function selectSummary(row: EvaluationSummary) {
   selectedOfferingId.value = row.offeringId
+  recordPage.value = 1
   await loadData()
 }
 
 async function clearOfferingFilter() {
   selectedOfferingId.value = undefined
+  recordPage.value = 1
   await loadData()
+}
+
+function search() {
+  summaryPage.value = 1
+  recordPage.value = 1
+  void loadData()
+}
+
+function handleSummarySizeChange() {
+  summaryPage.value = 1
+}
+
+function handleRecordSizeChange() {
+  recordPage.value = 1
 }
 
 function formatScore(value?: number) {
@@ -84,7 +106,7 @@ function formatDateTime(value?: string) {
     <div class="admin-actions">
       <el-input v-model="term" class="term-input" placeholder="学期" clearable />
       <el-button @click="clearOfferingFilter">全部明细</el-button>
-      <el-button type="primary" @click="loadData">查询</el-button>
+      <el-button type="primary" @click="search">查询</el-button>
     </div>
   </section>
 
@@ -93,7 +115,7 @@ function formatDateTime(value?: string) {
       <h2>课程评价概览</h2>
       <span>点击课程行查看该课程明细</span>
     </div>
-    <el-table :data="summaries" empty-text="暂无评价统计" @row-click="selectSummary">
+    <el-table :data="pagedSummaries" empty-text="暂无评价统计" @row-click="selectSummary">
       <el-table-column prop="term" label="学期" width="130" />
       <el-table-column prop="courseCode" label="课程号" width="110" />
       <el-table-column prop="courseName" label="课程名称" min-width="150" />
@@ -114,6 +136,15 @@ function formatDateTime(value?: string) {
         <template #default="{ row }">{{ formatScore(row.averageOverallScore) }}</template>
       </el-table-column>
     </el-table>
+    <el-pagination
+      v-model:current-page="summaryPage"
+      v-model:page-size="summarySize"
+      class="table-pagination"
+      layout="total, sizes, prev, pager, next"
+      :page-sizes="[10, 20, 50, 100]"
+      :total="summaries.length"
+      @size-change="handleSummarySizeChange"
+    />
   </section>
 
   <section v-loading="loading" class="work-panel">
@@ -121,7 +152,7 @@ function formatDateTime(value?: string) {
       <h2>评价明细</h2>
       <span>{{ records.length }} 条</span>
     </div>
-    <el-table :data="records" empty-text="暂无评价明细">
+    <el-table :data="pagedRecords" empty-text="暂无评价明细">
       <el-table-column prop="studentNo" label="学号" width="110" />
       <el-table-column prop="studentName" label="姓名" width="100" />
       <el-table-column prop="courseName" label="课程" min-width="150" />
@@ -132,5 +163,14 @@ function formatDateTime(value?: string) {
         <template #default="{ row }">{{ formatDateTime(row.submittedAt) }}</template>
       </el-table-column>
     </el-table>
+    <el-pagination
+      v-model:current-page="recordPage"
+      v-model:page-size="recordSize"
+      class="table-pagination"
+      layout="total, sizes, prev, pager, next"
+      :page-sizes="[10, 20, 50, 100]"
+      :total="records.length"
+      @size-change="handleRecordSizeChange"
+    />
   </section>
 </template>

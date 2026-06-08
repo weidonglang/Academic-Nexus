@@ -1,5 +1,6 @@
 package weidonglang.tianshiwebside.student;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -12,11 +13,15 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import weidonglang.tianshiwebside.common.api.ApiResponse;
+import weidonglang.tianshiwebside.common.api.PageResponse;
+import weidonglang.tianshiwebside.common.api.Pagination;
+import weidonglang.tianshiwebside.common.cache.QueryCacheService;
 import weidonglang.tianshiwebside.common.error.BusinessException;
 import weidonglang.tianshiwebside.common.error.ErrorCode;
 import weidonglang.tianshiwebside.student.mapper.RegistrationApplicationMapper;
 import weidonglang.tianshiwebside.student.mapper.StudentMapper;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 
@@ -25,18 +30,41 @@ import java.util.List;
 public class RegistrationApplicationController {
     private final StudentMapper studentMapper;
     private final RegistrationApplicationMapper applicationMapper;
+    private final QueryCacheService queryCacheService;
 
-    public RegistrationApplicationController(StudentMapper studentMapper, RegistrationApplicationMapper applicationMapper) {
+    public RegistrationApplicationController(
+            StudentMapper studentMapper,
+            RegistrationApplicationMapper applicationMapper,
+            QueryCacheService queryCacheService
+    ) {
         this.studentMapper = studentMapper;
         this.applicationMapper = applicationMapper;
+        this.queryCacheService = queryCacheService;
     }
 
     @GetMapping
-    public ApiResponse<List<RegistrationApplicationMapper.RegistrationApplicationRow>> list(
+    public ApiResponse<PageResponse<RegistrationApplicationMapper.RegistrationApplicationRow>> list(
             Authentication authentication,
-            @RequestParam(required = false) RegistrationApplicationType type
+            @RequestParam(required = false) RegistrationApplicationType type,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size
     ) {
-        return ApiResponse.success(applicationMapper.findMine(authenticatedUsername(authentication), type));
+        String username = authenticatedUsername(authentication);
+        int safePage = Pagination.safePage(page);
+        int safeSize = Pagination.safeSize(size);
+        return ApiResponse.success(queryCacheService.get(
+                "query:student:registration-applications:" + username + ":" + (type == null ? "all" : type.name())
+                        + ":" + safePage + ":" + safeSize,
+                Duration.ofSeconds(20),
+                new TypeReference<PageResponse<RegistrationApplicationMapper.RegistrationApplicationRow>>() {
+                },
+                () -> new PageResponse<>(
+                        applicationMapper.findMine(username, type, safeSize, Pagination.offset(safePage, safeSize)),
+                        safePage,
+                        safeSize,
+                        applicationMapper.countMine(username, type)
+                )
+        ));
     }
 
     @PostMapping
@@ -58,8 +86,10 @@ public class RegistrationApplicationController {
                         request.reason().trim(),
                         ApplicationStatus.SUBMITTED,
                         Instant.now()
-                );
+        );
         applicationMapper.insert(command);
+        queryCacheService.evictByPrefix("query:student:registration-applications:" + authentication.getName());
+        queryCacheService.evictByPrefix("query:admin:registration-applications:");
 
         return ApiResponse.success(new RegistrationApplicationMapper.RegistrationApplicationRow(
                 command.getId(),

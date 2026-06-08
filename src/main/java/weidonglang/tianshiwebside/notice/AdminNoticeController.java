@@ -7,6 +7,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import weidonglang.tianshiwebside.audit.AuditLogService;
 import weidonglang.tianshiwebside.common.api.ApiResponse;
+import weidonglang.tianshiwebside.common.cache.QueryCacheService;
 import weidonglang.tianshiwebside.notice.mapper.NoticeMapper;
 
 import java.security.Principal;
@@ -20,11 +21,18 @@ public class AdminNoticeController {
     private final NoticeMapper noticeMapper;
     private final NotificationService notificationService;
     private final AuditLogService auditLogService;
+    private final QueryCacheService queryCacheService;
 
-    public AdminNoticeController(NoticeMapper noticeMapper, NotificationService notificationService, AuditLogService auditLogService) {
+    public AdminNoticeController(
+            NoticeMapper noticeMapper,
+            NotificationService notificationService,
+            AuditLogService auditLogService,
+            QueryCacheService queryCacheService
+    ) {
         this.noticeMapper = noticeMapper;
         this.notificationService = notificationService;
         this.auditLogService = auditLogService;
+        this.queryCacheService = queryCacheService;
     }
 
     @PostMapping
@@ -43,6 +51,9 @@ public class AdminNoticeController {
                 : noticeMapper.findUserIdsByRoleCode(request.roleCode().trim());
         notificationService.notifyUsers(userIds, request.title(), request.content(), request.category(), "NOTICE", command.getId());
         auditLogService.record(principal.getName(), "PUBLISH_NOTICE", "NOTICE", command.getId(), request.title(), null);
+        queryCacheService.evictByPrefix("query:notices:");
+        queryCacheService.evictByPrefix("query:notifications:");
+        queryCacheService.evictByPrefix("query:dashboard:");
         return ApiResponse.success(noticeMapper.findNotices(null, 1, 0).get(0));
     }
 

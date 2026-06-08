@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import weidonglang.tianshiwebside.audit.AuditLogService;
 import weidonglang.tianshiwebside.common.api.ApiResponse;
+import weidonglang.tianshiwebside.common.cache.QueryCacheService;
 import weidonglang.tianshiwebside.common.error.BusinessException;
 import weidonglang.tianshiwebside.common.error.ErrorCode;
 import weidonglang.tianshiwebside.user.mapper.AdminRoleRow;
@@ -26,11 +27,18 @@ public class AdminUserController {
     private final AdminUserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
     private final AuditLogService auditLogService;
+    private final QueryCacheService queryCacheService;
 
-    public AdminUserController(AdminUserMapper userMapper, PasswordEncoder passwordEncoder, AuditLogService auditLogService) {
+    public AdminUserController(
+            AdminUserMapper userMapper,
+            PasswordEncoder passwordEncoder,
+            AuditLogService auditLogService,
+            QueryCacheService queryCacheService
+    ) {
         this.userMapper = userMapper;
         this.passwordEncoder = passwordEncoder;
         this.auditLogService = auditLogService;
+        this.queryCacheService = queryCacheService;
     }
 
     @GetMapping
@@ -82,6 +90,7 @@ public class AdminUserController {
         );
         userMapper.insertUser(command);
         updateUserRoles(command.getId(), request.roleCodes());
+        evictUserRelatedCaches();
         return ApiResponse.success(toResponse(userMapper.findUserById(command.getId())));
     }
 
@@ -101,6 +110,7 @@ public class AdminUserController {
             throw new BusinessException(ErrorCode.CONFLICT, "不能禁用或锁定当前登录账号");
         }
         userMapper.updateUserProfile(userId, request.displayName().trim(), request.status());
+        evictUserRelatedCaches();
         return ApiResponse.success(toResponse(userMapper.findUserById(userId)));
     }
 
@@ -124,6 +134,7 @@ public class AdminUserController {
         }
         updateUserRoles(userId, request.roleCodes());
         auditLogService.record(authentication.getName(), "UPDATE_USER_ROLES", "USER", userId, String.join(",", request.roleCodes()), null);
+        evictUserRelatedCaches();
         return ApiResponse.success(toResponse(userMapper.findUserById(userId)));
     }
 
@@ -161,7 +172,14 @@ public class AdminUserController {
         userMapper.deleteUserRoles(userId);
         userMapper.deleteUser(userId);
         auditLogService.record(authentication.getName(), "DELETE_USER", "USER", userId, user.username(), null);
+        evictUserRelatedCaches();
         return ApiResponse.success();
+    }
+
+    private void evictUserRelatedCaches() {
+        queryCacheService.evictByPrefix("query:menus:");
+        queryCacheService.evictByPrefix("query:dashboard:");
+        queryCacheService.evictByPrefix("query:teacher:");
     }
 
     private AdminUserRow requireUser(Long userId) {

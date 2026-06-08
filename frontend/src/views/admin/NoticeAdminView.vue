@@ -10,6 +10,11 @@ const loading = ref(false)
 const saving = ref(false)
 const rows = ref<Notice[]>([])
 const stats = ref<NoticeStat[]>([])
+const noticePage = ref(1)
+const noticeSize = ref(10)
+const noticeTotal = ref(0)
+const statPage = ref(1)
+const statSize = ref(10)
 const form = reactive({
   title: '',
   content: '',
@@ -21,6 +26,7 @@ const form = reactive({
 const totalTargets = computed(() => stats.value.reduce((sum, item) => sum + Number(item.targetTotal || 0), 0))
 const totalRead = computed(() => stats.value.reduce((sum, item) => sum + Number(item.readCount || 0), 0))
 const totalUnread = computed(() => stats.value.reduce((sum, item) => sum + Number(item.unreadCount || 0), 0))
+const pagedStats = computed(() => stats.value.slice((statPage.value - 1) * statSize.value, statPage.value * statSize.value))
 
 onMounted(loadData)
 
@@ -29,8 +35,11 @@ onMounted(loadData)
 async function loadData() {
   loading.value = true
   try {
-    const noticeResponse = await homeNoticesApi({ page: 1, size: 20 })
+    const noticeResponse = await homeNoticesApi({ page: noticePage.value, size: noticeSize.value })
     rows.value = noticeResponse.data.records
+    noticePage.value = noticeResponse.data.page
+    noticeSize.value = noticeResponse.data.size
+    noticeTotal.value = noticeResponse.data.total
     try {
       const statResponse = await adminNoticeStatsApi()
       stats.value = statResponse.data
@@ -41,6 +50,15 @@ async function loadData() {
   } finally {
     loading.value = false
   }
+}
+
+function handleNoticeSizeChange() {
+  noticePage.value = 1
+  void loadData()
+}
+
+function handleStatSizeChange() {
+  statPage.value = 1
 }
 
 // 功能：发布公告。
@@ -84,7 +102,7 @@ function resolveErrorMessage(error: unknown, fallback: string) {
 
   <section class="admin-toolbar">
     <div class="admin-summary">
-      <article><span>通知条数</span><strong>{{ stats.length }}</strong></article>
+      <article><span>通知条数</span><strong>{{ noticeTotal }}</strong></article>
       <article><span>接收人次</span><strong>{{ totalTargets }}</strong></article>
       <article><span>已读 / 未读</span><strong>{{ totalRead }} / {{ totalUnread }}</strong></article>
     </div>
@@ -130,6 +148,16 @@ function resolveErrorMessage(error: unknown, fallback: string) {
         <el-table-column label="置顶" width="80"><template #default="{ row }">{{ row.pinned ? '是' : '否' }}</template></el-table-column>
         <el-table-column prop="publisher" label="发布人" width="110" />
       </el-table>
+      <el-pagination
+        v-model:current-page="noticePage"
+        v-model:page-size="noticeSize"
+        class="table-pagination"
+        layout="total, sizes, prev, pager, next"
+        :page-sizes="[10, 20, 50, 100]"
+        :total="noticeTotal"
+        @current-change="loadData"
+        @size-change="handleNoticeSizeChange"
+      />
     </article>
   </section>
 
@@ -137,7 +165,7 @@ function resolveErrorMessage(error: unknown, fallback: string) {
     <div class="section-heading">
       <h2>已读 / 未读统计</h2>
     </div>
-    <el-table :data="stats" empty-text="暂无通知统计">
+    <el-table :data="pagedStats" empty-text="暂无通知统计">
       <el-table-column prop="title" label="标题" min-width="180" />
       <el-table-column prop="category" label="类别" width="110" />
       <el-table-column prop="publisher" label="发布人" width="110" />
@@ -151,5 +179,14 @@ function resolveErrorMessage(error: unknown, fallback: string) {
         <template #default="{ row }">{{ readRate(row) }}</template>
       </el-table-column>
     </el-table>
+    <el-pagination
+      v-model:current-page="statPage"
+      v-model:page-size="statSize"
+      class="table-pagination"
+      layout="total, sizes, prev, pager, next"
+      :page-sizes="[10, 20, 50, 100]"
+      :total="stats.length"
+      @size-change="handleStatSizeChange"
+    />
   </section>
 </template>

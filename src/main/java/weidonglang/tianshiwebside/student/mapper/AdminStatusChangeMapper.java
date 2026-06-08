@@ -39,8 +39,30 @@ public interface AdminStatusChangeMapper {
                 or s.class_name like #{keyword}
               )
             order by a.submitted_at desc
+            limit #{size} offset #{offset}
             """)
     List<AdminStatusChangeRow> findApplications(
+            @Param("status") ApplicationStatus status,
+            @Param("keyword") String keyword,
+            @Param("size") int size,
+            @Param("offset") int offset
+    );
+
+    @Select("""
+            select count(*)
+            from student_status_change_application a
+            join student s on s.id = a.student_id
+            join sys_user u on u.id = s.user_id
+            where (#{status} is null or a.status = #{status})
+              and (
+                #{keyword} is null
+                or s.student_no like #{keyword}
+                or u.display_name like #{keyword}
+                or s.major like #{keyword}
+                or s.class_name like #{keyword}
+              )
+            """)
+    long countApplications(
             @Param("status") ApplicationStatus status,
             @Param("keyword") String keyword
     );

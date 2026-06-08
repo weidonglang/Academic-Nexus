@@ -1,4 +1,4 @@
-import { http, type ApiResponse } from './http'
+import { http, type ApiResponse, type PageResponse } from './http'
 
 // 学生个人信息 API 封装。
 // 个人信息页面通过这些函数读取和更新当前登录学生资料，不需要前端传入学号。
@@ -47,8 +47,8 @@ export interface SubmitStatusChangeRequest {
   reason: string
 }
 
-export function statusChangeApplicationsApi() {
-  return http.get<never, ApiResponse<StatusChangeApplication[]>>('/students/me/status-changes')
+export function statusChangeApplicationsApi(params?: { page?: number; size?: number }) {
+  return http.get<never, ApiResponse<PageResponse<StatusChangeApplication>>>('/students/me/status-changes', { params })
 }
 
 export function submitStatusChangeApplicationApi(payload: SubmitStatusChangeRequest) {

@@ -1,10 +1,13 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import PageHeader from '@/components/PageHeader.vue'
 import { thesisGradeApi, type ThesisGrade } from '@/api/information'
 
 const loading = ref(false)
 const records = ref<ThesisGrade[]>([])
+const page = ref(1)
+const size = ref(10)
+const pagedRecords = computed(() => records.value.slice((page.value - 1) * size.value, page.value * size.value))
 
 onMounted(async () => {
   loading.value = true
@@ -19,13 +22,17 @@ function formatDateTime(value?: string) {
   if (!value) return '-'
   return new Date(value).toLocaleString('zh-CN')
 }
+
+function handleSizeChange() {
+  page.value = 1
+}
 </script>
 
 <template>
   <PageHeader title="毕业设计（论文）成绩查看" description="查看开题、中期、答辩和最终成绩状态。" />
 
   <section class="work-panel">
-    <el-table v-loading="loading" :data="records" empty-text="暂无毕业设计成绩">
+    <el-table v-loading="loading" :data="pagedRecords" empty-text="暂无毕业设计成绩">
       <el-table-column prop="title" label="论文题目" min-width="220" show-overflow-tooltip />
       <el-table-column prop="advisor" label="指导教师" width="110" />
       <el-table-column prop="proposalScore" label="开题" width="90">
@@ -48,5 +55,14 @@ function formatDateTime(value?: string) {
         <template #default="{ row }">{{ formatDateTime(row.updatedAt) }}</template>
       </el-table-column>
     </el-table>
+    <el-pagination
+      v-model:current-page="page"
+      v-model:page-size="size"
+      class="table-pagination"
+      layout="total, sizes, prev, pager, next"
+      :page-sizes="[10, 20, 50, 100]"
+      :total="records.length"
+      @size-change="handleSizeChange"
+    />
   </section>
 </template>

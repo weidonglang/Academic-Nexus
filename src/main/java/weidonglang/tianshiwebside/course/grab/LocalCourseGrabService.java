@@ -5,6 +5,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import weidonglang.tianshiwebside.common.error.BusinessException;
 import weidonglang.tianshiwebside.common.error.ErrorCode;
 import weidonglang.tianshiwebside.course.SelectionWindowStatus;
@@ -96,6 +97,7 @@ public class LocalCourseGrabService implements CourseGrabPort {
     }
 
     @Override
+    @Transactional
     /**
      * 功能：实现学生抢课核心流程。
      * 说明：依次完成 requestId 幂等处理、教学班信息缓存、选课时间窗口校验、
@@ -199,6 +201,12 @@ public class LocalCourseGrabService implements CourseGrabPort {
 
         if (!markRequestProcessing(requestKey)) {
             throw failure(CourseGrabFailureReason.DUPLICATE_REQUEST, "Duplicate selection request");
+        }
+
+        Long lockedOfferingId = selectionWriteMapper.lockOfferingForUpdate(offering.offeringId());
+        if (lockedOfferingId == null) {
+            clearRequest(requestKey);
+            throw failure(CourseGrabFailureReason.OFFERING_NOT_FOUND, "Course offering not found");
         }
 
         long selectedCount = selectionWriteMapper.countOfferingSelections(offering.offeringId());

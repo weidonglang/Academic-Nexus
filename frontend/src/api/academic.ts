@@ -1,4 +1,4 @@
-import { http, type ApiResponse } from '@/api/http'
+import { http, type ApiResponse, type PageResponse } from '@/api/http'
 
 // 学生端教务查询 API 封装。
 // 这里把成绩查询、考试安排和空闲教室查询统一封装，页面组件只负责展示数据，
@@ -40,13 +40,13 @@ export interface FreeClassroomQuery {
   slot?: string
 }
 
-export async function fetchGradesApi() {
-  const response = await http.get<never, ApiResponse<GradeRecord[]>>('/grades/me')
+export async function fetchGradesApi(params?: { page?: number; size?: number }) {
+  const response = await http.get<never, ApiResponse<PageResponse<GradeRecord>>>('/grades/me', { params })
   return response.data
 }
 
-export async function fetchExamsApi() {
-  const response = await http.get<never, ApiResponse<ExamSchedule[]>>('/exams/me')
+export async function fetchExamsApi(params?: { page?: number; size?: number }) {
+  const response = await http.get<never, ApiResponse<PageResponse<ExamSchedule>>>('/exams/me', { params })
   return response.data
 }
 

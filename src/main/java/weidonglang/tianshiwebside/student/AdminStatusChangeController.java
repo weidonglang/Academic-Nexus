@@ -1,5 +1,6 @@
 package weidonglang.tianshiwebside.student;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -10,12 +11,16 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import weidonglang.tianshiwebside.audit.AuditLogService;
 import weidonglang.tianshiwebside.common.api.ApiResponse;
+import weidonglang.tianshiwebside.common.api.PageResponse;
+import weidonglang.tianshiwebside.common.api.Pagination;
+import weidonglang.tianshiwebside.common.cache.QueryCacheService;
 import weidonglang.tianshiwebside.common.error.BusinessException;
 import weidonglang.tianshiwebside.common.error.ErrorCode;
 import weidonglang.tianshiwebside.notice.NotificationService;
 import weidonglang.tianshiwebside.student.mapper.AdminStatusChangeMapper;
 import weidonglang.tianshiwebside.student.mapper.AdminStatusChangeRow;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.EnumSet;
 import java.util.List;
@@ -31,20 +36,43 @@ public class AdminStatusChangeController {
     private final AdminStatusChangeMapper statusChangeMapper;
     private final NotificationService notificationService;
     private final AuditLogService auditLogService;
+    private final QueryCacheService queryCacheService;
 
-    public AdminStatusChangeController(AdminStatusChangeMapper statusChangeMapper, NotificationService notificationService, AuditLogService auditLogService) {
+    public AdminStatusChangeController(
+            AdminStatusChangeMapper statusChangeMapper,
+            NotificationService notificationService,
+            AuditLogService auditLogService,
+            QueryCacheService queryCacheService
+    ) {
         this.statusChangeMapper = statusChangeMapper;
         this.notificationService = notificationService;
         this.auditLogService = auditLogService;
+        this.queryCacheService = queryCacheService;
     }
 
     @GetMapping
-    public ApiResponse<List<AdminStatusChangeRow>> applications(
+    public ApiResponse<PageResponse<AdminStatusChangeRow>> applications(
             @RequestParam(required = false) ApplicationStatus status,
-            @RequestParam(required = false) String keyword
+            @RequestParam(required = false) String keyword,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size
     ) {
         String normalizedKeyword = keyword == null || keyword.isBlank() ? null : "%" + keyword.trim() + "%";
-        return ApiResponse.success(statusChangeMapper.findApplications(status, normalizedKeyword));
+        int safePage = Pagination.safePage(page);
+        int safeSize = Pagination.safeSize(size);
+        return ApiResponse.success(queryCacheService.get(
+                "query:admin:status-changes:" + (status == null ? "all" : status.name()) + ":" + (normalizedKeyword == null ? "all" : normalizedKeyword)
+                        + ":" + safePage + ":" + safeSize,
+                Duration.ofSeconds(20),
+                new TypeReference<PageResponse<AdminStatusChangeRow>>() {
+                },
+                () -> new PageResponse<>(
+                        statusChangeMapper.findApplications(status, normalizedKeyword, safeSize, Pagination.offset(safePage, safeSize)),
+                        safePage,
+                        safeSize,
+                        statusChangeMapper.countApplications(status, normalizedKeyword)
+                )
+        ));
     }
 
     @PostMapping("/{applicationId}/review")
@@ -83,6 +111,10 @@ public class AdminStatusChangeController {
                 "STATUS", "STATUS_CHANGE", applicationId);
         auditLogService.record(authentication.getName(), "REVIEW_STATUS_CHANGE", "STATUS_CHANGE", applicationId,
                 targetStatus.name() + ": " + request.comment(), null);
+        queryCacheService.evictByPrefix("query:admin:status-changes:");
+        queryCacheService.evictByPrefix("query:student:status-changes:");
+        queryCacheService.evictByPrefix("query:student:profile:");
+        queryCacheService.evictByPrefix("query:notifications:");
         return ApiResponse.success(statusChangeMapper.findApplicationById(applicationId));
     }
 

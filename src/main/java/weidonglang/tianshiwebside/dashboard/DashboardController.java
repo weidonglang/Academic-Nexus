@@ -1,10 +1,13 @@
 package weidonglang.tianshiwebside.dashboard;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 import weidonglang.tianshiwebside.common.api.ApiResponse;
+import weidonglang.tianshiwebside.common.cache.QueryCacheService;
 
 import java.security.Principal;
+import java.time.Duration;
 
 /**
  * 首页仪表盘接口。
@@ -17,9 +20,11 @@ public class DashboardController {
     private static final String CURRENT_TERM = "2025-2026-2";
 
     private final DashboardMapper dashboardMapper;
+    private final QueryCacheService queryCacheService;
 
-    public DashboardController(DashboardMapper dashboardMapper) {
+    public DashboardController(DashboardMapper dashboardMapper, QueryCacheService queryCacheService) {
         this.dashboardMapper = dashboardMapper;
+        this.queryCacheService = queryCacheService;
     }
 
     /**
@@ -31,13 +36,18 @@ public class DashboardController {
     @GetMapping("/api/dashboard/me")
     public ApiResponse<DashboardOverview> overview(Principal principal) {
         String username = principal.getName();
-        DashboardOverview overview = new DashboardOverview(
-                dashboardMapper.countTermOfferings(CURRENT_TERM),
-                dashboardMapper.countPendingEvaluations(username),
-                dashboardMapper.countUpcomingExams(username),
-                dashboardMapper.sumEarnedCredits(username),
-                dashboardMapper.findRecentEvents(username)
-        );
-        return ApiResponse.success(overview);
+        return ApiResponse.success(queryCacheService.get(
+                "query:dashboard:" + username + ":" + CURRENT_TERM,
+                Duration.ofSeconds(20),
+                new TypeReference<DashboardOverview>() {
+                },
+                () -> new DashboardOverview(
+                        dashboardMapper.countTermOfferings(CURRENT_TERM),
+                        dashboardMapper.countPendingEvaluations(username),
+                        dashboardMapper.countUpcomingExams(username),
+                        dashboardMapper.sumEarnedCredits(username),
+                        dashboardMapper.findRecentEvents(username)
+                )
+        ));
     }
 }

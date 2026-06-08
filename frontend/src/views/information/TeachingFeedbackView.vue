@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import PageHeader from '@/components/PageHeader.vue'
 import {
@@ -11,6 +11,9 @@ import {
 const loading = ref(false)
 const submitting = ref(false)
 const records = ref<TeachingFeedback[]>([])
+const page = ref(1)
+const size = ref(10)
+const pagedRecords = computed(() => records.value.slice((page.value - 1) * size.value, page.value * size.value))
 const form = reactive({
   category: '教学运行',
   title: '',
@@ -26,6 +29,10 @@ async function loadRecords() {
   } finally {
     loading.value = false
   }
+}
+
+function handleSizeChange() {
+  page.value = 1
 }
 
 async function submit() {
@@ -78,7 +85,7 @@ function formatDateTime(value?: string) {
 
     <article class="work-panel">
       <h2>反馈记录</h2>
-      <el-table v-loading="loading" :data="records" empty-text="暂无反馈记录">
+      <el-table v-loading="loading" :data="pagedRecords" empty-text="暂无反馈记录">
         <el-table-column prop="category" label="类别" width="110" />
         <el-table-column prop="title" label="标题" min-width="150" show-overflow-tooltip />
         <el-table-column prop="status" label="状态" width="100" />
@@ -89,6 +96,15 @@ function formatDateTime(value?: string) {
           <template #default="{ row }">{{ row.reply || '-' }}</template>
         </el-table-column>
       </el-table>
+      <el-pagination
+        v-model:current-page="page"
+        v-model:page-size="size"
+        class="table-pagination"
+        layout="total, sizes, prev, pager, next"
+        :page-sizes="[10, 20, 50, 100]"
+        :total="records.length"
+        @size-change="handleSizeChange"
+      />
     </article>
   </section>
 </template>

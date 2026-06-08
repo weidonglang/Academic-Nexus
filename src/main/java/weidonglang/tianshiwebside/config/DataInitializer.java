@@ -135,6 +135,8 @@ public class DataInitializer {
             }
 
             seedMenu("dashboard", "\u9996\u9875", "/dashboard", "LayoutDashboard", null, 10);
+            seedMenu("ai-assistant", "\u667a\u80fd\u6559\u52a1\u52a9\u624b", "/ai/assistant", "Bot", null, 15);
+            seedMenu("ai-chat", "AI \u804a\u5929", "/ai/chat", "MessagesSquare", null, 16);
             seedMenu("student", "\u5b66\u751f\u4fe1\u606f", "/student", "UserRound", null, 20);
             seedMenu("student-profile", "\u4e2a\u4eba\u4fe1\u606f", "/student/profile", "IdCard", "student", 21);
             seedMenu("student-status-change", "\u5b66\u7c4d\u5f02\u52a8\u7533\u8bf7", "/student/status-change", "FilePenLine", "student", 22);
@@ -156,6 +158,7 @@ public class DataInitializer {
             seedMenu("info-class-schedule", "\u73ed\u7ea7\u8bfe\u8868\u67e5\u8be2", "/information/class-schedule", "CalendarRange", "info-query", 49);
             seedMenu("info-roster", "\u9009\u8bfe\u540d\u5355\u67e5\u8be2", "/information/course-roster", "ListChecks", "info-query", 52);
             seedMenu("info-academic-progress", "\u5b66\u751f\u5b66\u4e1a\u60c5\u51b5\u67e5\u8be2", "/information/academic-progress", "GraduationCap", "info-query", 55);
+            seedMenu("ai-academic-profile", "\u5b66\u4e1a\u753b\u50cf", "/ai/academic-profile", "Radar", "info-query", 55);
             seedMenu("info-teaching-plan", "\u6559\u5b66\u6267\u884c\u8ba1\u5212\u67e5\u770b", "/information/teaching-plan", "BookOpenText", "info-query", 56);
             seedMenu("grade", "\u6210\u7ee9\u8003\u8bd5", "/grade", "ClipboardList", null, 58);
             seedMenu("grade-query", "\u6210\u7ee9\u67e5\u8be2", "/grade/query", "ChartNoAxesColumn", "grade", 59);
@@ -184,6 +187,8 @@ public class DataInitializer {
             seedMenu("admin-redis-monitor", "Redis\u72b6\u6001\u76d1\u63a7", "/admin/redis-monitor", "DatabaseZap", "admin", 72);
             seedMenu("admin-load-test-reports", "\u538b\u6d4b\u5386\u53f2\u62a5\u544a", "/admin/load-test-reports", "ChartColumnBig", "admin", 73);
             seedMenu("admin-database-browser", "\u6570\u636e\u5e93\u53ea\u8bfb\u6d4f\u89c8", "/admin/database-browser", "TableProperties", "admin", 74);
+            seedMenu("admin-ai-sql", "\u81ea\u7136\u8bed\u8a00\u67e5\u5e93", "/admin/ai-sql", "Sparkles", "admin", 75);
+            seedMenu("admin-ai-logs", "AI\u8c03\u7528\u65e5\u5fd7", "/admin/ai-logs", "ScrollText", "admin", 76);
             seedPermission("COURSE_WRITE", "\u8bfe\u7a0b\u5199\u5165", "\u7ef4\u62a4\u8bfe\u7a0b\u548c\u6559\u5b66\u73ed");
             seedPermission("GRADE_READ", "\u6210\u7ee9\u67e5\u770b", "\u67e5\u770b\u6210\u7ee9\u6570\u636e");
             seedPermission("GRADE_WRITE", "\u6210\u7ee9\u5199\u5165", "\u5f55\u5165\u548c\u4fee\u6539\u6210\u7ee9");
@@ -201,6 +206,8 @@ public class DataInitializer {
             retireMenu("info-weekly-schedule");
             seedRoleMenus(studentRole.getCode(), List.of(
                     "dashboard",
+                    "ai-assistant",
+                    "ai-chat",
                     "student",
                     "student-profile",
                     "student-status-change",
@@ -222,6 +229,7 @@ public class DataInitializer {
                     "info-class-schedule",
                     "info-roster",
                     "info-academic-progress",
+                    "ai-academic-profile",
                     "info-teaching-plan",
                     "grade",
                     "grade-query",
@@ -233,6 +241,8 @@ public class DataInitializer {
             ));
             seedRoleMenus(adminRole.getCode(), List.of(
                     "dashboard",
+                    "ai-assistant",
+                    "ai-chat",
                     "admin",
                     "admin-course-offerings",
                     "admin-status-changes",
@@ -247,7 +257,9 @@ public class DataInitializer {
                     "admin-registration-applications",
                     "admin-redis-monitor",
                     "admin-load-test-reports",
-                    "admin-database-browser"
+                    "admin-database-browser",
+                    "admin-ai-sql",
+                    "admin-ai-logs"
             ));
             removeRoleMenus(adminRole.getCode(), List.of(
                     "student",
@@ -299,6 +311,8 @@ public class DataInitializer {
             seedRolePermissions(teacherRole.getCode(), List.of("GRADE_READ"));
             seedRoleMenus(teacherRole.getCode(), List.of(
                     "dashboard",
+                    "ai-assistant",
+                    "ai-chat",
                     "teacher",
                     "teacher-offerings",
                     "teacher-grades",

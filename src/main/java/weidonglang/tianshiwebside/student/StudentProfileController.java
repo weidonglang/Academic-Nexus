@@ -1,5 +1,6 @@
 package weidonglang.tianshiwebside.student;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -10,9 +11,12 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Size;
 import weidonglang.tianshiwebside.common.api.ApiResponse;
+import weidonglang.tianshiwebside.common.cache.QueryCacheService;
 import weidonglang.tianshiwebside.common.error.BusinessException;
 import weidonglang.tianshiwebside.common.error.ErrorCode;
 import weidonglang.tianshiwebside.student.mapper.StudentMapper;
+
+import java.time.Duration;
 
 /**
  * 学生个人信息接口。
@@ -24,9 +28,11 @@ import weidonglang.tianshiwebside.student.mapper.StudentMapper;
 @RequestMapping("/api/students")
 public class StudentProfileController {
     private final StudentMapper studentMapper;
+    private final QueryCacheService queryCacheService;
 
-    public StudentProfileController(StudentMapper studentMapper) {
+    public StudentProfileController(StudentMapper studentMapper, QueryCacheService queryCacheService) {
         this.studentMapper = studentMapper;
+        this.queryCacheService = queryCacheService;
     }
 
     /**
@@ -36,7 +42,14 @@ public class StudentProfileController {
      */
     @GetMapping("/me/profile")
     public ApiResponse<StudentProfileResponse> myProfile(Authentication authentication) {
-        return ApiResponse.success(toResponse(currentStudent(authentication)));
+        String username = authenticatedUsername(authentication);
+        return ApiResponse.success(queryCacheService.get(
+                "query:student:profile:" + username,
+                Duration.ofSeconds(30),
+                new TypeReference<StudentProfileResponse>() {
+                },
+                () -> toResponse(currentStudent(username))
+        ));
     }
 
     /**
@@ -54,6 +67,8 @@ public class StudentProfileController {
         if (updated == 0) {
             throw new BusinessException(ErrorCode.NOT_FOUND, "Student profile not found");
         }
+        queryCacheService.evict("query:student:profile:" + username);
+        queryCacheService.evictByPrefix("query:dashboard:" + username);
         return ApiResponse.success(toResponse(currentStudent(username)));
     }
 

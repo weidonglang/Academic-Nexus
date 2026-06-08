@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import weidonglang.tianshiwebside.audit.AuditLogService;
 import weidonglang.tianshiwebside.common.api.ApiResponse;
+import weidonglang.tianshiwebside.common.cache.QueryCacheService;
 import weidonglang.tianshiwebside.common.error.BusinessException;
 import weidonglang.tianshiwebside.common.error.ErrorCode;
 import weidonglang.tianshiwebside.permission.mapper.RolePermissionMapper;
@@ -19,10 +20,16 @@ import java.util.List;
 public class RolePermissionController {
     private final RolePermissionMapper rolePermissionMapper;
     private final AuditLogService auditLogService;
+    private final QueryCacheService queryCacheService;
 
-    public RolePermissionController(RolePermissionMapper rolePermissionMapper, AuditLogService auditLogService) {
+    public RolePermissionController(
+            RolePermissionMapper rolePermissionMapper,
+            AuditLogService auditLogService,
+            QueryCacheService queryCacheService
+    ) {
         this.rolePermissionMapper = rolePermissionMapper;
         this.auditLogService = auditLogService;
+        this.queryCacheService = queryCacheService;
     }
 
     @GetMapping("/roles")
@@ -74,6 +81,7 @@ public class RolePermissionController {
                 .distinct()
                 .forEach(menuCode -> rolePermissionMapper.insertRoleMenu(roleId, menuCode));
         auditLogService.record(authentication.getName(), "UPDATE_ROLE_MENUS", "ROLE", roleId, String.join(",", request.menuCodes()), null);
+        queryCacheService.evictByPrefix("query:menus:");
         return ApiResponse.success(rolePermissionMapper.findMenuCodesByRoleId(roleId));
     }
 

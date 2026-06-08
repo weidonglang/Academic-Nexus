@@ -1,5 +1,6 @@
 package weidonglang.tianshiwebside.student;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -16,11 +17,15 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import weidonglang.tianshiwebside.audit.AuditLogService;
 import weidonglang.tianshiwebside.common.api.ApiResponse;
+import weidonglang.tianshiwebside.common.api.PageResponse;
+import weidonglang.tianshiwebside.common.api.Pagination;
+import weidonglang.tianshiwebside.common.cache.QueryCacheService;
 import weidonglang.tianshiwebside.common.error.BusinessException;
 import weidonglang.tianshiwebside.common.error.ErrorCode;
 import weidonglang.tianshiwebside.notice.NotificationService;
 import weidonglang.tianshiwebside.student.mapper.RegistrationApplicationMapper;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.EnumSet;
 import java.util.List;
@@ -36,25 +41,46 @@ public class AdminRegistrationApplicationController {
     private final RegistrationApplicationMapper applicationMapper;
     private final NotificationService notificationService;
     private final AuditLogService auditLogService;
+    private final QueryCacheService queryCacheService;
 
     public AdminRegistrationApplicationController(
             RegistrationApplicationMapper applicationMapper,
             NotificationService notificationService,
-            AuditLogService auditLogService
+            AuditLogService auditLogService,
+            QueryCacheService queryCacheService
     ) {
         this.applicationMapper = applicationMapper;
         this.notificationService = notificationService;
         this.auditLogService = auditLogService;
+        this.queryCacheService = queryCacheService;
     }
 
     @GetMapping
-    public ApiResponse<List<RegistrationApplicationMapper.AdminRegistrationApplicationRow>> applications(
+    public ApiResponse<PageResponse<RegistrationApplicationMapper.AdminRegistrationApplicationRow>> applications(
             @RequestParam(required = false) ApplicationStatus status,
             @RequestParam(required = false) RegistrationApplicationType type,
-            @RequestParam(required = false) String keyword
+            @RequestParam(required = false) String keyword,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size
     ) {
         String normalizedKeyword = keyword == null || keyword.isBlank() ? null : "%" + keyword.trim() + "%";
-        return ApiResponse.success(applicationMapper.findAdminApplications(status, type, normalizedKeyword));
+        int safePage = Pagination.safePage(page);
+        int safeSize = Pagination.safeSize(size);
+        return ApiResponse.success(queryCacheService.get(
+                "query:admin:registration-applications:" + (status == null ? "all" : status.name())
+                        + ":" + (type == null ? "all" : type.name())
+                        + ":" + (normalizedKeyword == null ? "all" : normalizedKeyword)
+                        + ":" + safePage + ":" + safeSize,
+                Duration.ofSeconds(20),
+                new TypeReference<PageResponse<RegistrationApplicationMapper.AdminRegistrationApplicationRow>>() {
+                },
+                () -> new PageResponse<>(
+                        applicationMapper.findAdminApplications(status, type, normalizedKeyword, safeSize, Pagination.offset(safePage, safeSize)),
+                        safePage,
+                        safeSize,
+                        applicationMapper.countAdminApplications(status, type, normalizedKeyword)
+                )
+        ));
     }
 
     @PostMapping("/{applicationId}/review")
@@ -86,6 +112,9 @@ public class AdminRegistrationApplicationController {
                 "APPLICATION", "REGISTRATION_APPLICATION", applicationId);
         auditLogService.record(authentication.getName(), "REVIEW_REGISTRATION_APPLICATION", "REGISTRATION_APPLICATION",
                 applicationId, targetStatus.name() + ": " + request.comment(), null);
+        queryCacheService.evictByPrefix("query:admin:registration-applications:");
+        queryCacheService.evictByPrefix("query:student:registration-applications:");
+        queryCacheService.evictByPrefix("query:notifications:");
         return ApiResponse.success(applicationMapper.findAdminApplicationById(applicationId));
     }
 

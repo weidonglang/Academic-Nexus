@@ -14,6 +14,9 @@ const routes: RouteRecordRaw[] = [
     redirect: '/dashboard',
     children: [
       { path: 'dashboard', component: () => import('@/views/dashboard/DashboardView.vue') },
+      { path: 'ai/assistant', component: () => import('@/views/ai/AiAssistantView.vue') },
+      { path: 'ai/chat', component: () => import('@/views/ai/AiChatView.vue') },
+      { path: 'ai/academic-profile', component: () => import('@/views/ai/AcademicProfileView.vue') },
       { path: 'student/profile', component: () => import('@/views/student/ProfileView.vue') },
       { path: 'student/status-change', component: () => import('@/views/student/StatusChangeView.vue') },
       { path: 'registration/minor', component: () => import('@/views/student/RegistrationApplicationView.vue') },
@@ -56,6 +59,8 @@ const routes: RouteRecordRaw[] = [
       { path: 'admin/redis-monitor', component: () => import('@/views/admin/RedisMonitorView.vue') },
       { path: 'admin/load-test-reports', component: () => import('@/views/admin/LoadTestReportsView.vue') },
       { path: 'admin/database-browser', component: () => import('@/views/admin/DatabaseBrowserView.vue') },
+      { path: 'admin/ai-sql', component: () => import('@/views/admin/NaturalSqlAdminView.vue') },
+      { path: 'admin/ai-logs', component: () => import('@/views/admin/AiCallLogAdminView.vue') },
     ],
   },
 ]
@@ -82,6 +87,9 @@ router.beforeEach((to) => {
       return
     }
     const roles = auth.user.roles
+    if (to.path.startsWith('/ai')) {
+      return
+    }
     if (roles.includes('ADMIN') && to.path !== '/dashboard' && !to.path.startsWith('/admin')) {
       return '/dashboard'
     }

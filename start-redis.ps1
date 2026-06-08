@@ -1,7 +1,7 @@
 $ErrorActionPreference = "Stop"
 
 $ContainerName = "tianshi-redis"
-$ImageName = "redis:7-alpine"
+$ImageName = if ($env:REDIS_IMAGE) { $env:REDIS_IMAGE } else { "redis:7-alpine" }
 $Port = "6379"
 
 # Check local Redis first.
@@ -47,16 +47,42 @@ $existing = docker ps -a --filter "name=^/$ContainerName$" --format "{{.Names}}"
 if (-not $existing) {
     Write-Host "Creating Redis container $ContainerName on port $Port..." -ForegroundColor Cyan
     Write-Host "Checking Redis image: $ImageName"
-    $pullExit = Invoke-Docker @("pull", $ImageName)
-    if ($pullExit -ne 0) {
-        Write-Host ""
-        Write-Host "Docker cannot download Redis image: $ImageName" -ForegroundColor Red
-        Write-Host "Usually this means Docker Desktop has no internet access, Docker Hub is blocked, or a proxy/mirror is required." -ForegroundColor Yellow
-        Write-Host "Try this command manually after fixing Docker network:" -ForegroundColor Yellow
-        Write-Host "  docker pull $ImageName"
-        Write-Host ""
-        Write-Host "The application can still run without Redis. It will use database fallback."
-        exit 1
+
+    $hasImage = $false
+    & docker image inspect $ImageName | Out-Null
+    if ($LASTEXITCODE -eq 0) {
+        $hasImage = $true
+        Write-Host "Using local Redis image: $ImageName" -ForegroundColor Green
+    }
+
+    if (-not $hasImage) {
+        $pullExit = Invoke-Docker @("pull", $ImageName)
+        if ($pullExit -ne 0) {
+            $localRedisImages = docker images --format "{{.Repository}}:{{.Tag}}" |
+                    Where-Object { $_ -match "redis" -and $_ -notmatch "<none>" } |
+                    Select-Object -First 1
+
+            if ($localRedisImages) {
+                $ImageName = $localRedisImages
+                Write-Host ""
+                Write-Host "Docker cannot download the configured Redis image, but found a local Redis image:" -ForegroundColor Yellow
+                Write-Host "  $ImageName"
+                Write-Host "Using this local image instead." -ForegroundColor Green
+            } else {
+                Write-Host ""
+                Write-Host "Docker cannot download Redis image: $ImageName" -ForegroundColor Red
+                Write-Host "Usually this means Docker Desktop has no internet access, Docker Hub is blocked, or a proxy/mirror is required." -ForegroundColor Yellow
+                Write-Host "Try this command manually after fixing Docker network:" -ForegroundColor Yellow
+                Write-Host "  docker pull $ImageName"
+                Write-Host ""
+                Write-Host "You can also use another reachable Redis image before running start-all.bat:" -ForegroundColor Yellow
+                Write-Host "  set REDIS_IMAGE=your-registry/redis:7-alpine"
+                Write-Host "  start-all.bat"
+                Write-Host ""
+                Write-Host "The application can still run without Redis. It will use database fallback."
+                exit 1
+            }
+        }
     }
 
     $runExit = Invoke-Docker @("run", "-d", "--name", $ContainerName, "-p", "${Port}:6379", $ImageName)

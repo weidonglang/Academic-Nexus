@@ -26,6 +26,9 @@ const keyword = ref('')
 const rows = ref<AdminGrade[]>([])
 const courses = ref<AdminCourse[]>([])
 const importText = ref('')
+const page = ref(1)
+const size = ref(10)
+const total = ref(0)
 
 const form = reactive<AdminGradePayload>({
   studentNo: '',
@@ -46,14 +49,27 @@ async function loadData() {
   loading.value = true
   try {
     const [gradeResponse, courseResponse] = await Promise.all([
-      adminGradesApi({ term: term.value, keyword: keyword.value.trim() }),
+      adminGradesApi({ term: term.value, keyword: keyword.value.trim(), page: page.value, size: size.value }),
       adminCoursesApi(),
     ])
-    rows.value = gradeResponse.data
+    rows.value = gradeResponse.data.records
+    page.value = gradeResponse.data.page
+    size.value = gradeResponse.data.size
+    total.value = gradeResponse.data.total
     courses.value = courseResponse.data
   } finally {
     loading.value = false
   }
+}
+
+function search() {
+  page.value = 1
+  void loadData()
+}
+
+function handleSizeChange() {
+  page.value = 1
+  void loadData()
 }
 
 function openCreate() {
@@ -123,7 +139,7 @@ function resolveErrorMessage(error: unknown, fallback: string) {
     <div class="admin-actions">
       <el-input v-model="term" class="term-input" placeholder="学期" />
       <el-input v-model="keyword" class="keyword-input" placeholder="学号、姓名、课程" clearable />
-      <el-button @click="loadData">查询</el-button>
+      <el-button @click="search">查询</el-button>
       <el-button @click="exportGrades">导出 JSON</el-button>
       <el-button @click="importVisible = true">导入 JSON</el-button>
       <el-button type="primary" @click="openCreate">录入成绩</el-button>
@@ -141,6 +157,16 @@ function resolveErrorMessage(error: unknown, fallback: string) {
       <el-table-column label="锁定" width="80"><template #default="{ row }">{{ row.locked ? '是' : '否' }}</template></el-table-column>
       <el-table-column label="操作" width="100" fixed="right"><template #default="{ row }"><el-button type="primary" link @click="openEdit(row)">编辑</el-button></template></el-table-column>
     </el-table>
+    <el-pagination
+      v-model:current-page="page"
+      v-model:page-size="size"
+      class="table-pagination"
+      layout="total, sizes, prev, pager, next"
+      :page-sizes="[10, 20, 50, 100]"
+      :total="total"
+      @current-change="loadData"
+      @size-change="handleSizeChange"
+    />
   </section>
 
   <el-dialog v-model="dialogVisible" :title="editing ? '编辑成绩' : '录入成绩'" width="560px">

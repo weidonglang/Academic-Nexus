@@ -3,6 +3,7 @@ package weidonglang.tianshiwebside.information;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import com.fasterxml.jackson.core.type.TypeReference;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -11,10 +12,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import weidonglang.tianshiwebside.common.api.ApiResponse;
+import weidonglang.tianshiwebside.common.cache.QueryCacheService;
 import weidonglang.tianshiwebside.common.error.BusinessException;
 import weidonglang.tianshiwebside.common.error.ErrorCode;
 import weidonglang.tianshiwebside.student.mapper.StudentMapper;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 
@@ -30,20 +33,32 @@ import java.util.List;
 public class InformationCenterController {
     private final InformationCenterMapper informationMapper;
     private final StudentMapper studentMapper;
+    private final QueryCacheService queryCacheService;
 
-    public InformationCenterController(InformationCenterMapper informationMapper, StudentMapper studentMapper) {
+    public InformationCenterController(
+            InformationCenterMapper informationMapper,
+            StudentMapper studentMapper,
+            QueryCacheService queryCacheService
+    ) {
         this.informationMapper = informationMapper;
         this.studentMapper = studentMapper;
+        this.queryCacheService = queryCacheService;
     }
 
     @GetMapping("/academic-warnings/me")
     public ApiResponse<List<InformationCenterMapper.AcademicWarningRow>> academicWarnings(Authentication authentication) {
-        return ApiResponse.success(informationMapper.findWarningsByUsername(authenticatedUsername(authentication)));
+        String username = authenticatedUsername(authentication);
+        return ApiResponse.success(queryCacheService.get("query:information:warnings:" + username, Duration.ofSeconds(30),
+                new TypeReference<List<InformationCenterMapper.AcademicWarningRow>>() {
+                }, () -> informationMapper.findWarningsByUsername(username)));
     }
 
     @GetMapping("/graduation-audit/me")
     public ApiResponse<List<InformationCenterMapper.GraduationAuditRow>> graduationAudit(Authentication authentication) {
-        return ApiResponse.success(informationMapper.findGraduationAuditByUsername(authenticatedUsername(authentication)));
+        String username = authenticatedUsername(authentication);
+        return ApiResponse.success(queryCacheService.get("query:information:graduation:" + username, Duration.ofSeconds(30),
+                new TypeReference<List<InformationCenterMapper.GraduationAuditRow>>() {
+                }, () -> informationMapper.findGraduationAuditByUsername(username)));
     }
 
     @GetMapping("/class-schedules")
@@ -51,7 +66,13 @@ public class InformationCenterController {
             @RequestParam(required = false) String className,
             @RequestParam(required = false) String term
     ) {
-        return ApiResponse.success(informationMapper.findClassSchedule(className, term));
+        return ApiResponse.success(queryCacheService.get(
+                "query:information:class-schedules:" + normalize(className) + ":" + normalize(term),
+                Duration.ofSeconds(20),
+                new TypeReference<List<InformationCenterMapper.ClassScheduleRow>>() {
+                },
+                () -> informationMapper.findClassSchedule(className, term)
+        ));
     }
 
     @GetMapping("/course-rosters")
@@ -59,17 +80,28 @@ public class InformationCenterController {
             @RequestParam(required = false) Long offeringId,
             @RequestParam(required = false) String term
     ) {
-        return ApiResponse.success(informationMapper.findCourseRoster(offeringId, term));
+        return ApiResponse.success(queryCacheService.get(
+                "query:information:course-rosters:" + (offeringId == null ? "all" : offeringId) + ":" + normalize(term),
+                Duration.ofSeconds(20),
+                new TypeReference<List<InformationCenterMapper.CourseRosterRow>>() {
+                },
+                () -> informationMapper.findCourseRoster(offeringId, term)
+        ));
     }
 
     @GetMapping("/offering-options")
     public ApiResponse<List<InformationCenterMapper.OfferingOptionRow>> offeringOptions(@RequestParam(required = false) String term) {
-        return ApiResponse.success(informationMapper.findOfferingOptions(term));
+        return ApiResponse.success(queryCacheService.get("query:information:offering-options:" + normalize(term), Duration.ofSeconds(20),
+                new TypeReference<List<InformationCenterMapper.OfferingOptionRow>>() {
+                }, () -> informationMapper.findOfferingOptions(term)));
     }
 
     @GetMapping("/academic-progress/me")
     public ApiResponse<List<InformationCenterMapper.AcademicProgressRow>> academicProgress(Authentication authentication) {
-        return ApiResponse.success(informationMapper.findAcademicProgressByUsername(authenticatedUsername(authentication)));
+        String username = authenticatedUsername(authentication);
+        return ApiResponse.success(queryCacheService.get("query:information:academic-progress:" + username, Duration.ofSeconds(30),
+                new TypeReference<List<InformationCenterMapper.AcademicProgressRow>>() {
+                }, () -> informationMapper.findAcademicProgressByUsername(username)));
     }
 
     @GetMapping("/teaching-plan")
@@ -77,7 +109,13 @@ public class InformationCenterController {
             @RequestParam(required = false) String major,
             @RequestParam(required = false) String grade
     ) {
-        return ApiResponse.success(informationMapper.findTeachingPlan(major, grade));
+        return ApiResponse.success(queryCacheService.get(
+                "query:information:teaching-plan:" + normalize(major) + ":" + normalize(grade),
+                Duration.ofMinutes(2),
+                new TypeReference<List<InformationCenterMapper.TeachingPlanRow>>() {
+                },
+                () -> informationMapper.findTeachingPlan(major, grade)
+        ));
     }
 
     @GetMapping("/weekly-schedule/me")
@@ -85,17 +123,30 @@ public class InformationCenterController {
             Authentication authentication,
             @RequestParam(defaultValue = "1") Integer week
     ) {
-        return ApiResponse.success(informationMapper.findWeeklySchedule(authenticatedUsername(authentication), week));
+        String username = authenticatedUsername(authentication);
+        return ApiResponse.success(queryCacheService.get(
+                "query:information:weekly-schedule:" + username + ":" + week,
+                Duration.ofSeconds(20),
+                new TypeReference<List<InformationCenterMapper.WeeklyScheduleRow>>() {
+                },
+                () -> informationMapper.findWeeklySchedule(username, week)
+        ));
     }
 
     @GetMapping("/thesis-grade/me")
     public ApiResponse<List<InformationCenterMapper.ThesisGradeRow>> thesisGrade(Authentication authentication) {
-        return ApiResponse.success(informationMapper.findThesisGradesByUsername(authenticatedUsername(authentication)));
+        String username = authenticatedUsername(authentication);
+        return ApiResponse.success(queryCacheService.get("query:information:thesis:" + username, Duration.ofSeconds(30),
+                new TypeReference<List<InformationCenterMapper.ThesisGradeRow>>() {
+                }, () -> informationMapper.findThesisGradesByUsername(username)));
     }
 
     @GetMapping("/feedback/me")
     public ApiResponse<List<InformationCenterMapper.TeachingFeedbackRow>> feedback(Authentication authentication) {
-        return ApiResponse.success(informationMapper.findFeedbackByUsername(authenticatedUsername(authentication)));
+        String username = authenticatedUsername(authentication);
+        return ApiResponse.success(queryCacheService.get("query:information:feedback:" + username, Duration.ofSeconds(20),
+                new TypeReference<List<InformationCenterMapper.TeachingFeedbackRow>>() {
+                }, () -> informationMapper.findFeedbackByUsername(username)));
     }
 
     @PostMapping("/feedback/me")
@@ -116,6 +167,8 @@ public class InformationCenterController {
                 Instant.now()
         );
         informationMapper.insertFeedback(command);
+        queryCacheService.evictByPrefix("query:information:feedback:" + authentication.getName());
+        queryCacheService.evictByPrefix("query:dashboard:" + authentication.getName());
         return ApiResponse.success(new InformationCenterMapper.TeachingFeedbackRow(
                 command.getId(),
                 command.getCategory(),
@@ -133,6 +186,10 @@ public class InformationCenterController {
             throw new BusinessException(ErrorCode.UNAUTHORIZED);
         }
         return authentication.getName();
+    }
+
+    private String normalize(String value) {
+        return value == null || value.isBlank() ? "all" : value.trim();
     }
 
     public record SubmitFeedbackRequest(

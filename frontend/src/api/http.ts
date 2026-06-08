@@ -9,6 +9,13 @@ export interface ApiResponse<T> {
   timestamp: string
 }
 
+export interface PageResponse<T> {
+  records: T[]
+  page: number
+  size: number
+  total: number
+}
+
 export const http = axios.create({
   baseURL: '/api',
   timeout: 10000,

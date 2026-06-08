@@ -73,8 +73,20 @@ public interface StudentMapper {
             join sys_user u on u.id = s.user_id
             where u.username = #{username}
             order by a.submitted_at desc
+            limit #{size} offset #{offset}
             """)
-    List<StatusChangeApplicationRow> findStatusChangesByUsername(@Param("username") String username);
+    List<StatusChangeApplicationRow> findStatusChangesByUsername(@Param("username") String username,
+                                                                 @Param("size") int size,
+                                                                 @Param("offset") int offset);
+
+    @Select("""
+            select count(*)
+            from student_status_change_application a
+            join student s on s.id = a.student_id
+            join sys_user u on u.id = s.user_id
+            where u.username = #{username}
+            """)
+    long countStatusChangesByUsername(@Param("username") String username);
 
     @Insert("""
             insert into student_status_change_application

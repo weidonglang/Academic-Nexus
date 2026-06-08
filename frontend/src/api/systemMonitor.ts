@@ -1,4 +1,4 @@
-import { http, type ApiResponse } from './http'
+import { http, type ApiResponse, type PageResponse } from './http'
 
 export interface RedisKeyRow {
   key: string
@@ -70,8 +70,8 @@ export function prewarmRedisStockApi(limit = 20) {
 
 // 功能：查询压测历史报告列表。
 // 说明：读取 reports 目录中的 JSON/HTML 报告，展示吞吐量、平均延迟、P95 和 Redis 状态。
-export function loadTestReportsApi() {
-  return http.get<never, ApiResponse<LoadTestReportRow[]>>('/admin/load-test-reports')
+export function loadTestReportsApi(params?: { page?: number; size?: number }) {
+  return http.get<never, ApiResponse<PageResponse<LoadTestReportRow>>>('/admin/load-test-reports', { params })
 }
 
 export function loadTestReportHtmlApi(fileName: string) {

@@ -48,7 +48,7 @@ public interface StatusChangeAttachmentMapper {
               att.uploaded_at as uploaded_at,
               s.student_no as student_no,
               u.display_name as student_name,
-              a.change_type as change_type,
+              a.type as change_type,
               a.status as application_status
             from status_change_attachment att
             join student_status_change_application a on a.id = att.application_id

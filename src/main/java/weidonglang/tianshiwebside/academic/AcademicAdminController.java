@@ -11,6 +11,9 @@ import weidonglang.tianshiwebside.academic.mapper.AcademicAdminMapper;
 import weidonglang.tianshiwebside.academic.mapper.AcademicAdminMapper.ExamAdminRow;
 import weidonglang.tianshiwebside.academic.mapper.AcademicAdminMapper.GradeAdminRow;
 import weidonglang.tianshiwebside.common.api.ApiResponse;
+import weidonglang.tianshiwebside.common.api.PageResponse;
+import weidonglang.tianshiwebside.common.api.Pagination;
+import weidonglang.tianshiwebside.common.cache.QueryCacheService;
 import weidonglang.tianshiwebside.common.error.BusinessException;
 import weidonglang.tianshiwebside.common.error.ErrorCode;
 import weidonglang.tianshiwebside.notice.NotificationService;
@@ -26,11 +29,18 @@ public class AcademicAdminController {
     private final AcademicAdminMapper mapper;
     private final AuditLogService auditLogService;
     private final NotificationService notificationService;
+    private final QueryCacheService queryCacheService;
 
-    public AcademicAdminController(AcademicAdminMapper mapper, AuditLogService auditLogService, NotificationService notificationService) {
+    public AcademicAdminController(
+            AcademicAdminMapper mapper,
+            AuditLogService auditLogService,
+            NotificationService notificationService,
+            QueryCacheService queryCacheService
+    ) {
         this.mapper = mapper;
         this.auditLogService = auditLogService;
         this.notificationService = notificationService;
+        this.queryCacheService = queryCacheService;
     }
 
     @GetMapping("/grades")
@@ -40,8 +50,22 @@ public class AcademicAdminController {
      * 说明：管理端按学期和关键字查询学生成绩，返回学生、课程、分数、绩点、
      * 考试类型、成绩状态和锁定状态，供成绩后台表格展示。
      */
-    public ApiResponse<List<GradeAdminRow>> grades(@RequestParam(required = false) String term, @RequestParam(required = false) String keyword) {
-        return ApiResponse.success(mapper.findGrades(normalize(term), keyword == null || keyword.isBlank() ? null : "%" + keyword.trim() + "%"));
+    public ApiResponse<PageResponse<GradeAdminRow>> grades(
+            @RequestParam(required = false) String term,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        String normalizedTerm = normalize(term);
+        String normalizedKeyword = keyword == null || keyword.isBlank() ? null : "%" + keyword.trim() + "%";
+        int safePage = Pagination.safePage(page);
+        int safeSize = Pagination.safeSize(size);
+        return ApiResponse.success(new PageResponse<>(
+                mapper.findGrades(normalizedTerm, normalizedKeyword, safeSize, Pagination.offset(safePage, safeSize)),
+                safePage,
+                safeSize,
+                mapper.countGrades(normalizedTerm, normalizedKeyword)
+        ));
     }
 
     @PostMapping("/grades")
@@ -57,6 +81,7 @@ public class AcademicAdminController {
         }
         mapper.insertGrade(toGradeCommand(null, studentId, request));
         auditLogService.record(authentication.getName(), "CREATE_GRADE", "GRADE", request.studentNo(), request.examType(), null);
+        evictAcademicCaches();
         return ApiResponse.success();
     }
 
@@ -78,20 +103,21 @@ public class AcademicAdminController {
         mapper.updateGrade(toGradeCommand(gradeId, studentId, request));
         auditLogService.record(authentication.getName(), "UPDATE_GRADE", "GRADE", gradeId,
                 "score=" + request.score() + ", status=" + request.gradeStatus(), null);
+        evictAcademicCaches();
         return ApiResponse.success();
     }
 
     @GetMapping("/grades/export")
     @PreAuthorize("hasAuthority('GRADE_READ')")
     public ApiResponse<List<GradeAdminRow>> exportGrades(@RequestParam(required = false) String term) {
-        return ApiResponse.success(mapper.findGrades(normalize(term), null));
+        return ApiResponse.success(mapper.findGradesForExport(normalize(term), null));
     }
 
     @GetMapping(value = "/grades/export-csv", produces = "text/csv;charset=UTF-8")
     @PreAuthorize("hasAuthority('GRADE_READ')")
     public String exportGradesCsv(@RequestParam(required = false) String term) {
         StringBuilder builder = new StringBuilder("studentNo,courseId,term,score,gradePoint,examType,gradeStatus,locked\n");
-        for (GradeAdminRow row : mapper.findGrades(normalize(term), null)) {
+        for (GradeAdminRow row : mapper.findGradesForExport(normalize(term), null)) {
             builder.append(row.studentNo()).append(',')
                     .append(row.courseId()).append(',')
                     .append(row.term()).append(',')
@@ -143,8 +169,20 @@ public class AcademicAdminController {
      * 功能：查询考试安排列表。
      * 说明：管理端按学期查看教学班对应的考试时间、考场、座位、考试类型和监考教师。
      */
-    public ApiResponse<List<ExamAdminRow>> exams(@RequestParam(required = false) String term) {
-        return ApiResponse.success(mapper.findExams(normalize(term)));
+    public ApiResponse<PageResponse<ExamAdminRow>> exams(
+            @RequestParam(required = false) String term,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        String normalizedTerm = normalize(term);
+        int safePage = Pagination.safePage(page);
+        int safeSize = Pagination.safeSize(size);
+        return ApiResponse.success(new PageResponse<>(
+                mapper.findExams(normalizedTerm, safeSize, Pagination.offset(safePage, safeSize)),
+                safePage,
+                safeSize,
+                mapper.countExams(normalizedTerm)
+        ));
     }
 
     @PostMapping("/exams")
@@ -161,6 +199,7 @@ public class AcademicAdminController {
                 "考试安排通知", "你有新的考试安排：" + request.examTime() + " " + request.room(),
                 "EXAM", "EXAM", request.offeringId());
         auditLogService.record(authentication.getName(), "CREATE_EXAM", "EXAM", request.offeringId(), request.room(), null);
+        evictAcademicCaches();
         return ApiResponse.success();
     }
 
@@ -178,6 +217,7 @@ public class AcademicAdminController {
                 "考试安排变更", "考试安排已更新：" + request.examTime() + " " + request.room(),
                 "EXAM", "EXAM", examId);
         auditLogService.record(authentication.getName(), "UPDATE_EXAM", "EXAM", examId, request.room(), null);
+        evictAcademicCaches();
         return ApiResponse.success();
     }
 
@@ -186,7 +226,16 @@ public class AcademicAdminController {
     public ApiResponse<Void> deleteExam(Authentication authentication, @PathVariable Long examId) {
         mapper.deleteExam(examId);
         auditLogService.record(authentication.getName(), "DELETE_EXAM", "EXAM", examId, null, null);
+        evictAcademicCaches();
         return ApiResponse.success();
+    }
+
+    private void evictAcademicCaches() {
+        queryCacheService.evictByPrefix("query:grades:");
+        queryCacheService.evictByPrefix("query:exams:");
+        queryCacheService.evictByPrefix("query:teacher:");
+        queryCacheService.evictByPrefix("query:dashboard:");
+        queryCacheService.evictByPrefix("query:notifications:");
     }
 
     private AcademicAdminMapper.GradeCommand toGradeCommand(Long id, Long studentId, GradeRequest request) {

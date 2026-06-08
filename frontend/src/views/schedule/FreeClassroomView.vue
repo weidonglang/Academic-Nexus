@@ -1,10 +1,13 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import PageHeader from '@/components/PageHeader.vue'
 import { fetchFreeClassroomsApi, type FreeClassroom } from '@/api/academic'
 
 const loading = ref(false)
 const rooms = ref<FreeClassroom[]>([])
+const page = ref(1)
+const size = ref(10)
+const pagedRooms = computed(() => rooms.value.slice((page.value - 1) * size.value, page.value * size.value))
 const query = reactive({
   campus: '',
   building: '',
@@ -18,6 +21,15 @@ async function loadRooms() {
   } finally {
     loading.value = false
   }
+}
+
+function search() {
+  page.value = 1
+  void loadRooms()
+}
+
+function handleSizeChange() {
+  page.value = 1
 }
 
 onMounted(loadRooms)
@@ -47,10 +59,10 @@ onMounted(loadRooms)
           <el-option label="5-6节" value="5-6节" />
         </el-select>
       </el-form-item>
-      <el-button type="primary" @click="loadRooms">查询</el-button>
+      <el-button type="primary" @click="search">查询</el-button>
     </el-form>
 
-    <el-table v-loading="loading" :data="rooms">
+    <el-table v-loading="loading" :data="pagedRooms">
       <el-table-column prop="campus" label="校区" width="110" />
       <el-table-column prop="building" label="教学楼" width="120" />
       <el-table-column prop="room" label="教室" width="110" />
@@ -58,5 +70,14 @@ onMounted(loadRooms)
       <el-table-column prop="roomType" label="类型" width="120" />
       <el-table-column prop="availableSlot" label="空闲节次" />
     </el-table>
+    <el-pagination
+      v-model:current-page="page"
+      v-model:page-size="size"
+      class="table-pagination"
+      layout="total, sizes, prev, pager, next"
+      :page-sizes="[10, 20, 50, 100]"
+      :total="rooms.length"
+      @size-change="handleSizeChange"
+    />
   </section>
 </template>

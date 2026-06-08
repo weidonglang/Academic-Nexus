@@ -15,6 +15,9 @@ const editing = ref<AdminExam | null>(null)
 const term = ref(DEFAULT_TERM)
 const rows = ref<AdminExam[]>([])
 const offerings = ref<AdminCourseOffering[]>([])
+const page = ref(1)
+const size = ref(10)
+const total = ref(0)
 
 const form = reactive<AdminExamPayload>({
   offeringId: 0,
@@ -33,12 +36,28 @@ onMounted(loadData)
 async function loadData() {
   loading.value = true
   try {
-    const [examResponse, offeringResponse] = await Promise.all([adminExamsApi(term.value), adminCourseOfferingsApi(term.value)])
-    rows.value = examResponse.data
+    const [examResponse, offeringResponse] = await Promise.all([
+      adminExamsApi({ term: term.value, page: page.value, size: size.value }),
+      adminCourseOfferingsApi(term.value),
+    ])
+    rows.value = examResponse.data.records
+    page.value = examResponse.data.page
+    size.value = examResponse.data.size
+    total.value = examResponse.data.total
     offerings.value = offeringResponse.data
   } finally {
     loading.value = false
   }
+}
+
+function search() {
+  page.value = 1
+  void loadData()
+}
+
+function handleSizeChange() {
+  page.value = 1
+  void loadData()
 }
 
 function openCreate() {
@@ -96,7 +115,7 @@ function resolveErrorMessage(error: unknown, fallback: string) {
   <section class="admin-toolbar">
     <div class="admin-actions">
       <el-input v-model="term" class="term-input" placeholder="学期" />
-      <el-button @click="loadData">查询</el-button>
+      <el-button @click="search">查询</el-button>
       <el-button type="primary" @click="openCreate">新增考试</el-button>
     </div>
   </section>
@@ -112,6 +131,16 @@ function resolveErrorMessage(error: unknown, fallback: string) {
       <el-table-column prop="status" label="状态" width="110" />
       <el-table-column label="操作" width="130" fixed="right"><template #default="{ row }"><el-button type="primary" link @click="openEdit(row)">编辑</el-button><el-button type="danger" link @click="remove(row)">删除</el-button></template></el-table-column>
     </el-table>
+    <el-pagination
+      v-model:current-page="page"
+      v-model:page-size="size"
+      class="table-pagination"
+      layout="total, sizes, prev, pager, next"
+      :page-sizes="[10, 20, 50, 100]"
+      :total="total"
+      @current-change="loadData"
+      @size-change="handleSizeChange"
+    />
   </section>
   <el-dialog v-model="dialogVisible" :title="editing ? '编辑考试' : '新增考试'" width="560px">
     <el-form label-width="92px" :model="form">

@@ -14,6 +14,9 @@ const saving = ref(false)
 const dialogVisible = ref(false)
 const tasks = ref<EvaluationTask[]>([])
 const currentTask = ref<EvaluationTask | null>(null)
+const page = ref(1)
+const size = ref(10)
+const pagedTasks = computed(() => tasks.value.slice((page.value - 1) * size.value, page.value * size.value))
 
 const form = reactive<SubmitEvaluationPayload>({
   teachingScore: 5,
@@ -36,6 +39,10 @@ async function loadTasks() {
   } finally {
     loading.value = false
   }
+}
+
+function handleSizeChange() {
+  page.value = 1
 }
 
 function openDialog(task: EvaluationTask) {
@@ -113,7 +120,7 @@ function resolveErrorMessage(error: unknown, fallback: string) {
   </section>
 
   <section v-loading="loading" class="work-panel">
-    <el-table :data="tasks" empty-text="暂无评价任务，选课后会自动生成">
+    <el-table :data="pagedTasks" empty-text="暂无评价任务，选课后会自动生成">
       <el-table-column prop="term" label="学期" width="130" />
       <el-table-column prop="courseCode" label="课程号" width="110" />
       <el-table-column prop="courseName" label="课程名称" min-width="150" />
@@ -141,6 +148,15 @@ function resolveErrorMessage(error: unknown, fallback: string) {
         </template>
       </el-table-column>
     </el-table>
+    <el-pagination
+      v-model:current-page="page"
+      v-model:page-size="size"
+      class="table-pagination"
+      layout="total, sizes, prev, pager, next"
+      :page-sizes="[10, 20, 50, 100]"
+      :total="tasks.length"
+      @size-change="handleSizeChange"
+    />
   </section>
 
   <el-dialog v-model="dialogVisible" title="提交教学评价" width="560px">

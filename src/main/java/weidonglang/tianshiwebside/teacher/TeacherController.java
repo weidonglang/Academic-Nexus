@@ -5,8 +5,10 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import com.fasterxml.jackson.core.type.TypeReference;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import weidonglang.tianshiwebside.common.cache.QueryCacheService;
 import weidonglang.tianshiwebside.academic.mapper.AcademicAdminMapper;
 import weidonglang.tianshiwebside.academic.mapper.AcademicAdminMapper.ExamAdminRow;
 import weidonglang.tianshiwebside.common.api.ApiResponse;
@@ -19,6 +21,7 @@ import weidonglang.tianshiwebside.teacher.mapper.TeacherMapper.TeacherOfferingRo
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -32,9 +35,11 @@ import java.util.List;
 @RequestMapping("/api/teacher")
 public class TeacherController {
     private final TeacherMapper teacherMapper;
+    private final QueryCacheService queryCacheService;
 
-    public TeacherController(TeacherMapper teacherMapper) {
+    public TeacherController(TeacherMapper teacherMapper, QueryCacheService queryCacheService) {
         this.teacherMapper = teacherMapper;
+        this.queryCacheService = queryCacheService;
     }
 
     /**
@@ -44,7 +49,15 @@ public class TeacherController {
      */
     @GetMapping("/offerings")
     public ApiResponse<List<TeacherOfferingRow>> offerings(Authentication authentication, @RequestParam(required = false) String term) {
-        return ApiResponse.success(teacherMapper.findOfferings(teacherName(authentication), normalize(term)));
+        String teacherName = teacherName(authentication);
+        String normalizedTerm = normalize(term);
+        return ApiResponse.success(queryCacheService.get(
+                "query:teacher:offerings:" + teacherName + ":" + (normalizedTerm == null ? "all" : normalizedTerm),
+                Duration.ofSeconds(20),
+                new TypeReference<List<TeacherOfferingRow>>() {
+                },
+                () -> teacherMapper.findOfferings(teacherName, normalizedTerm)
+        ));
     }
 
     /**
@@ -66,16 +79,30 @@ public class TeacherController {
         int safeSize = Math.max(10, Math.min(size, 200));
         int offset = (safePage - 1) * safeSize;
         String normalizedKeyword = keyword == null || keyword.isBlank() ? null : "%" + keyword.trim() + "%";
-        List<TeacherGradeEntryRow> records = teacherMapper.findGradeEntries(
-                teacherName,
-                normalize(term),
-                offeringId,
-                normalizedKeyword,
-                safeSize,
-                offset
+        String normalizedTerm = normalize(term);
+        String cacheKey = "query:teacher:grades:" + teacherName + ":" + (normalizedTerm == null ? "all" : normalizedTerm)
+                + ":" + (offeringId == null ? "all" : offeringId)
+                + ":" + (normalizedKeyword == null ? "all" : normalizedKeyword)
+                + ":" + safePage + ":" + safeSize;
+        PageResponse<TeacherGradeEntryRow> response = queryCacheService.get(
+                cacheKey,
+                Duration.ofSeconds(15),
+                new TypeReference<PageResponse<TeacherGradeEntryRow>>() {
+                },
+                () -> {
+                    List<TeacherGradeEntryRow> records = teacherMapper.findGradeEntries(
+                            teacherName,
+                            normalizedTerm,
+                            offeringId,
+                            normalizedKeyword,
+                            safeSize,
+                            offset
+                    );
+                    long total = teacherMapper.countGradeEntries(teacherName, normalizedTerm, offeringId, normalizedKeyword);
+                    return new PageResponse<>(records, safePage, safeSize, total);
+                }
         );
-        long total = teacherMapper.countGradeEntries(teacherName, normalize(term), offeringId, normalizedKeyword);
-        return ApiResponse.success(new PageResponse<>(records, safePage, safeSize, total));
+        return ApiResponse.success(response);
     }
 
     /**
@@ -116,6 +143,7 @@ public class TeacherController {
         } else {
             teacherMapper.updateGrade(command);
         }
+        evictTeacherAcademicCaches();
         return ApiResponse.success();
     }
 
@@ -124,7 +152,15 @@ public class TeacherController {
      */
     @GetMapping("/exams")
     public ApiResponse<List<ExamAdminRow>> exams(Authentication authentication, @RequestParam(required = false) String term) {
-        return ApiResponse.success(teacherMapper.findExams(teacherName(authentication), normalize(term)));
+        String teacherName = teacherName(authentication);
+        String normalizedTerm = normalize(term);
+        return ApiResponse.success(queryCacheService.get(
+                "query:teacher:exams:" + teacherName + ":" + (normalizedTerm == null ? "all" : normalizedTerm),
+                Duration.ofSeconds(20),
+                new TypeReference<List<ExamAdminRow>>() {
+                },
+                () -> teacherMapper.findExams(teacherName, normalizedTerm)
+        ));
     }
 
     @PostMapping("/exams")
@@ -132,6 +168,7 @@ public class TeacherController {
         String teacherName = teacherName(authentication);
         ensureOwnedOffering(teacherName, request.offeringId());
         teacherMapper.insertExam(toExamCommand(null, request));
+        evictTeacherAcademicCaches();
         return ApiResponse.success();
     }
 
@@ -141,6 +178,7 @@ public class TeacherController {
         ensureOwnedExam(teacherName, examId);
         ensureOwnedOffering(teacherName, request.offeringId());
         teacherMapper.updateExam(toExamCommand(examId, request));
+        evictTeacherAcademicCaches();
         return ApiResponse.success();
     }
 
@@ -149,12 +187,21 @@ public class TeacherController {
         String teacherName = teacherName(authentication);
         ensureOwnedExam(teacherName, examId);
         teacherMapper.deleteExam(examId);
+        evictTeacherAcademicCaches();
         return ApiResponse.success();
     }
 
     @GetMapping("/evaluations")
     public ApiResponse<List<EvaluationSummaryRow>> evaluations(Authentication authentication, @RequestParam(required = false) String term) {
-        return ApiResponse.success(teacherMapper.findEvaluationSummaries(teacherName(authentication), normalize(term)));
+        String teacherName = teacherName(authentication);
+        String normalizedTerm = normalize(term);
+        return ApiResponse.success(queryCacheService.get(
+                "query:teacher:evaluations:" + teacherName + ":" + (normalizedTerm == null ? "all" : normalizedTerm),
+                Duration.ofSeconds(20),
+                new TypeReference<List<EvaluationSummaryRow>>() {
+                },
+                () -> teacherMapper.findEvaluationSummaries(teacherName, normalizedTerm)
+        ));
     }
 
     private String teacherName(Authentication authentication) {
@@ -182,6 +229,13 @@ public class TeacherController {
         if (teacherMapper.countOwnedExam(teacherName, examId) == 0) {
             throw new BusinessException(ErrorCode.FORBIDDEN, "只能维护本人任课教学班的考试安排");
         }
+    }
+
+    private void evictTeacherAcademicCaches() {
+        queryCacheService.evictByPrefix("query:teacher:");
+        queryCacheService.evictByPrefix("query:grades:");
+        queryCacheService.evictByPrefix("query:exams:");
+        queryCacheService.evictByPrefix("query:dashboard:");
     }
 
     private AcademicAdminMapper.ExamCommand toExamCommand(Long id, TeacherExamRequest request) {

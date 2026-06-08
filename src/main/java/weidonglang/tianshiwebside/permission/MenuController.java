@@ -1,13 +1,16 @@
 package weidonglang.tianshiwebside.permission;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import weidonglang.tianshiwebside.common.api.ApiResponse;
+import weidonglang.tianshiwebside.common.cache.QueryCacheService;
 import weidonglang.tianshiwebside.permission.mapper.MenuMapper;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -20,10 +23,12 @@ import java.util.Set;
 public class MenuController {
     private final MenuMapper menuMapper;
     private final SysMenuRepository menuRepository;
+    private final QueryCacheService queryCacheService;
 
-    public MenuController(MenuMapper menuMapper, SysMenuRepository menuRepository) {
+    public MenuController(MenuMapper menuMapper, SysMenuRepository menuRepository, QueryCacheService queryCacheService) {
         this.menuMapper = menuMapper;
         this.menuRepository = menuRepository;
+        this.queryCacheService = queryCacheService;
     }
 
     @GetMapping
@@ -37,7 +42,18 @@ public class MenuController {
                 .map(GrantedAuthority::getAuthority)
                 .filter(authority -> authority.startsWith("ROLE_"))
                 .map(authority -> authority.substring("ROLE_".length()))
+                .sorted()
                 .toList();
+        return ApiResponse.success(queryCacheService.get(
+                "query:menus:" + String.join(",", roleCodes),
+                Duration.ofMinutes(5),
+                new TypeReference<List<MenuItemResponse>>() {
+                },
+                () -> buildMenus(roleCodes)
+        ));
+    }
+
+    private List<MenuItemResponse> buildMenus(List<String> roleCodes) {
         List<MenuMapper.MenuRow> menus;
         try {
             menus = roleCodes.isEmpty()
@@ -74,7 +90,7 @@ public class MenuController {
             }
         }
 
-        return ApiResponse.success(roots.stream().map(MutableMenuItem::toResponse).toList());
+        return roots.stream().map(MutableMenuItem::toResponse).toList();
     }
 
     /**
@@ -85,6 +101,8 @@ public class MenuController {
     private Set<String> fallbackMenuCodes(List<String> roleCodes) {
         Set<String> codes = new HashSet<>();
         codes.add("dashboard");
+        codes.add("ai-assistant");
+        codes.add("ai-chat");
         if (roleCodes.contains("ADMIN")) {
             codes.addAll(List.of(
                     "admin",
@@ -101,7 +119,9 @@ public class MenuController {
                     "admin-audit-logs",
                     "admin-redis-monitor",
                     "admin-load-test-reports",
-                    "admin-database-browser"
+                    "admin-database-browser",
+                    "admin-ai-sql",
+                    "admin-ai-logs"
             ));
         }
         if (roleCodes.contains("TEACHER")) {
@@ -136,6 +156,7 @@ public class MenuController {
                     "info-class-schedule",
                     "info-roster",
                     "info-academic-progress",
+                    "ai-academic-profile",
                     "info-teaching-plan",
                     "grade",
                     "grade-query",

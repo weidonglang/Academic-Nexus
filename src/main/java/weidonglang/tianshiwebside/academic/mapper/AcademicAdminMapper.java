@@ -29,8 +29,45 @@ public interface AcademicAdminMapper {
             where (#{term} is null or ag.term = #{term})
               and (#{keyword} is null or s.student_no like #{keyword} or u.display_name like #{keyword} or c.name like #{keyword})
             order by ag.term desc, c.code asc, s.student_no asc
+            limit #{size} offset #{offset}
             """)
-    List<GradeAdminRow> findGrades(@Param("term") String term, @Param("keyword") String keyword);
+    List<GradeAdminRow> findGrades(@Param("term") String term, @Param("keyword") String keyword,
+                                   @Param("size") int size, @Param("offset") int offset);
+
+    @Select("""
+            select count(*)
+            from academic_grade ag
+            join student s on s.id = ag.student_id
+            join sys_user u on u.id = s.user_id
+            join course c on c.id = ag.course_id
+            where (#{term} is null or ag.term = #{term})
+              and (#{keyword} is null or s.student_no like #{keyword} or u.display_name like #{keyword} or c.name like #{keyword})
+            """)
+    long countGrades(@Param("term") String term, @Param("keyword") String keyword);
+
+    @Select("""
+            select
+              ag.id as grade_id,
+              s.student_no as student_no,
+              u.display_name as student_name,
+              c.id as course_id,
+              c.code as course_code,
+              c.name as course_name,
+              ag.term as term,
+              ag.score as score,
+              ag.grade_point as grade_point,
+              ag.exam_type as exam_type,
+              ag.grade_status as grade_status,
+              ag.locked as locked
+            from academic_grade ag
+            join student s on s.id = ag.student_id
+            join sys_user u on u.id = s.user_id
+            join course c on c.id = ag.course_id
+            where (#{term} is null or ag.term = #{term})
+              and (#{keyword} is null or s.student_no like #{keyword} or u.display_name like #{keyword} or c.name like #{keyword})
+            order by ag.term desc, c.code asc, s.student_no asc
+            """)
+    List<GradeAdminRow> findGradesForExport(@Param("term") String term, @Param("keyword") String keyword);
 
     @Select("""
             select id
@@ -91,8 +128,17 @@ public interface AcademicAdminMapper {
             join course c on c.id = co.course_id
             where (#{term} is null or co.term = #{term})
             order by es.exam_time asc
+            limit #{size} offset #{offset}
             """)
-    List<ExamAdminRow> findExams(@Param("term") String term);
+    List<ExamAdminRow> findExams(@Param("term") String term, @Param("size") int size, @Param("offset") int offset);
+
+    @Select("""
+            select count(*)
+            from exam_schedule es
+            join course_offering co on co.id = es.course_offering_id
+            where (#{term} is null or co.term = #{term})
+            """)
+    long countExams(@Param("term") String term);
 
     @Select("""
             select count(*)

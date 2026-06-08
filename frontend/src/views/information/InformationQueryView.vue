@@ -36,6 +36,9 @@ const rows = ref<
   Array<AcademicWarning | GraduationAudit | ClassSchedule | CourseRoster | AcademicProgress | TeachingPlan | WeeklySchedule>
 >([])
 const offerings = ref<OfferingOption[]>([])
+const page = ref(1)
+const size = ref(10)
+const pagedRows = computed(() => rows.value.slice((page.value - 1) * size.value, page.value * size.value))
 
 const filters = reactive({
   term: '2025-2026-2',
@@ -104,6 +107,7 @@ watch(
   () => route.path,
   async () => {
     rows.value = []
+    page.value = 1
     await loadOptions()
     await loadRows()
   },
@@ -142,8 +146,13 @@ async function loadRows() {
 }
 
 async function query() {
+  page.value = 1
   await loadOptions()
   await loadRows()
+}
+
+function handleSizeChange() {
+  page.value = 1
 }
 
 function formatDateTime(value?: string) {
@@ -187,7 +196,7 @@ function formatDateTime(value?: string) {
       </el-form-item>
     </el-form>
 
-    <el-table v-if="mode === 'warning'" v-loading="loading" :data="rows" empty-text="暂无学籍预警">
+    <el-table v-if="mode === 'warning'" v-loading="loading" :data="pagedRows" empty-text="暂无学籍预警">
       <el-table-column prop="term" label="学期" width="130" />
       <el-table-column prop="level" label="预警等级" width="110" />
       <el-table-column prop="reason" label="原因" min-width="260" />
@@ -197,7 +206,7 @@ function formatDateTime(value?: string) {
       </el-table-column>
     </el-table>
 
-    <el-table v-if="mode === 'graduation'" v-loading="loading" :data="rows" empty-text="暂无毕业审核记录">
+    <el-table v-if="mode === 'graduation'" v-loading="loading" :data="pagedRows" empty-text="暂无毕业审核记录">
       <el-table-column prop="auditItem" label="审核项" width="150" />
       <el-table-column prop="requiredValue" label="要求" width="140" />
       <el-table-column prop="currentValue" label="当前情况" width="180" />
@@ -209,7 +218,7 @@ function formatDateTime(value?: string) {
       <el-table-column prop="remark" label="说明" min-width="220" />
     </el-table>
 
-    <el-table v-if="mode === 'classSchedule'" v-loading="loading" :data="rows" empty-text="暂无班级课表">
+    <el-table v-if="mode === 'classSchedule'" v-loading="loading" :data="pagedRows" empty-text="暂无班级课表">
       <el-table-column prop="term" label="学期" width="130" />
       <el-table-column prop="className" label="班级" width="150" />
       <el-table-column prop="courseCode" label="课程号" width="110" />
@@ -219,7 +228,7 @@ function formatDateTime(value?: string) {
       <el-table-column prop="classroom" label="教室" width="130" />
     </el-table>
 
-    <el-table v-if="mode === 'roster'" v-loading="loading" :data="rows" empty-text="暂无选课名单">
+    <el-table v-if="mode === 'roster'" v-loading="loading" :data="pagedRows" empty-text="暂无选课名单">
       <el-table-column prop="courseCode" label="课程号" width="110" />
       <el-table-column prop="courseName" label="课程" min-width="150" />
       <el-table-column prop="studentNo" label="学号" width="120" />
@@ -230,7 +239,7 @@ function formatDateTime(value?: string) {
       </el-table-column>
     </el-table>
 
-    <el-table v-if="mode === 'progress'" v-loading="loading" :data="rows" empty-text="暂无学业进度">
+    <el-table v-if="mode === 'progress'" v-loading="loading" :data="pagedRows" empty-text="暂无学业进度">
       <el-table-column prop="courseType" label="课程类别" min-width="150" />
       <el-table-column prop="courseCount" label="课程数" width="100" />
       <el-table-column prop="totalCredits" label="总学分" width="100" />
@@ -240,7 +249,7 @@ function formatDateTime(value?: string) {
       </el-table-column>
     </el-table>
 
-    <el-table v-if="mode === 'plan'" v-loading="loading" :data="rows" empty-text="暂无教学计划">
+    <el-table v-if="mode === 'plan'" v-loading="loading" :data="pagedRows" empty-text="暂无教学计划">
       <el-table-column prop="term" label="学期" width="130" />
       <el-table-column prop="courseCode" label="课程号" width="110" />
       <el-table-column prop="courseName" label="课程" min-width="160" />
@@ -249,7 +258,7 @@ function formatDateTime(value?: string) {
       <el-table-column prop="assessmentType" label="考核方式" width="110" />
     </el-table>
 
-    <el-table v-if="mode === 'weeklySchedule'" v-loading="loading" :data="rows" empty-text="暂无周课表">
+    <el-table v-if="mode === 'weeklySchedule'" v-loading="loading" :data="pagedRows" empty-text="暂无周课表">
       <el-table-column prop="week" label="周次" width="90" />
       <el-table-column prop="courseCode" label="课程号" width="110" />
       <el-table-column prop="courseName" label="课程" min-width="160" />
@@ -257,5 +266,14 @@ function formatDateTime(value?: string) {
       <el-table-column prop="scheduleText" label="时间" width="130" />
       <el-table-column prop="classroom" label="教室" width="130" />
     </el-table>
+    <el-pagination
+      v-model:current-page="page"
+      v-model:page-size="size"
+      class="table-pagination"
+      layout="total, sizes, prev, pager, next"
+      :page-sizes="[10, 20, 50, 100]"
+      :total="rows.length"
+      @size-change="handleSizeChange"
+    />
   </section>
 </template>

@@ -31,8 +31,22 @@ public interface RegistrationApplicationMapper {
             where u.username = #{username}
               and (#{type} is null or a.type = #{type})
             order by a.submitted_at desc
+            limit #{size} offset #{offset}
             """)
-    List<RegistrationApplicationRow> findMine(@Param("username") String username, @Param("type") RegistrationApplicationType type);
+    List<RegistrationApplicationRow> findMine(@Param("username") String username,
+                                              @Param("type") RegistrationApplicationType type,
+                                              @Param("size") int size,
+                                              @Param("offset") int offset);
+
+    @Select("""
+            select count(*)
+            from student_registration_application a
+            join student s on s.id = a.student_id
+            join sys_user u on u.id = s.user_id
+            where u.username = #{username}
+              and (#{type} is null or a.type = #{type})
+            """)
+    long countMine(@Param("username") String username, @Param("type") RegistrationApplicationType type);
 
     @Select("""
             select
@@ -64,8 +78,32 @@ public interface RegistrationApplicationMapper {
                 or a.course_name like #{keyword}
               )
             order by a.submitted_at desc
+            limit #{size} offset #{offset}
             """)
     List<AdminRegistrationApplicationRow> findAdminApplications(
+            @Param("status") ApplicationStatus status,
+            @Param("type") RegistrationApplicationType type,
+            @Param("keyword") String keyword,
+            @Param("size") int size,
+            @Param("offset") int offset
+    );
+
+    @Select("""
+            select count(*)
+            from student_registration_application a
+            join student s on s.id = a.student_id
+            join sys_user u on u.id = s.user_id
+            where (#{status} is null or a.status = #{status})
+              and (#{type} is null or a.type = #{type})
+              and (
+                #{keyword} is null
+                or s.student_no like #{keyword}
+                or u.display_name like #{keyword}
+                or a.target_name like #{keyword}
+                or a.course_name like #{keyword}
+              )
+            """)
+    long countAdminApplications(
             @Param("status") ApplicationStatus status,
             @Param("type") RegistrationApplicationType type,
             @Param("keyword") String keyword

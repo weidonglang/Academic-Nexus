@@ -1,4 +1,4 @@
-import { http, type ApiResponse } from './http'
+import { http, type ApiResponse, type PageResponse } from './http'
 import type { ApplicationStatus, StatusChangeType } from './student'
 
 export type ReviewDecision = 'APPROVE' | 'REJECT'
@@ -25,8 +25,8 @@ export interface ReviewStatusChangePayload {
   comment: string
 }
 
-export function adminStatusChangesApi(params?: { status?: ApplicationStatus | ''; keyword?: string }) {
-  return http.get<never, ApiResponse<AdminStatusChangeApplication[]>>('/admin/status-changes', {
+export function adminStatusChangesApi(params?: { status?: ApplicationStatus | ''; keyword?: string; page?: number; size?: number }) {
+  return http.get<never, ApiResponse<PageResponse<AdminStatusChangeApplication>>>('/admin/status-changes', {
     params,
   })
 }

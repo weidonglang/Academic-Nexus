@@ -1,4 +1,4 @@
-import { http, type ApiResponse } from './http'
+import { http, type ApiResponse, type PageResponse } from './http'
 import type { ApplicationStatus } from './student'
 
 export type RegistrationApplicationType =
@@ -53,8 +53,8 @@ export const registrationTypeText: Record<RegistrationApplicationType, string> =
   MAJOR_DIRECTION_CONFIRMATION: '专业方向确认',
 }
 
-export function registrationApplicationsApi(params?: { type?: RegistrationApplicationType }) {
-  return http.get<never, ApiResponse<RegistrationApplication[]>>('/students/me/registration-applications', {
+export function registrationApplicationsApi(params?: { type?: RegistrationApplicationType; page?: number; size?: number }) {
+  return http.get<never, ApiResponse<PageResponse<RegistrationApplication>>>('/students/me/registration-applications', {
     params,
   })
 }
@@ -67,8 +67,10 @@ export function adminRegistrationApplicationsApi(params?: {
   status?: ApplicationStatus | ''
   type?: RegistrationApplicationType | ''
   keyword?: string
+  page?: number
+  size?: number
 }) {
-  return http.get<never, ApiResponse<AdminRegistrationApplication[]>>('/admin/registration-applications', {
+  return http.get<never, ApiResponse<PageResponse<AdminRegistrationApplication>>>('/admin/registration-applications', {
     params,
   })
 }

@@ -16,6 +16,9 @@ const route = useRoute()
 const loading = ref(false)
 const submitting = ref(false)
 const records = ref<RegistrationApplication[]>([])
+const page = ref(1)
+const size = ref(10)
+const total = ref(0)
 
 const typeByRoute: Record<string, RegistrationApplicationType> = {
   '/registration/minor': 'MINOR_MAJOR_REGISTRATION',
@@ -80,6 +83,7 @@ watch(
   () => route.path,
   async () => {
     resetForm()
+    page.value = 1
     await loadRecords()
   },
 )
@@ -87,11 +91,19 @@ watch(
 async function loadRecords() {
   loading.value = true
   try {
-    const response = await registrationApplicationsApi({ type: currentType.value })
-    records.value = response.data
+    const response = await registrationApplicationsApi({ type: currentType.value, page: page.value, size: size.value })
+    records.value = response.data.records
+    page.value = response.data.page
+    size.value = response.data.size
+    total.value = response.data.total
   } finally {
     loading.value = false
   }
+}
+
+function handleSizeChange() {
+  page.value = 1
+  void loadRecords()
 }
 
 async function submitApplication() {
@@ -189,6 +201,16 @@ function resolveErrorMessage(error: unknown, fallback: string) {
           <template #default="{ row }">{{ row.reviewComment || '-' }}</template>
         </el-table-column>
       </el-table>
+      <el-pagination
+        v-model:current-page="page"
+        v-model:page-size="size"
+        class="table-pagination"
+        layout="total, sizes, prev, pager, next"
+        :page-sizes="[10, 20, 50, 100]"
+        :total="total"
+        @current-change="loadRecords"
+        @size-change="handleSizeChange"
+      />
     </article>
   </section>
 </template>

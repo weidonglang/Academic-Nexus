@@ -1,4 +1,4 @@
-import { http, type ApiResponse } from './http'
+import { http, type ApiResponse, type PageResponse } from './http'
 
 export interface AdminGrade {
   gradeId: number
@@ -51,8 +51,8 @@ export interface AdminExamPayload {
   invigilator?: string
 }
 
-export function adminGradesApi(params?: { term?: string; keyword?: string }) {
-  return http.get<never, ApiResponse<AdminGrade[]>>('/admin/academic/grades', { params })
+export function adminGradesApi(params?: { term?: string; keyword?: string; page?: number; size?: number }) {
+  return http.get<never, ApiResponse<PageResponse<AdminGrade>>>('/admin/academic/grades', { params })
 }
 
 export function createAdminGradeApi(payload: AdminGradePayload) {
@@ -71,8 +71,8 @@ export function importAdminGradesApi(grades: AdminGradePayload[]) {
   return http.post<never, ApiResponse<void>>('/admin/academic/grades/import', { grades })
 }
 
-export function adminExamsApi(term?: string) {
-  return http.get<never, ApiResponse<AdminExam[]>>('/admin/academic/exams', { params: term ? { term } : undefined })
+export function adminExamsApi(params?: { term?: string; page?: number; size?: number }) {
+  return http.get<never, ApiResponse<PageResponse<AdminExam>>>('/admin/academic/exams', { params })
 }
 
 export function createAdminExamApi(payload: AdminExamPayload) {

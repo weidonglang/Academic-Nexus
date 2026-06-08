@@ -1,17 +1,19 @@
 package weidonglang.tianshiwebside.schedule;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import org.springframework.security.core.Authentication;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import weidonglang.tianshiwebside.common.api.ApiResponse;
+import weidonglang.tianshiwebside.common.cache.QueryCacheService;
 import weidonglang.tianshiwebside.common.error.BusinessException;
 import weidonglang.tianshiwebside.common.error.ErrorCode;
 import weidonglang.tianshiwebside.course.mapper.CourseSelectionReadMapper;
 import weidonglang.tianshiwebside.course.mapper.CourseSelectionRow;
 import weidonglang.tianshiwebside.student.mapper.StudentMapper;
 
+import java.time.Duration;
 import java.util.List;
 
 @RestController
@@ -19,21 +21,30 @@ import java.util.List;
 public class PersonalScheduleController {
     private final StudentMapper studentMapper;
     private final CourseSelectionReadMapper selectionReadMapper;
+    private final QueryCacheService queryCacheService;
 
     public PersonalScheduleController(
             StudentMapper studentMapper,
-            CourseSelectionReadMapper selectionReadMapper
+            CourseSelectionReadMapper selectionReadMapper,
+            QueryCacheService queryCacheService
     ) {
         this.studentMapper = studentMapper;
         this.selectionReadMapper = selectionReadMapper;
+        this.queryCacheService = queryCacheService;
     }
 
     @GetMapping("/me/personal")
     public ApiResponse<List<ScheduleEntryResponse>> personalSchedule(Authentication authentication) {
         String username = authenticatedUsername(authentication);
-        return ApiResponse.success(selectionReadMapper.findSelectedCourses(username, 200, 0).stream()
-                .map(this::toResponse)
-                .toList());
+        return ApiResponse.success(queryCacheService.get(
+                "query:schedule:personal:" + username,
+                Duration.ofSeconds(20),
+                new TypeReference<List<ScheduleEntryResponse>>() {
+                },
+                () -> selectionReadMapper.findSelectedCourses(username, 200, 0).stream()
+                        .map(this::toResponse)
+                        .toList()
+        ));
     }
 
     private String authenticatedUsername(Authentication authentication) {

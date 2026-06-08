@@ -2,8 +2,10 @@ package weidonglang.tianshiwebside.course;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Size;
+import com.fasterxml.jackson.core.type.TypeReference;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import weidonglang.tianshiwebside.common.cache.QueryCacheService;
 import weidonglang.tianshiwebside.common.api.ApiResponse;
 import weidonglang.tianshiwebside.common.error.BusinessException;
 import weidonglang.tianshiwebside.common.error.ErrorCode;
@@ -16,6 +18,7 @@ import weidonglang.tianshiwebside.course.mapper.CourseSelectionRow;
 import weidonglang.tianshiwebside.course.mapper.CourseSelectionWriteMapper;
 
 import java.time.Instant;
+import java.time.Duration;
 import java.util.List;
 
 @RestController
@@ -26,15 +29,18 @@ public class CourseSelectionController {
     private final CourseGrabPort courseGrabPort;
     private final CourseSelectionReadMapper selectionReadMapper;
     private final CourseSelectionWriteMapper selectionWriteMapper;
+    private final QueryCacheService queryCacheService;
 
     public CourseSelectionController(
             CourseGrabPort courseGrabPort,
             CourseSelectionReadMapper selectionReadMapper,
-            CourseSelectionWriteMapper selectionWriteMapper
+            CourseSelectionWriteMapper selectionWriteMapper,
+            QueryCacheService queryCacheService
     ) {
         this.courseGrabPort = courseGrabPort;
         this.selectionReadMapper = selectionReadMapper;
         this.selectionWriteMapper = selectionWriteMapper;
+        this.queryCacheService = queryCacheService;
     }
 
     @GetMapping("/offerings")
@@ -52,10 +58,20 @@ public class CourseSelectionController {
         int safePage = Math.max(page, 1);
         int safeSize = Math.max(10, Math.min(size, 100));
         int offset = (safePage - 1) * safeSize;
-        List<CourseOfferingResponse> records = selectionReadMapper.findOfferings(username, CURRENT_TERM, safeSize, offset).stream()
-                .map(this::toOfferingResponse)
-                .toList();
-        return ApiResponse.success(new PageResponse<>(records, safePage, safeSize, selectionReadMapper.countOfferings(CURRENT_TERM)));
+        String cacheKey = "query:course-selection:offerings:" + username + ":" + CURRENT_TERM + ":" + safePage + ":" + safeSize;
+        PageResponse<CourseOfferingResponse> response = queryCacheService.get(
+                cacheKey,
+                Duration.ofSeconds(20),
+                new TypeReference<PageResponse<CourseOfferingResponse>>() {
+                },
+                () -> {
+                    List<CourseOfferingResponse> records = selectionReadMapper.findOfferings(username, CURRENT_TERM, safeSize, offset).stream()
+                            .map(this::toOfferingResponse)
+                            .toList();
+                    return new PageResponse<>(records, safePage, safeSize, selectionReadMapper.countOfferings(CURRENT_TERM));
+                }
+        );
+        return ApiResponse.success(response);
     }
 
     @GetMapping("/selected")
@@ -73,15 +89,26 @@ public class CourseSelectionController {
         int safePage = Math.max(page, 1);
         int safeSize = Math.max(5, Math.min(size, 100));
         int offset = (safePage - 1) * safeSize;
-        List<CourseSelectionResponse> records = selectionReadMapper.findSelectedCourses(username, safeSize, offset).stream()
-                .map(this::toSelectionResponse)
-                .toList();
-        return ApiResponse.success(new PageResponse<>(records, safePage, safeSize, selectionReadMapper.countSelectedCourses(username)));
+        String cacheKey = "query:course-selection:selected:" + username + ":" + safePage + ":" + safeSize;
+        PageResponse<CourseSelectionResponse> response = queryCacheService.get(
+                cacheKey,
+                Duration.ofSeconds(20),
+                new TypeReference<PageResponse<CourseSelectionResponse>>() {
+                },
+                () -> {
+                    List<CourseSelectionResponse> records = selectionReadMapper.findSelectedCourses(username, safeSize, offset).stream()
+                            .map(this::toSelectionResponse)
+                            .toList();
+                    return new PageResponse<>(records, safePage, safeSize, selectionReadMapper.countSelectedCourses(username));
+                }
+        );
+        return ApiResponse.success(response);
     }
 
     @PostMapping("/offerings/{offeringId}")
     public ApiResponse<CourseSelectionResponse> select(Authentication authentication, @PathVariable Long offeringId) {
         CourseGrabResult result = grabCourse(authentication, offeringId).data();
+        evictCourseFlowCaches(authentication.getName());
         return ApiResponse.success(toSelectionResponse(result));
     }
 
@@ -92,7 +119,9 @@ public class CourseSelectionController {
      * Redis 库存扣减、重复选课校验和数据库选课记录写入。
      */
     public ApiResponse<CourseGrabResult> grab(Authentication authentication, @PathVariable Long offeringId) {
-        return grabCourse(authentication, offeringId);
+        ApiResponse<CourseGrabResult> response = grabCourse(authentication, offeringId);
+        evictCourseFlowCaches(authentication.getName());
+        return response;
     }
 
     @DeleteMapping("/selected/{selectionId}")
@@ -106,10 +135,15 @@ public class CourseSelectionController {
         if (studentId == null) {
             throw new BusinessException(ErrorCode.NOT_FOUND, "Student profile not found");
         }
+        Long offeringId = selectionWriteMapper.findOfferingIdBySelection(selectionId, studentId);
         int deleted = selectionWriteMapper.deleteSelection(selectionId, studentId);
         if (deleted == 0) {
             throw new BusinessException(ErrorCode.NOT_FOUND, "Course selection not found");
         }
+        if (offeringId != null) {
+            queryCacheService.evict("selection:offering:" + offeringId + ":remaining");
+        }
+        evictCourseFlowCaches(authenticatedUsername(authentication));
         return ApiResponse.success();
     }
 
@@ -176,11 +210,24 @@ public class CourseSelectionController {
         if (authentication == null || !authentication.isAuthenticated()) {
             throw new BusinessException(ErrorCode.UNAUTHORIZED);
         }
-        return ApiResponse.success(courseGrabPort.grab(new CourseGrabCommand(
+        ApiResponse<CourseGrabResult> response = ApiResponse.success(courseGrabPort.grab(new CourseGrabCommand(
                 authentication.getName(),
                 request.offeringId(),
                 request.requestId()
         )));
+        evictCourseFlowCaches(authentication.getName());
+        return response;
+    }
+
+    private void evictCourseFlowCaches(String username) {
+        queryCacheService.evictByPrefix("query:course-selection:");
+        queryCacheService.evictByPrefix("query:teacher:");
+        queryCacheService.evictByPrefix("query:admin:course-offerings:");
+        queryCacheService.evictByPrefix("query:schedule:");
+        queryCacheService.evictByPrefix("query:information:");
+        queryCacheService.evictByPrefix("query:dashboard:");
+        queryCacheService.evictByPrefix("query:grades:" + username + ":");
+        queryCacheService.evictByPrefix("query:exams:" + username + ":");
     }
 
     private SelectionWindowStatus windowStatus(Instant startAt, Instant endAt, Instant now) {

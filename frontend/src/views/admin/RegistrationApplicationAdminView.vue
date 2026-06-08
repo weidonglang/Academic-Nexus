@@ -16,6 +16,9 @@ const reviewing = ref(false)
 const records = ref<AdminRegistrationApplication[]>([])
 const currentApplication = ref<AdminRegistrationApplication | null>(null)
 const reviewDialogVisible = ref(false)
+const page = ref(1)
+const size = ref(10)
+const total = ref(0)
 
 const filters = reactive({
   status: '' as ApplicationStatus | '',
@@ -53,11 +56,26 @@ async function loadRecords() {
       status: filters.status,
       type: filters.type,
       keyword: filters.keyword || undefined,
+      page: page.value,
+      size: size.value,
     })
-    records.value = response.data
+    records.value = response.data.records
+    page.value = response.data.page
+    size.value = response.data.size
+    total.value = response.data.total
   } finally {
     loading.value = false
   }
+}
+
+function search() {
+  page.value = 1
+  void loadRecords()
+}
+
+function handleSizeChange() {
+  page.value = 1
+  void loadRecords()
 }
 
 function openReviewDialog(row: AdminRegistrationApplication, decision: 'APPROVE' | 'REJECT') {
@@ -136,7 +154,7 @@ function resolveErrorMessage(error: unknown, fallback: string) {
         <el-input v-model="filters.keyword" class="keyword-input" clearable placeholder="学号/姓名/目标/课程" />
       </el-form-item>
       <el-form-item>
-        <el-button type="primary" @click="loadRecords">查询</el-button>
+        <el-button type="primary" @click="search">查询</el-button>
       </el-form-item>
     </el-form>
 
@@ -171,6 +189,16 @@ function resolveErrorMessage(error: unknown, fallback: string) {
         </template>
       </el-table-column>
     </el-table>
+    <el-pagination
+      v-model:current-page="page"
+      v-model:page-size="size"
+      class="table-pagination"
+      layout="total, sizes, prev, pager, next"
+      :page-sizes="[10, 20, 50, 100]"
+      :total="total"
+      @current-change="loadRecords"
+      @size-change="handleSizeChange"
+    />
   </section>
 
   <el-dialog

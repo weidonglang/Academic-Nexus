@@ -15,6 +15,9 @@ const saving = ref(false)
 const reviewDialogVisible = ref(false)
 const currentApplication = ref<AdminStatusChangeApplication | null>(null)
 const records = ref<AdminStatusChangeApplication[]>([])
+const page = ref(1)
+const size = ref(10)
+const total = ref(0)
 
 const filters = reactive({
   status: 'SUBMITTED' as ApplicationStatus | '',
@@ -61,11 +64,26 @@ async function loadRecords() {
     const response = await adminStatusChangesApi({
       status: filters.status,
       keyword: filters.keyword.trim(),
+      page: page.value,
+      size: size.value,
     })
-    records.value = response.data
+    records.value = response.data.records
+    page.value = response.data.page
+    size.value = response.data.size
+    total.value = response.data.total
   } finally {
     loading.value = false
   }
+}
+
+function search() {
+  page.value = 1
+  void loadRecords()
+}
+
+function handleSizeChange() {
+  page.value = 1
+  void loadRecords()
 }
 
 function openReviewDialog(row: AdminStatusChangeApplication, decision: ReviewDecision) {
@@ -130,7 +148,7 @@ function resolveErrorMessage(error: unknown, fallback: string) {
     <div class="admin-summary">
       <article>
         <span>当前列表</span>
-        <strong>{{ records.length }}</strong>
+        <strong>{{ total }}</strong>
       </article>
       <article>
         <span>待处理</span>
@@ -150,7 +168,7 @@ function resolveErrorMessage(error: unknown, fallback: string) {
         <el-option label="已取消" value="CANCELED" />
       </el-select>
       <el-input v-model="filters.keyword" class="keyword-input" placeholder="学号、姓名、专业、班级" clearable />
-      <el-button type="primary" @click="loadRecords">查询</el-button>
+      <el-button type="primary" @click="search">查询</el-button>
     </div>
   </section>
 
@@ -189,6 +207,16 @@ function resolveErrorMessage(error: unknown, fallback: string) {
         </template>
       </el-table-column>
     </el-table>
+    <el-pagination
+      v-model:current-page="page"
+      v-model:page-size="size"
+      class="table-pagination"
+      layout="total, sizes, prev, pager, next"
+      :page-sizes="[10, 20, 50, 100]"
+      :total="total"
+      @current-change="loadRecords"
+      @size-change="handleSizeChange"
+    />
   </section>
 
   <el-dialog

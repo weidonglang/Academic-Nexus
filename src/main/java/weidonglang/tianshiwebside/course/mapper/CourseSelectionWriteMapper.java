@@ -45,6 +45,19 @@ public interface CourseSelectionWriteMapper {
     CourseOfferingDetailRow findOfferingDetail(@Param("offeringId") Long offeringId);
 
     /**
+     * 功能：在数据库兜底抢课路径中锁定教学班行。
+     * 说明：Redis 不可用时，同一教学班的并发抢课请求会在事务内串行执行容量检查和写入，
+     * 避免多个请求同时看到相同剩余名额后一起插入造成超容量。
+     */
+    @Select("""
+            select id
+            from course_offering
+            where id = #{offeringId}
+            for update
+            """)
+    Long lockOfferingForUpdate(@Param("offeringId") Long offeringId);
+
+    /**
      * 功能：校验学生是否已经选择过指定教学班。
      * 说明：用于防止同一学生重复选择同一教学班，是 Redis 幂等之外的数据库业务校验。
      */
@@ -66,6 +79,14 @@ public interface CourseSelectionWriteMapper {
             where offering_id = #{offeringId}
             """)
     long countOfferingSelections(@Param("offeringId") Long offeringId);
+
+    @Select("""
+            select offering_id
+            from course_selection
+            where id = #{selectionId}
+              and student_id = #{studentId}
+            """)
+    Long findOfferingIdBySelection(@Param("selectionId") Long selectionId, @Param("studentId") Long studentId);
 
     /**
      * 功能：新增学生选课记录。

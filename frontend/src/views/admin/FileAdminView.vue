@@ -6,8 +6,11 @@ import { adminFilesApi, deleteAdminFileApi, downloadAdminFileApi, type AdminAtta
 
 const loading = ref(false)
 const files = ref<AdminAttachment[]>([])
+const page = ref(1)
+const size = ref(10)
 
 const totalSize = computed(() => files.value.reduce((sum, item) => sum + Number(item.sizeBytes || 0), 0))
+const pagedFiles = computed(() => files.value.slice((page.value - 1) * size.value, page.value * size.value))
 
 onMounted(loadData)
 
@@ -18,6 +21,10 @@ async function loadData() {
   } finally {
     loading.value = false
   }
+}
+
+function handleSizeChange() {
+  page.value = 1
 }
 
 async function downloadFile(row: AdminAttachment) {
@@ -87,7 +94,7 @@ function resolveErrorMessage(error: unknown, fallback: string) {
   </section>
 
   <section v-loading="loading" class="work-panel">
-    <el-table :data="files" empty-text="暂无上传材料">
+    <el-table :data="pagedFiles" empty-text="暂无上传材料">
       <el-table-column prop="originalFilename" label="文件名" min-width="180" />
       <el-table-column prop="studentNo" label="学号" width="120" />
       <el-table-column prop="studentName" label="学生" width="120" />
@@ -107,5 +114,14 @@ function resolveErrorMessage(error: unknown, fallback: string) {
         </template>
       </el-table-column>
     </el-table>
+    <el-pagination
+      v-model:current-page="page"
+      v-model:page-size="size"
+      class="table-pagination"
+      layout="total, sizes, prev, pager, next"
+      :page-sizes="[10, 20, 50, 100]"
+      :total="files.length"
+      @size-change="handleSizeChange"
+    />
   </section>
 </template>
