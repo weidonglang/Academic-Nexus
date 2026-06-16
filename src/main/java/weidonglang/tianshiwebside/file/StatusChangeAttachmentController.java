@@ -11,7 +11,11 @@ import java.io.IOException;
 import java.nio.file.*;
 import java.security.Principal;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.UUID;
 
 @RestController
@@ -19,13 +23,22 @@ import java.util.UUID;
 public class StatusChangeAttachmentController {
     private final StatusChangeAttachmentMapper mapper;
     private final Path uploadRoot;
+    private final long maxSizeBytes;
+    private final Set<String> allowedExtensions;
+    private final Set<String> allowedContentTypes;
 
     public StatusChangeAttachmentController(
             StatusChangeAttachmentMapper mapper,
-            @Value("${app.upload-root:uploads}") String uploadRoot
+            @Value("${app.upload-root:uploads}") String uploadRoot,
+            @Value("${app.upload.max-size-bytes:10485760}") long maxSizeBytes,
+            @Value("${app.upload.allowed-extensions:pdf,jpg,jpeg,png,doc,docx,xls,xlsx}") String allowedExtensions,
+            @Value("${app.upload.allowed-content-types:application/pdf,image/jpeg,image/png,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet}") String allowedContentTypes
     ) {
         this.mapper = mapper;
         this.uploadRoot = Paths.get(uploadRoot).toAbsolutePath().normalize();
+        this.maxSizeBytes = maxSizeBytes;
+        this.allowedExtensions = parseCsv(allowedExtensions);
+        this.allowedContentTypes = parseCsv(allowedContentTypes);
     }
 
     @GetMapping
@@ -41,6 +54,7 @@ public class StatusChangeAttachmentController {
         if (file.isEmpty()) {
             throw new BusinessException(ErrorCode.BAD_REQUEST, "文件不能为空");
         }
+        validateFile(file);
         try {
             Files.createDirectories(uploadRoot);
             String original = file.getOriginalFilename() == null ? "attachment" : file.getOriginalFilename();
@@ -55,5 +69,42 @@ public class StatusChangeAttachmentController {
         } catch (IOException ex) {
             throw new BusinessException(ErrorCode.INTERNAL_ERROR, "文件保存失败");
         }
+    }
+
+    private void validateFile(MultipartFile file) {
+        if (file.getSize() > maxSizeBytes) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "文件大小不能超过 " + formatSize(maxSizeBytes));
+        }
+
+        String original = file.getOriginalFilename() == null ? "" : file.getOriginalFilename().trim();
+        String extension = extensionOf(original);
+        if (extension.isBlank() || !allowedExtensions.contains(extension)) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "不支持的文件类型");
+        }
+
+        String contentType = file.getContentType() == null ? "" : file.getContentType().toLowerCase(Locale.ROOT);
+        if (contentType.isBlank() || !allowedContentTypes.contains(contentType)) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "不支持的文件内容类型");
+        }
+    }
+
+    private Set<String> parseCsv(String value) {
+        return Arrays.stream(value.split(","))
+                .map(item -> item.trim().toLowerCase(Locale.ROOT))
+                .filter(item -> !item.isBlank())
+                .collect(Collectors.toUnmodifiableSet());
+    }
+
+    private String extensionOf(String filename) {
+        int dot = filename.lastIndexOf('.');
+        if (dot < 0 || dot == filename.length() - 1) {
+            return "";
+        }
+        return filename.substring(dot + 1).toLowerCase(Locale.ROOT);
+    }
+
+    private String formatSize(long bytes) {
+        long megabytes = bytes / 1024 / 1024;
+        return megabytes > 0 ? megabytes + "MB" : bytes + " bytes";
     }
 }
