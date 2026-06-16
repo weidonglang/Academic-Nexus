@@ -70,9 +70,19 @@ const router = createRouter({
   routes,
 })
 
-// 功能：实现前端路由访问控制。
-// 说明：未登录用户访问业务页面时跳转到登录页；已登录用户访问登录页时跳转首页；
-// 同时根据角色限制学生、教师、管理员进入各自允许的页面范围。
+function canAccessPath(path: string, roles: string[]) {
+  if (path === '/dashboard' || path.startsWith('/ai')) {
+    return true
+  }
+  if (path.startsWith('/admin')) {
+    return roles.includes('ADMIN')
+  }
+  if (path.startsWith('/teacher')) {
+    return roles.includes('TEACHER') || roles.includes('ADMIN')
+  }
+  return roles.includes('STUDENT')
+}
+
 router.beforeEach((to) => {
   const auth = useAuthStore()
   if (!to.meta.public && !auth.isAuthenticated) {
@@ -82,24 +92,8 @@ router.beforeEach((to) => {
     return '/dashboard'
   }
   if (!to.meta.public && auth.user) {
-    // 开发者综合账号用于答辩演示，允许访问学生、教师和管理员全部页面。
-    if (auth.user.username === '23111141') {
-      return
-    }
-    const roles = auth.user.roles
-    if (to.path.startsWith('/ai')) {
-      return
-    }
-    if (roles.includes('ADMIN') && to.path !== '/dashboard' && !to.path.startsWith('/admin')) {
+    if (!canAccessPath(to.path, auth.user.roles)) {
       return '/dashboard'
-    }
-    if (roles.includes('TEACHER') && !roles.includes('ADMIN') && to.path !== '/dashboard' && !to.path.startsWith('/teacher')) {
-      return '/dashboard'
-    }
-    if (roles.includes('STUDENT') && !roles.includes('ADMIN') && !roles.includes('TEACHER')) {
-      if (to.path.startsWith('/admin') || to.path.startsWith('/teacher')) {
-        return '/dashboard'
-      }
     }
   }
 })
