@@ -11,8 +11,12 @@ import org.springframework.web.bind.annotation.RestController;
 import weidonglang.tianshiwebside.common.api.ApiResponse;
 import weidonglang.tianshiwebside.common.api.PageResponse;
 import weidonglang.tianshiwebside.common.api.Pagination;
+import weidonglang.tianshiwebside.common.trace.TraceIdHolder;
+
+import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.security.Principal;
+import java.time.Instant;
 import java.util.List;
 
 @RestController
@@ -25,6 +29,7 @@ public class AiController {
     private final AiCallLogService callLogService;
     private final AcademicProfileService academicProfileService;
     private final LoadTestAnalysisService loadTestAnalysisService;
+    private final JdbcTemplate jdbcTemplate;
 
     public AiController(
             AiAssistantService assistantService,
@@ -34,7 +39,8 @@ public class AiController {
             AiRemoteClient remoteClient,
             AiCallLogService callLogService,
             AcademicProfileService academicProfileService,
-            LoadTestAnalysisService loadTestAnalysisService
+            LoadTestAnalysisService loadTestAnalysisService,
+            JdbcTemplate jdbcTemplate
     ) {
         this.assistantService = assistantService;
         this.chatService = chatService;
@@ -44,6 +50,7 @@ public class AiController {
         this.callLogService = callLogService;
         this.academicProfileService = academicProfileService;
         this.loadTestAnalysisService = loadTestAnalysisService;
+        this.jdbcTemplate = jdbcTemplate;
     }
 
     @PostMapping("/api/ai/assistant/ask")
@@ -59,6 +66,22 @@ public class AiController {
     @GetMapping("/api/ai/status")
     public ApiResponse<AiServiceStatusResponse> status() {
         return ApiResponse.success(remoteClient.status());
+    }
+
+    @PostMapping("/api/ai/feedback")
+    public ApiResponse<Void> feedback(@Valid @RequestBody AiFeedbackRequest request, Principal principal) {
+        jdbcTemplate.update("""
+                        insert into ai_feedback (call_log_id, username, rating, comment, trace_id, created_at)
+                        values (?, ?, ?, ?, ?, ?)
+                        """,
+                request.callLogId(),
+                principal == null ? "anonymous" : principal.getName(),
+                request.rating(),
+                request.comment(),
+                TraceIdHolder.get(),
+                Instant.now()
+        );
+        return ApiResponse.success();
     }
 
     @GetMapping("/api/ai/academic-profile")
@@ -113,5 +136,8 @@ public class AiController {
                 safeSize,
                 callLogService.countLogs()
         ));
+    }
+
+    public record AiFeedbackRequest(Long callLogId, String rating, String comment) {
     }
 }

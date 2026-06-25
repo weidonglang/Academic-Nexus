@@ -18,6 +18,27 @@ export interface RolePermissionMenu {
   sortOrder: number
 }
 
+export interface PermissionCapability {
+  code: string
+  name: string
+  description?: string
+}
+
+export interface PermissionMatrixRoleRow {
+  roleId: number
+  roleCode: string
+  roleName: string
+  menuCodes: string[]
+  capabilityCodes: string[]
+}
+
+export interface PermissionMatrixResponse {
+  roles: RolePermissionRole[]
+  menus: RolePermissionMenu[]
+  capabilities: PermissionCapability[]
+  roleRows: PermissionMatrixRoleRow[]
+}
+
 export function rolePermissionRolesApi() {
   return http.get<never, ApiResponse<RolePermissionRole[]>>('/admin/role-permissions/roles')
 }
@@ -34,4 +55,8 @@ export function updateRolePermissionMenusApi(roleId: number, menuCodes: string[]
   return http.put<never, ApiResponse<string[]>>(`/admin/role-permissions/roles/${roleId}/menus`, {
     menuCodes,
   })
+}
+
+export function permissionMatrixApi() {
+  return http.get<never, ApiResponse<PermissionMatrixResponse>>('/admin/role-permissions/matrix')
 }
