@@ -15,6 +15,8 @@ import weidonglang.tianshiwebside.academic.AcademicQueryController;
 import weidonglang.tianshiwebside.admin.SystemMonitorController;
 import weidonglang.tianshiwebside.audit.AuditLogController;
 import weidonglang.tianshiwebside.common.api.PageResponse;
+import weidonglang.tianshiwebside.common.trace.TraceIdHolder;
+import weidonglang.tianshiwebside.course.CourseSelectionConsistencyController;
 import weidonglang.tianshiwebside.course.grab.CourseGrabCommand;
 import weidonglang.tianshiwebside.course.grab.LocalCourseGrabService;
 import weidonglang.tianshiwebside.evaluation.AdminTeachingEvaluationController;
@@ -27,6 +29,8 @@ import weidonglang.tianshiwebside.notice.NoticeController;
 import weidonglang.tianshiwebside.notice.mapper.NoticeMapper;
 import weidonglang.tianshiwebside.permission.MenuController;
 import weidonglang.tianshiwebside.permission.RolePermissionController;
+import weidonglang.tianshiwebside.governance.DataDictionaryController;
+import weidonglang.tianshiwebside.governance.GovernanceController;
 import weidonglang.tianshiwebside.student.AdminRegistrationApplicationController;
 import weidonglang.tianshiwebside.student.AdminStatusChangeController;
 import weidonglang.tianshiwebside.student.ApplicationStatus;
@@ -45,6 +49,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @SpringBootTest
 class SystemInteroperabilityIntegrationTests {
@@ -90,6 +95,12 @@ class SystemInteroperabilityIntegrationTests {
     private LocalCourseGrabService courseGrabService;
     @Autowired
     private SystemMonitorController systemMonitorController;
+    @Autowired
+    private GovernanceController governanceController;
+    @Autowired
+    private DataDictionaryController dataDictionaryController;
+    @Autowired
+    private CourseSelectionConsistencyController consistencyController;
 
     @BeforeEach
     void setUp() {
@@ -317,6 +328,39 @@ class SystemInteroperabilityIntegrationTests {
                 .contains("mysql", "redis", "ai", "upload", "flyway", "jvm");
         assertThat(health.metrics()).extracting(SystemMonitorController.SystemMetricItem::key)
                 .contains("jvm.usedMemory", "jvm.maxMemory", "jvm.threads", "disk.uploadFree");
+    }
+
+    @Test
+    void traceIdPermissionMatrixModerationDictionaryAndConsistencyAreAvailable() {
+        TraceIdHolder.set("test-trace-id");
+        try {
+            assertThat(systemMonitorController.systemHealth().traceId()).isEqualTo("test-trace-id");
+        } finally {
+            TraceIdHolder.clear();
+        }
+
+        ensureRole("ADMIN", "管理员");
+        ensureMenu("dashboard", "首页", "/dashboard", null, 1);
+        var matrix = rolePermissionController.matrix().data();
+        assertThat(matrix.roleRows()).anyMatch(row -> row.roleCode().equals("ADMIN"));
+        assertThat(matrix.menus()).anyMatch(menu -> menu.code().equals("dashboard"));
+
+        assertThatThrownBy(() -> governanceController.checkContent(adminAuth(),
+                new GovernanceController.ModerationCheckRequest("TEST", "这里包含示例敏感词A", true)))
+                .hasMessageContaining("高风险敏感词");
+        assertThat(governanceController.moderationLogs(1, 20).data().records())
+                .anyMatch(row -> row.scene().equals("TEST") && row.action().equals("BLOCK"));
+
+        assertThat(dataDictionaryController.tables(null).data())
+                .anyMatch(row -> row.tableName().equals("student") && row.exportAllowed());
+        assertThat(dataDictionaryController.fields("student").data())
+                .anyMatch(row -> row.fieldName().equals("phone") && row.sensitive());
+
+        Long courseId = seedCourse("CON" + suffix(), "一致性课程");
+        seedOffering(courseId, "一致性老师", "2027-2028-1", 30);
+        var report = consistencyController.report(20).data();
+        assertThat(report.rows()).isNotEmpty();
+        assertThat(report.redisMessage()).isNotBlank();
     }
 
     private void seedSelection(String studentUsername, Long offeringId) {

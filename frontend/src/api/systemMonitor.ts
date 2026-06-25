@@ -76,10 +76,48 @@ export interface SystemHealthResponse {
   metrics: SystemMetricItem[]
 }
 
+export interface CourseSelectionConsistencyRow {
+  offeringId: number
+  courseName: string
+  capacity: number
+  selectedCountInDb: number
+  redisStock?: number | null
+  expectedStock: number
+  diff: number
+  consistent: boolean
+  oversold: boolean
+  lastCheckedAt?: string | null
+}
+
+export interface CourseSelectionConsistencyReport {
+  checkedAt: string
+  redisReachable: boolean
+  redisMessage: string
+  inconsistentCount: number
+  oversoldRisk: boolean
+  rows: CourseSelectionConsistencyRow[]
+}
+
 // 功能：查询系统健康中心聚合状态。
 // 说明：管理端健康中心展示 MySQL、Redis、AI Service、上传目录、Flyway 和 JVM 状态。
 export function systemHealthApi() {
   return http.get<never, ApiResponse<SystemHealthResponse>>('/admin/system-health')
+}
+
+export function courseSelectionConsistencyApi(params?: { limit?: number }) {
+  return http.get<never, ApiResponse<CourseSelectionConsistencyReport>>('/admin/course-selection/consistency', { params })
+}
+
+export function checkCourseSelectionConsistencyApi(limit = 50) {
+  return http.post<never, ApiResponse<CourseSelectionConsistencyReport>>('/admin/course-selection/consistency/check', null, {
+    params: { limit },
+  })
+}
+
+export function repairCourseSelectionConsistencyApi(limit = 50) {
+  return http.post<never, ApiResponse<CourseSelectionConsistencyReport>>('/admin/course-selection/consistency/repair', null, {
+    params: { limit },
+  })
 }
 
 // 功能：查询 Redis 运行状态和缓存 key。

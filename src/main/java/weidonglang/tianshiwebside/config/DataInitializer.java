@@ -176,20 +176,24 @@ public class DataInitializer {
             seedMenu("admin-course-offerings", "\u8bfe\u7a0b\u4e0e\u6559\u5b66\u73ed", "/admin/course-offerings", "BookOpenCheck", "admin", 61);
             seedMenu("admin-status-changes", "\u5b66\u7c4d\u5f02\u52a8\u5ba1\u6838", "/admin/status-changes", "FileCheck2", "admin", 62);
             seedMenu("admin-role-permissions", "\u89d2\u8272\u6743\u9650\u7ba1\u7406", "/admin/role-permissions", "ShieldCheck", "admin", 63);
-            seedMenu("admin-users", "\u7528\u6237\u4e0e\u89d2\u8272", "/admin/users", "UsersRound", "admin", 64);
-            seedMenu("admin-evaluations", "\u6559\u5b66\u8bc4\u4ef7\u7edf\u8ba1", "/admin/evaluations", "ChartColumn", "admin", 65);
-            seedMenu("admin-grades", "\u6210\u7ee9\u7ba1\u7406", "/admin/grades", "FileSpreadsheet", "admin", 66);
-            seedMenu("admin-exams", "\u8003\u8bd5\u7ba1\u7406", "/admin/exams", "ClipboardCheck", "admin", 67);
-            seedMenu("admin-notices", "\u901a\u77e5\u516c\u544a", "/admin/notices", "Megaphone", "admin", 68);
-            seedMenu("admin-files", "\u6587\u4ef6\u7ba1\u7406", "/admin/files", "FolderOpen", "admin", 69);
-            seedMenu("admin-audit-logs", "\u64cd\u4f5c\u5ba1\u8ba1", "/admin/audit-logs", "ScrollText", "admin", 70);
-            seedMenu("admin-registration-applications", "\u62a5\u540d\u7533\u8bf7\u5ba1\u6838", "/admin/registration-applications", "FileCheck2", "admin", 71);
-            seedMenu("admin-system-health", "\u7cfb\u7edf\u5065\u5eb7\u4e2d\u5fc3", "/admin/system-health", "Activity", "admin", 72);
-            seedMenu("admin-redis-monitor", "Redis\u72b6\u6001\u76d1\u63a7", "/admin/redis-monitor", "DatabaseZap", "admin", 73);
-            seedMenu("admin-load-test-reports", "\u538b\u6d4b\u5386\u53f2\u62a5\u544a", "/admin/load-test-reports", "ChartColumnBig", "admin", 74);
-            seedMenu("admin-database-browser", "\u6570\u636e\u5e93\u53ea\u8bfb\u6d4f\u89c8", "/admin/database-browser", "TableProperties", "admin", 75);
-            seedMenu("admin-ai-sql", "\u81ea\u7136\u8bed\u8a00\u67e5\u5e93", "/admin/ai-sql", "Sparkles", "admin", 76);
-            seedMenu("admin-ai-logs", "AI\u8c03\u7528\u65e5\u5fd7", "/admin/ai-logs", "ScrollText", "admin", 77);
+            seedMenu("admin-permission-matrix", "\u6743\u9650\u77e9\u9635", "/admin/permission-matrix", "ShieldCheck", "admin", 64);
+            seedMenu("admin-users", "\u7528\u6237\u4e0e\u89d2\u8272", "/admin/users", "UsersRound", "admin", 65);
+            seedMenu("admin-evaluations", "\u6559\u5b66\u8bc4\u4ef7\u7edf\u8ba1", "/admin/evaluations", "ChartColumn", "admin", 66);
+            seedMenu("admin-grades", "\u6210\u7ee9\u7ba1\u7406", "/admin/grades", "FileSpreadsheet", "admin", 67);
+            seedMenu("admin-exams", "\u8003\u8bd5\u7ba1\u7406", "/admin/exams", "ClipboardCheck", "admin", 68);
+            seedMenu("admin-notices", "\u901a\u77e5\u516c\u544a", "/admin/notices", "Megaphone", "admin", 69);
+            seedMenu("admin-files", "\u6587\u4ef6\u7ba1\u7406", "/admin/files", "FolderOpen", "admin", 70);
+            seedMenu("admin-audit-logs", "\u64cd\u4f5c\u5ba1\u8ba1", "/admin/audit-logs", "ScrollText", "admin", 71);
+            seedMenu("admin-registration-applications", "\u62a5\u540d\u7533\u8bf7\u5ba1\u6838", "/admin/registration-applications", "FileCheck2", "admin", 72);
+            seedMenu("admin-system-health", "\u7cfb\u7edf\u5065\u5eb7\u4e2d\u5fc3", "/admin/system-health", "Activity", "admin", 73);
+            seedMenu("admin-redis-monitor", "Redis\u72b6\u6001\u76d1\u63a7", "/admin/redis-monitor", "DatabaseZap", "admin", 74);
+            seedMenu("admin-course-selection-consistency", "\u9009\u8bfe\u4e00\u81f4\u6027\u62a5\u544a", "/admin/course-selection-consistency", "ListChecks", "admin", 75);
+            seedMenu("admin-data-dictionary", "\u6570\u636e\u5b57\u5178", "/admin/data-dictionary", "BookMarked", "admin", 76);
+            seedMenu("admin-sensitive-words", "\u654f\u611f\u8bcd\u4e0e\u5185\u5bb9\u5b89\u5168", "/admin/sensitive-words", "ShieldAlert", "admin", 77);
+            seedMenu("admin-load-test-reports", "\u538b\u6d4b\u5386\u53f2\u62a5\u544a", "/admin/load-test-reports", "ChartColumnBig", "admin", 78);
+            seedMenu("admin-database-browser", "\u6570\u636e\u5e93\u53ea\u8bfb\u6d4f\u89c8", "/admin/database-browser", "TableProperties", "admin", 79);
+            seedMenu("admin-ai-sql", "\u81ea\u7136\u8bed\u8a00\u67e5\u5e93", "/admin/ai-sql", "Sparkles", "admin", 80);
+            seedMenu("admin-ai-logs", "AI\u8c03\u7528\u65e5\u5fd7", "/admin/ai-logs", "ScrollText", "admin", 81);
             seedPermission("COURSE_WRITE", "\u8bfe\u7a0b\u5199\u5165", "\u7ef4\u62a4\u8bfe\u7a0b\u548c\u6559\u5b66\u73ed");
             seedPermission("GRADE_READ", "\u6210\u7ee9\u67e5\u770b", "\u67e5\u770b\u6210\u7ee9\u6570\u636e");
             seedPermission("GRADE_WRITE", "\u6210\u7ee9\u5199\u5165", "\u5f55\u5165\u548c\u4fee\u6539\u6210\u7ee9");
@@ -248,6 +252,7 @@ public class DataInitializer {
                     "admin-course-offerings",
                     "admin-status-changes",
                     "admin-role-permissions",
+                    "admin-permission-matrix",
                     "admin-users",
                     "admin-evaluations",
                     "admin-grades",
@@ -258,6 +263,9 @@ public class DataInitializer {
                     "admin-registration-applications",
                     "admin-system-health",
                     "admin-redis-monitor",
+                    "admin-course-selection-consistency",
+                    "admin-data-dictionary",
+                    "admin-sensitive-words",
                     "admin-load-test-reports",
                     "admin-database-browser",
                     "admin-ai-sql",
