@@ -27,8 +27,12 @@ export function loginApi(payload: LoginRequest) {
 
 // 功能：封装退出登录接口。
 // 说明：配合 auth store 清空本地登录状态，完成前后端退出流程。
-export function logoutApi() {
-  return http.post<never, ApiResponse<void>>('/auth/logout')
+export function logoutApi(refreshToken?: string) {
+  return http.post<never, ApiResponse<void>>('/auth/logout', { refreshToken })
+}
+
+export function refreshTokenApi(refreshToken: string) {
+  return http.post<never, ApiResponse<LoginResponse>>('/auth/refresh', { refreshToken })
 }
 
 export function currentUserApi() {

@@ -5,14 +5,15 @@ import PageHeader from '@/components/PageHeader.vue'
 import {
   adminStatusChangesApi,
   adminStatusChangeAttachmentsApi,
-  adminStatusChangeAttachmentDownloadUrl,
-  adminStatusChangeAttachmentPreviewUrl,
+  adminStatusChangeAttachmentDownloadApi,
+  adminStatusChangeAttachmentPreviewApi,
   reviewStatusChangeApi,
   type AdminStatusChangeAttachment,
   type AdminStatusChangeApplication,
   type ReviewDecision,
 } from '@/api/adminStatusChange'
 import type { ApplicationStatus, StatusChangeType } from '@/api/student'
+import { openBlob, saveBlob } from '@/utils/download'
 
 const loading = ref(false)
 const saving = ref(false)
@@ -137,12 +138,20 @@ async function openAttachmentDialog(row: AdminStatusChangeApplication) {
   }
 }
 
-function previewAttachment(row: AdminStatusChangeAttachment) {
-  window.open(adminStatusChangeAttachmentPreviewUrl(row.applicationId, row.id), '_blank')
+async function previewAttachment(row: AdminStatusChangeAttachment) {
+  try {
+    openBlob(await adminStatusChangeAttachmentPreviewApi(row.applicationId, row.id))
+  } catch (error) {
+    ElMessage.error(resolveErrorMessage(error, '附件预览失败'))
+  }
 }
 
-function downloadAttachment(row: AdminStatusChangeAttachment) {
-  window.open(adminStatusChangeAttachmentDownloadUrl(row.applicationId, row.id), '_blank')
+async function downloadAttachment(row: AdminStatusChangeAttachment) {
+  try {
+    saveBlob(await adminStatusChangeAttachmentDownloadApi(row.applicationId, row.id), row.originalFilename || 'attachment')
+  } catch (error) {
+    ElMessage.error(resolveErrorMessage(error, '附件下载失败'))
+  }
 }
 
 function canReview(row: AdminStatusChangeApplication) {

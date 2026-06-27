@@ -56,11 +56,25 @@ public class AiRemoteClient {
     }
 
     public Optional<AiChatResponse> chat(String message) {
+        return chat(message, null, null, null);
+    }
+
+    public Optional<AiChatResponse> chat(String message, Long selectedModelId, String selectedModelName, Long sessionId) {
         try {
             if (discoveryEnabled) {
-                return Optional.of(feign().chat(new AiServiceFeignClient.ChatPayload(message)));
+                return Optional.of(feign().chat(new AiServiceFeignClient.ChatPayload(
+                        message,
+                        selectedModelName,
+                        selectedModelId,
+                        sessionId
+                )));
             }
-            String response = post("/internal/ai/chat", Map.of("message", message), Duration.ofSeconds(90));
+            Map<String, Object> payload = new java.util.LinkedHashMap<>();
+            payload.put("message", message);
+            payload.put("modelName", selectedModelName);
+            payload.put("modelId", selectedModelId);
+            payload.put("sessionId", sessionId);
+            String response = post("/internal/ai/chat", payload, Duration.ofSeconds(90));
             return Optional.of(objectMapper.readValue(response, AiChatResponse.class));
         } catch (Exception ex) {
             return Optional.empty();

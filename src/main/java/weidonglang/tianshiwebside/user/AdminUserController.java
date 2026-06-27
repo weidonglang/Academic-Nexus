@@ -10,6 +10,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import weidonglang.tianshiwebside.audit.AuditLogService;
+import weidonglang.tianshiwebside.auth.AuthTokenStore;
 import weidonglang.tianshiwebside.common.api.ApiResponse;
 import weidonglang.tianshiwebside.common.cache.QueryCacheService;
 import weidonglang.tianshiwebside.common.error.BusinessException;
@@ -28,17 +29,20 @@ public class AdminUserController {
     private final PasswordEncoder passwordEncoder;
     private final AuditLogService auditLogService;
     private final QueryCacheService queryCacheService;
+    private final AuthTokenStore authTokenStore;
 
     public AdminUserController(
             AdminUserMapper userMapper,
             PasswordEncoder passwordEncoder,
             AuditLogService auditLogService,
-            QueryCacheService queryCacheService
+            QueryCacheService queryCacheService,
+            AuthTokenStore authTokenStore
     ) {
         this.userMapper = userMapper;
         this.passwordEncoder = passwordEncoder;
         this.auditLogService = auditLogService;
         this.queryCacheService = queryCacheService;
+        this.authTokenStore = authTokenStore;
     }
 
     @GetMapping
@@ -110,6 +114,10 @@ public class AdminUserController {
             throw new BusinessException(ErrorCode.CONFLICT, "不能禁用或锁定当前登录账号");
         }
         userMapper.updateUserProfile(userId, request.displayName().trim(), request.status());
+        if (request.status() != UserStatus.ACTIVE) {
+            authTokenStore.revokeAllForUser(user.username());
+            auditLogService.record(authentication.getName(), "REVOKE_USER_TOKENS", "USER", userId, request.status().name(), null);
+        }
         evictUserRelatedCaches();
         return ApiResponse.success(toResponse(userMapper.findUserById(userId)));
     }

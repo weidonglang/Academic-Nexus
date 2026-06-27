@@ -2,7 +2,7 @@
 
 Updated: 2026-06-27
 
-This matrix records the closure scope through v1.4.0-final-polish. v1.2 closed #4-#35; v1.3.0 closed #39-#59; v1.4.0-final-polish focuses on #61-#74 final business closure and release polish.
+This matrix records the closure scope through v1.4.1-open-issues-closure. v1.2 closed #4-#35; v1.3.0 closed #39-#59; v1.4.0-final-polish focused on #61-#74; v1.4.1 stabilizes the #76-#101 open-issue sweep.
 
 ## Final Verification
 
@@ -86,6 +86,32 @@ This matrix records the closure scope through v1.4.0-final-polish. v1.2 closed #
 | #72 | CLOSED BY V1.4.0 | Audit traceability updated for AI, database templates, archive cleanup and attachment flows. |
 | #73 | CLOSED BY V1.4.0 | New pages use loading, empty and error states; existing global 401/403 handling retained. |
 | #74 | CLOSED BY V1.4.0 | Health-check scripts generate Markdown/JSON reports under `reports/`. |
+| #76 | FIXED BY V1.4.1 | AI chat selected model is propagated to ai-service and actual/fallback model details are logged. |
+| #77 | FIXED BY V1.4.1 | Sensitive-word and moderation-log pages handle backend/table drift independently. |
+| #78 | FIXED BY V1.4.1 | Load-test panel supports backend API array/paged shapes, `offeringId`, term filtering, and diagnostics. |
+| #79 | PARTIAL | Full two-stage batch user import remains a larger follow-up; not closed by v1.4.1. |
+| #80 | PARTIAL | Full two-stage batch course/offering import remains a larger follow-up; not closed by v1.4.1. |
+| #81 | PARTIAL | Single review remains stable; complete batch review partial-success UI is still follow-up. |
+| #82 | PARTIAL | Role-targeted notices and stats are stable; grade/major/class/offering targeting is still follow-up. |
+| #83 | FIXED BY V1.4.1 | Locked grades are immutable through admin updates; grade-point range validation added. |
+| #84 | PARTIAL | Teacher readonly awareness for application summaries is still follow-up. |
+| #85 | IMPROVED BY V1.4.1 | Download failures, DB browser partial failures, sensitive-word errors, schedule anomalies and auth refresh states improved. |
+| #86 | IMPROVED BY V1.4.1 | Batch task center now downloads CSV reports. |
+| #87 | FIXED BY V1.4.1 | Exam create/update/delete now notifies affected students in admin and teacher flows. |
+| #88 | RETAINED | Evaluation submit and summary cache eviction remain covered by existing controller flow. |
+| #89 | RETAINED | Archive cleanup remains non-destructive in demo mode and documented in UI wording. |
+| #90 | FIXED BY V1.4.1 | Refresh/logout/session revocation and disabled-user rejection implemented. |
+| #91 | FIXED BY V1.4.1 | File/CSV/report downloads use authenticated blob requests instead of raw `window.open('/api/...')`. |
+| #92 | FIXED BY V1.4.1 | Frontend fallback menu now exposes all implemented admin pages. |
+| #93 | FIXED BY V1.4.1 | Sensitive DB browser fields have broader masking. |
+| #94 | FIXED BY V1.4.1 | Attachment file root checks and audit logs added for file operations. |
+| #95 | IMPROVED BY V1.4.1 | Redis prewarm/repair remains DB-authoritative and prewarm operations are audited. |
+| #96 | FIXED BY V1.4.1 | Health center includes runtime config, Nacos, demo data, release zip and existing dependency checks. |
+| #97 | FIXED BY V1.4.1 | DB browser loads schema/index/FK sections independently. |
+| #98 | FIXED BY V1.4.1 | Uploading extra materials after review is rejected. |
+| #99 | FIXED BY V1.4.1 | Current term is resolved dynamically instead of hardcoded. |
+| #100 | FIXED BY V1.4.1 | Abnormal schedule text is detected and surfaced. |
+| #101 | FIXED BY V1.4.1 | Course grab requires `offeringId` with a readable validation error. |
 
 ## Remaining Release Discipline
 

@@ -10,10 +10,13 @@ import {
   type SensitiveWordRow,
 } from '@/api/governance'
 
-const loading = ref(false)
+const wordLoading = ref(false)
+const logLoading = ref(false)
 const saving = ref(false)
 const words = ref<SensitiveWordRow[]>([])
 const logs = ref<ModerationLogRow[]>([])
+const wordError = ref('')
+const logError = ref('')
 const form = reactive({
   word: '',
   category: 'DEMO',
@@ -24,16 +27,34 @@ const form = reactive({
 onMounted(loadData)
 
 async function loadData() {
-  loading.value = true
+  await Promise.all([loadSensitiveWords(), loadModerationLogs()])
+}
+
+async function loadSensitiveWords() {
+  wordLoading.value = true
   try {
-    const [wordResponse, logResponse] = await Promise.all([
-      sensitiveWordsApi({ page: 1, size: 50 }),
-      moderationLogsApi({ page: 1, size: 20 }),
-    ])
+    const wordResponse = await sensitiveWordsApi({ page: 1, size: 50 })
     words.value = wordResponse.data.records
-    logs.value = logResponse.data.records
+    wordError.value = ''
+  } catch (error) {
+    wordError.value = resolveError(error)
+    ElMessage.error(`词库加载失败：${wordError.value}`)
   } finally {
-    loading.value = false
+    wordLoading.value = false
+  }
+}
+
+async function loadModerationLogs() {
+  logLoading.value = true
+  try {
+    const logResponse = await moderationLogsApi({ page: 1, size: 20 })
+    logs.value = logResponse.data.records
+    logError.value = ''
+  } catch (error) {
+    logError.value = resolveError(error)
+    ElMessage.error(`检测日志加载失败：${logError.value}`)
+  } finally {
+    logLoading.value = false
   }
 }
 
@@ -44,7 +65,7 @@ async function createWord() {
     await createSensitiveWordApi({ ...form, word: form.word.trim() })
     form.word = ''
     ElMessage.success('敏感词已新增')
-    await loadData()
+    await loadSensitiveWords()
   } catch (error) {
     ElMessage.error(resolveError(error))
   } finally {
@@ -96,12 +117,13 @@ function resolveError(error: unknown) {
       </el-form>
     </article>
 
-    <article v-loading="loading" class="work-panel">
+    <article v-loading="wordLoading" class="work-panel">
       <div class="panel-heading">
         <h2>词库</h2>
-        <span>{{ words.length }} 条</span>
+        <el-button link type="primary" @click="loadSensitiveWords">刷新</el-button>
       </div>
-      <el-table :data="words">
+      <el-alert v-if="wordError" class="state-alert" type="error" :closable="false" :title="wordError" />
+      <el-table :data="words" empty-text="暂无敏感词">
         <el-table-column prop="word" label="词条" min-width="150" />
         <el-table-column prop="category" label="分类" width="110" />
         <el-table-column label="风险" width="110">
@@ -116,11 +138,12 @@ function resolveError(error: unknown) {
     </article>
   </section>
 
-  <section v-loading="loading" class="work-panel">
+  <section v-loading="logLoading" class="work-panel">
     <div class="panel-heading">
       <h2>检测日志</h2>
-      <span>{{ logs.length }} 条</span>
+      <el-button link type="primary" @click="loadModerationLogs">刷新</el-button>
     </div>
+    <el-alert v-if="logError" class="state-alert" type="error" :closable="false" :title="logError" />
     <el-table :data="logs" empty-text="暂无检测日志">
       <el-table-column prop="scene" label="场景" width="130" />
       <el-table-column prop="matchedWords" label="命中词" min-width="160" show-overflow-tooltip />
@@ -147,5 +170,9 @@ function resolveError(error: unknown) {
   .moderation-layout {
     grid-template-columns: 1fr;
   }
+}
+
+.state-alert {
+  margin-bottom: 12px;
 }
 </style>

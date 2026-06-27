@@ -29,15 +29,26 @@ public class AiCallLogService {
     public void record(Principal principal, String functionType, String promptSummary, String modelName,
                        String serviceMode, long durationMs, boolean success, String errorMessage,
                        Long sessionId, Long modelId) {
+        record(principal, functionType, promptSummary, modelName, serviceMode, durationMs, success, errorMessage,
+                sessionId, modelId, modelName, modelName, null);
+    }
+
+    public void record(Principal principal, String functionType, String promptSummary, String modelName,
+                       String serviceMode, long durationMs, boolean success, String errorMessage,
+                       Long sessionId, Long modelId, String selectedModelName, String actualModelName,
+                       String fallbackReason) {
         String username = principal == null ? "anonymous" : principal.getName();
         Long userId = findUserId(username);
         String roles = roles(principal);
         String cleanServiceMode = serviceMode == null || serviceMode.isBlank() ? modelName : serviceMode;
+        String cleanSelectedModelName = hasText(selectedModelName) ? selectedModelName : modelName;
+        String cleanActualModelName = hasText(actualModelName) ? actualModelName : modelName;
         jdbcTemplate.update("""
                         insert into ai_call_log
                           (user_id, username, role_codes, function_type, prompt_summary, model_name,
-                           service_mode, duration_ms, success, level, error_message, trace_id, session_id, model_id, created_at)
-                        values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                           service_mode, duration_ms, success, level, error_message, trace_id, session_id, model_id,
+                           selected_model_name, actual_model_name, fallback_reason, created_at)
+                        values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """,
                 userId,
                 username,
@@ -53,6 +64,9 @@ public class AiCallLogService {
                 TraceIdHolder.get(),
                 sessionId,
                 modelId,
+                truncate(cleanSelectedModelName, 180),
+                truncate(cleanActualModelName, 180),
+                truncate(fallbackReason, 500),
                 Instant.now()
         );
     }
@@ -61,7 +75,8 @@ public class AiCallLogService {
         int safeLimit = Math.max(1, Math.min(limit, 100));
         return jdbcTemplate.query("""
                         select id, username, role_codes, function_type, prompt_summary, model_name,
-                               service_mode, duration_ms, success, level, error_message, trace_id, session_id, model_id, created_at
+                               service_mode, duration_ms, success, level, error_message, trace_id, session_id, model_id,
+                               selected_model_name, actual_model_name, fallback_reason, created_at
                         from ai_call_log
                         order by created_at desc
                         limit ?
@@ -81,7 +96,7 @@ public class AiCallLogService {
         return jdbcTemplate.query("""
                         select id, username, role_codes, function_type, prompt_summary, model_name,
                                service_mode, duration_ms, success, level, error_message, trace_id,
-                               session_id, model_id, created_at
+                               session_id, model_id, selected_model_name, actual_model_name, fallback_reason, created_at
                         from ai_call_log
                         %s
                         order by created_at desc
@@ -198,6 +213,9 @@ public class AiCallLogService {
                 rs.getString("trace_id"),
                 nullableSessionId,
                 nullableModelId,
+                rs.getString("selected_model_name"),
+                rs.getString("actual_model_name"),
+                rs.getString("fallback_reason"),
                 rs.getTimestamp("created_at").toInstant()
         );
     }

@@ -43,6 +43,11 @@ public class DatabaseBrowserController {
             "char", "varchar", "tinytext", "text", "mediumtext", "longtext",
             "enum", "set", "json"
     );
+    private static final List<String> SENSITIVE_KEYWORDS = List.of(
+            "password", "passwd", "pwd", "token", "secret", "api_key", "apikey", "access_key", "private_key",
+            "hash", "salt", "phone", "mobile", "email", "address", "id_card", "identity", "idnumber",
+            "id_number", "emergency_contact", "parent_phone"
+    );
 
     private final JdbcTemplate jdbcTemplate;
     private final AuditLogService auditLogService;
@@ -684,13 +689,36 @@ public class DatabaseBrowserController {
         Map<String, Object> masked = new LinkedHashMap<>();
         row.forEach((key, value) -> {
             String lowerKey = key.toLowerCase(Locale.ROOT);
-            if (lowerKey.contains("password") || lowerKey.contains("token")) {
-                masked.put(key, value == null ? null : "******");
+            if (isSensitiveColumnName(lowerKey)) {
+                masked.put(key, maskValue(lowerKey, value));
             } else {
                 masked.put(key, value);
             }
         });
         return masked;
+    }
+
+    private boolean isSensitiveColumnName(String lowerKey) {
+        return SENSITIVE_KEYWORDS.stream().anyMatch(lowerKey::contains);
+    }
+
+    private Object maskValue(String lowerKey, Object value) {
+        if (value == null) {
+            return null;
+        }
+        String text = String.valueOf(value);
+        if (lowerKey.contains("email") && text.contains("@")) {
+            int at = text.indexOf('@');
+            return text.charAt(0) + "***" + text.substring(at);
+        }
+        if ((lowerKey.contains("phone") || lowerKey.contains("mobile")) && text.length() >= 7) {
+            return text.substring(0, 3) + "****" + text.substring(text.length() - 4);
+        }
+        if ((lowerKey.contains("id_card") || lowerKey.contains("identity") || lowerKey.contains("idnumber") || lowerKey.contains("id_number"))
+                && text.length() >= 8) {
+            return text.substring(0, 3) + "********" + text.substring(text.length() - 4);
+        }
+        return "******";
     }
 
     private String toCsv(List<Map<String, Object>> records, List<String> headers) {

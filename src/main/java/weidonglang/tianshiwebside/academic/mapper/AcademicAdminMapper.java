@@ -156,6 +156,13 @@ public interface AcademicAdminMapper {
             """)
     List<Long> findSelectedUserIdsByOfferingId(@Param("offeringId") Long offeringId);
 
+    @Select("""
+            select course_offering_id
+            from exam_schedule
+            where id = #{examId}
+            """)
+    Long findOfferingIdByExamId(@Param("examId") Long examId);
+
     @Insert("""
             insert into exam_schedule (course_offering_id, exam_time, room, seat_no, exam_type, status, invigilator)
             values (#{offeringId}, #{examTime}, #{room}, #{seatNo}, #{examType}, #{status}, #{invigilator})

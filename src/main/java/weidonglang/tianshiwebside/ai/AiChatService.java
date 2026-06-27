@@ -36,32 +36,45 @@ public class AiChatService {
         moderationService.checkConfigured("AI_INPUT", message, operator(principal));
         AiModelRecord selectedModel = modelRegistryService.requireEnabledChatModel(modelId);
         AiSearchDtos.SearchTestResponse search = maybeSearch(message, principal);
-        return remoteClient.chat(message)
+        return remoteClient.chat(message, selectedModel.id(), selectedModel.modelName(), sessionId)
                 .map(response -> {
-                    String modelName = response.modelName() == null || response.modelName().isBlank()
+                    String actualModelName = response.actualModelName() == null || response.actualModelName().isBlank()
+                            ? response.modelName()
+                            : response.actualModelName();
+                    String modelName = actualModelName == null || actualModelName.isBlank()
                             ? selectedModel.modelName()
-                            : response.modelName();
+                            : actualModelName;
                     String answer = appendSearchNotice(response.answer(), search);
                     moderationService.checkConfigured("AI_OUTPUT", answer, operator(principal));
+                    String warning = firstNonBlank(response.fallbackReason(), search.message());
                     callLogService.record(principal, "CHAT", message, modelName, response.serviceMode(),
-                            elapsedMillis(start), true, search.message(), sessionId, selectedModel.id());
+                            elapsedMillis(start), true, warning, sessionId, selectedModel.id(),
+                            selectedModel.modelName(), modelName, response.fallbackReason());
                     return new AiChatResponse(
                             answer,
                             response.serviceMode(),
                             modelName,
                             search.searchUsed(),
                             search.results(),
-                            search.message()
+                            search.message(),
+                            selectedModel.id(),
+                            selectedModel.modelName(),
+                            modelName,
+                            response.fallback(),
+                            response.fallbackReason()
                     );
                 })
                 .orElseGet(() -> {
                     String answer = "AI 聊天服务暂不可用，当前为本地兜底模式。这个聊天入口不作为教务依据；涉及教务规则请使用智能教务助手。";
                     String moderatedAnswer = appendSearchNotice(answer, search);
                     moderationService.checkConfigured("AI_OUTPUT", moderatedAnswer, operator(principal));
+                    String fallbackReason = "ai-service unavailable";
                     callLogService.record(principal, "CHAT_FALLBACK", message, selectedModel.modelName(), "local-fallback",
-                            elapsedMillis(start), true, "ai-service unavailable; " + search.message(), sessionId, selectedModel.id());
+                            elapsedMillis(start), true, fallbackReason + "; " + search.message(), sessionId, selectedModel.id(),
+                            selectedModel.modelName(), selectedModel.modelName(), fallbackReason);
                     return new AiChatResponse(moderatedAnswer, "local-fallback", selectedModel.modelName(),
-                            search.searchUsed(), search.results(), search.message());
+                            search.searchUsed(), search.results(), search.message(), selectedModel.id(),
+                            selectedModel.modelName(), selectedModel.modelName(), true, fallbackReason);
                 });
     }
 
@@ -90,5 +103,9 @@ public class AiChatService {
 
     private String operator(Principal principal) {
         return principal == null ? "anonymous" : principal.getName();
+    }
+
+    private String firstNonBlank(String first, String second) {
+        return first != null && !first.isBlank() ? first : second;
     }
 }

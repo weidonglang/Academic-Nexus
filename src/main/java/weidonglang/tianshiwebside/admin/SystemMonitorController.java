@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
+import org.springframework.core.env.Environment;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.core.Cursor;
@@ -19,15 +20,18 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import weidonglang.tianshiwebside.audit.AuditLogService;
 import weidonglang.tianshiwebside.ai.AiRemoteClient;
 import weidonglang.tianshiwebside.ai.AiServiceStatusResponse;
 import weidonglang.tianshiwebside.common.api.ApiResponse;
 import weidonglang.tianshiwebside.common.api.PageResponse;
 import weidonglang.tianshiwebside.common.api.Pagination;
+import weidonglang.tianshiwebside.common.trace.TraceIdHolder;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.Principal;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -44,6 +48,8 @@ public class SystemMonitorController {
 
     private final StringRedisTemplate redisTemplate;
     private final AiRemoteClient aiRemoteClient;
+    private final AuditLogService auditLogService;
+    private final Environment environment;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final JdbcTemplate jdbcTemplate;
     private final Path reportDir;
@@ -52,12 +58,16 @@ public class SystemMonitorController {
     public SystemMonitorController(
             StringRedisTemplate redisTemplate,
             AiRemoteClient aiRemoteClient,
+            AuditLogService auditLogService,
+            Environment environment,
             JdbcTemplate jdbcTemplate,
             @Value("${load-test.report-dir:reports}") String reportDir,
             @Value("${app.upload-root:uploads}") String uploadRoot
     ) {
         this.redisTemplate = redisTemplate;
         this.aiRemoteClient = aiRemoteClient;
+        this.auditLogService = auditLogService;
+        this.environment = environment;
         this.jdbcTemplate = jdbcTemplate;
         this.reportDir = Path.of(reportDir).toAbsolutePath().normalize();
         this.uploadRoot = Path.of(uploadRoot).toAbsolutePath().normalize();
@@ -71,11 +81,15 @@ public class SystemMonitorController {
      */
     public ApiResponse<SystemHealthResponse> systemHealth() {
         List<SystemHealthItem> items = List.of(
+                runtimeConfigHealth(),
                 mysqlHealth(),
                 redisHealth(),
+                nacosHealth(),
                 aiHealth(),
                 uploadHealth(),
                 flywayHealth(),
+                demoDataHealth(),
+                releasePackageHealth(),
                 jvmHealth()
         );
         return ApiResponse.success(new SystemHealthResponse(
@@ -169,6 +183,7 @@ public class SystemMonitorController {
      * selection:offering:{offeringId}:remaining，便于抢课开始前 Redis 已经具备库存数据。
      */
     public ApiResponse<PrewarmStockResponse> prewarmStock(
+            Principal principal,
             @RequestParam(defaultValue = "20") int limit
     ) {
         int safeLimit = Math.min(Math.max(limit, 1), 100);
@@ -183,6 +198,8 @@ public class SystemMonitorController {
                     return new PrewarmStockItem(row.offeringId(), key, remaining);
                 })
                 .toList();
+        auditLogService.record(principal == null ? "anonymous" : principal.getName(), "PREWARM_SELECTION_STOCK",
+                "COURSE_SELECTION", null, "count=" + items.size(), TraceIdHolder.get());
         return ApiResponse.success(new PrewarmStockResponse(items.size(), items));
     }
 
@@ -383,6 +400,115 @@ public class SystemMonitorController {
         }
     }
 
+    private SystemHealthItem runtimeConfigHealth() {
+        String activeProfiles = String.join(",", environment.getActiveProfiles());
+        if (activeProfiles.isBlank()) {
+            activeProfiles = "default";
+        }
+        String port = property("local.server.port");
+        if (port.isBlank()) {
+            port = property("server.port");
+        }
+        if (port.isBlank()) {
+            port = "8080";
+        }
+        return new SystemHealthItem(
+                "runtime",
+                "运行配置",
+                "UP",
+                "当前 profile: " + activeProfiles + "，端口: " + port,
+                0,
+                Map.of(
+                        "activeProfiles", activeProfiles,
+                        "serverPort", port,
+                        "applicationName", property("spring.application.name"),
+                        "mainHostPort", property("MAIN_HOST_PORT")
+                )
+        );
+    }
+
+    private SystemHealthItem nacosHealth() {
+        String enabled = property("spring.cloud.nacos.discovery.enabled");
+        String serverAddr = property("spring.cloud.nacos.discovery.server-addr");
+        boolean discoveryEnabled = "true".equalsIgnoreCase(enabled);
+        String status = discoveryEnabled && !serverAddr.isBlank() ? "UP" : "DEGRADED";
+        String detail = discoveryEnabled
+                ? "Nacos 服务发现已启用，地址：" + (serverAddr.isBlank() ? "未配置" : serverAddr)
+                : "Nacos 服务发现未启用，本地演示将使用固定 URL / fallback";
+        return new SystemHealthItem(
+                "nacos",
+                "Nacos 服务发现",
+                status,
+                detail,
+                0,
+                Map.of(
+                        "enabled", discoveryEnabled,
+                        "serverAddr", serverAddr,
+                        "namespace", property("spring.cloud.nacos.discovery.namespace"),
+                        "group", property("spring.cloud.nacos.discovery.group")
+                )
+        );
+    }
+
+    private SystemHealthItem demoDataHealth() {
+        long start = System.nanoTime();
+        try {
+            Integer users = queryInteger("select count(*) from sys_user");
+            Integer students = queryInteger("select count(*) from student");
+            Integer teachers = queryInteger("select count(*) from teacher");
+            Integer courses = queryInteger("select count(*) from course");
+            Integer offerings = queryInteger("select count(*) from course_offering");
+            boolean complete = value(users) >= 3 && value(students) > 0 && value(teachers) > 0
+                    && value(courses) > 0 && value(offerings) > 0;
+            return new SystemHealthItem(
+                    "demoData",
+                    "演示数据",
+                    complete ? "UP" : "DEGRADED",
+                    complete ? "演示账号、学生、教师、课程和教学班数据已就绪" : "演示数据不完整，请使用 demo profile 或重置演示数据",
+                    elapsedMillis(start),
+                    Map.of(
+                            "users", value(users),
+                            "students", value(students),
+                            "teachers", value(teachers),
+                            "courses", value(courses),
+                            "offerings", value(offerings)
+                    )
+            );
+        } catch (RuntimeException ex) {
+            return failedHealth("demoData", "演示数据", "演示数据检查失败", start, ex);
+        }
+    }
+
+    private SystemHealthItem releasePackageHealth() {
+        long start = System.nanoTime();
+        Path releaseDir = Path.of("release").toAbsolutePath().normalize();
+        try {
+            if (!Files.isDirectory(releaseDir)) {
+                return new SystemHealthItem("release", "Release 包", "DEGRADED",
+                        "release 目录不存在，请先执行 scripts/build-release.ps1", elapsedMillis(start),
+                        Map.of("releaseDir", releaseDir.toString(), "zipCount", 0));
+            }
+            try (var stream = Files.list(releaseDir)) {
+                List<String> zips = stream
+                        .filter(path -> path.getFileName().toString().startsWith("Academic-Nexus-"))
+                        .filter(path -> path.getFileName().toString().endsWith(".zip"))
+                        .map(path -> path.getFileName().toString())
+                        .sorted()
+                        .toList();
+                return new SystemHealthItem(
+                        "release",
+                        "Release 包",
+                        zips.isEmpty() ? "DEGRADED" : "UP",
+                        zips.isEmpty() ? "未找到 release zip，请执行打包脚本" : "已找到 release zip: " + zips.get(zips.size() - 1),
+                        elapsedMillis(start),
+                        Map.of("releaseDir", releaseDir.toString(), "zipCount", zips.size(), "zips", zips)
+                );
+            }
+        } catch (IOException | RuntimeException ex) {
+            return failedHealth("release", "Release 包", "release 包检查失败", start, ex);
+        }
+    }
+
     private SystemHealthItem aiHealth() {
         AiServiceStatusResponse status = aiRemoteClient.status();
         String health = status.aiServiceOnline()
@@ -513,6 +639,14 @@ public class SystemMonitorController {
     private Integer queryInteger(String sql, Object... args) {
         List<Integer> values = jdbcTemplate.queryForList(sql, Integer.class, args);
         return values.isEmpty() ? null : values.get(0);
+    }
+
+    private int value(Integer value) {
+        return value == null ? 0 : value;
+    }
+
+    private String property(String key) {
+        return environment.getProperty(key, "");
     }
 
     private LoadTestReportRow readReportRow(Path jsonFile) {

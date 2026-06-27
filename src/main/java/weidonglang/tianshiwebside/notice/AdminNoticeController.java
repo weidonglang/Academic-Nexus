@@ -8,6 +8,8 @@ import org.springframework.web.bind.annotation.*;
 import weidonglang.tianshiwebside.audit.AuditLogService;
 import weidonglang.tianshiwebside.common.api.ApiResponse;
 import weidonglang.tianshiwebside.common.cache.QueryCacheService;
+import weidonglang.tianshiwebside.common.error.BusinessException;
+import weidonglang.tianshiwebside.common.error.ErrorCode;
 import weidonglang.tianshiwebside.governance.ContentModerationService;
 import weidonglang.tianshiwebside.notice.mapper.NoticeMapper;
 
@@ -47,15 +49,19 @@ public class AdminNoticeController {
      */
     public ApiResponse<NoticeMapper.NoticeRow> publish(Principal principal, @Valid @RequestBody PublishNoticeRequest request) {
         moderationService.checkConfigured("NOTICE", request.title() + "\n" + request.content(), principal.getName());
+        List<Long> userIds = request.roleCode() == null || request.roleCode().isBlank()
+                ? noticeMapper.findAllUserIds()
+                : noticeMapper.findUserIdsByRoleCode(request.roleCode().trim());
+        if (userIds.isEmpty()) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "接收人数为 0，不能发布通知");
+        }
         NoticeMapper.NoticeCommand command = new NoticeMapper.NoticeCommand(
                 request.title().trim(), request.content().trim(), request.category().trim(), request.pinned(),
                 Instant.now(), principal.getName());
         noticeMapper.insertNotice(command);
-        List<Long> userIds = request.roleCode() == null || request.roleCode().isBlank()
-                ? noticeMapper.findAllUserIds()
-                : noticeMapper.findUserIdsByRoleCode(request.roleCode().trim());
         notificationService.notifyUsers(userIds, request.title(), request.content(), request.category(), "NOTICE", command.getId());
-        auditLogService.record(principal.getName(), "PUBLISH_NOTICE", "NOTICE", command.getId(), request.title(), null);
+        auditLogService.record(principal.getName(), "PUBLISH_NOTICE", "NOTICE", command.getId(),
+                request.title() + ", receivers=" + userIds.size(), null);
         queryCacheService.evictByPrefix("query:notices:");
         queryCacheService.evictByPrefix("query:notifications:");
         queryCacheService.evictByPrefix("query:dashboard:");

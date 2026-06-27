@@ -1,5 +1,6 @@
 package weidonglang.tianshiwebside.file;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.PathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
@@ -10,6 +11,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import weidonglang.tianshiwebside.audit.AuditLogService;
 import weidonglang.tianshiwebside.common.api.ApiResponse;
 import weidonglang.tianshiwebside.common.error.BusinessException;
 import weidonglang.tianshiwebside.common.error.ErrorCode;
@@ -19,6 +21,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.Principal;
 import java.time.Instant;
 import java.util.List;
 
@@ -27,9 +30,17 @@ import java.util.List;
 @PreAuthorize("hasRole('ADMIN')")
 public class AdminStatusChangeAttachmentController {
     private final StatusChangeAttachmentMapper mapper;
+    private final AuditLogService auditLogService;
+    private final Path uploadRoot;
 
-    public AdminStatusChangeAttachmentController(StatusChangeAttachmentMapper mapper) {
+    public AdminStatusChangeAttachmentController(
+            StatusChangeAttachmentMapper mapper,
+            AuditLogService auditLogService,
+            @Value("${app.upload-root:uploads}") String uploadRoot
+    ) {
         this.mapper = mapper;
+        this.auditLogService = auditLogService;
+        this.uploadRoot = Paths.get(uploadRoot).toAbsolutePath().normalize();
     }
 
     @GetMapping
@@ -40,22 +51,25 @@ public class AdminStatusChangeAttachmentController {
     }
 
     @GetMapping("/{attachmentId}/download")
-    public ResponseEntity<Resource> download(@PathVariable Long applicationId, @PathVariable Long attachmentId) {
+    public ResponseEntity<Resource> download(@PathVariable Long applicationId, @PathVariable Long attachmentId, Principal principal) {
         StatusChangeAttachmentMapper.AttachmentRow row = requireAttachment(applicationId, attachmentId);
-        return fileResponse(row, false);
+        return fileResponse(row, false, principal);
     }
 
     @GetMapping("/{attachmentId}/preview")
-    public ResponseEntity<Resource> preview(@PathVariable Long applicationId, @PathVariable Long attachmentId) {
+    public ResponseEntity<Resource> preview(@PathVariable Long applicationId, @PathVariable Long attachmentId, Principal principal) {
         StatusChangeAttachmentMapper.AttachmentRow row = requireAttachment(applicationId, attachmentId);
-        return fileResponse(row, isPreviewable(row.contentType()));
+        return fileResponse(row, isPreviewable(row.contentType()), principal);
     }
 
-    private ResponseEntity<Resource> fileResponse(StatusChangeAttachmentMapper.AttachmentRow row, boolean inline) {
-        Path path = Paths.get(row.storedPath()).toAbsolutePath().normalize();
+    private ResponseEntity<Resource> fileResponse(StatusChangeAttachmentMapper.AttachmentRow row, boolean inline, Principal principal) {
+        Path path = resolveStoredPath(row);
         if (!Files.exists(path) || !Files.isRegularFile(path)) {
             throw new BusinessException(ErrorCode.NOT_FOUND, "文件不存在或已被移动");
         }
+        auditLogService.record(principal == null ? "anonymous" : principal.getName(),
+                inline ? "PREVIEW_STATUS_CHANGE_ATTACHMENT" : "DOWNLOAD_STATUS_CHANGE_ATTACHMENT",
+                "STATUS_CHANGE_ATTACHMENT", row.id(), row.originalFilename(), null);
         String encodedName = URLEncoder.encode(row.originalFilename(), StandardCharsets.UTF_8).replace("+", "%20");
         MediaType mediaType = MediaType.APPLICATION_OCTET_STREAM;
         if (row.contentType() != null && !row.contentType().isBlank()) {
@@ -74,6 +88,14 @@ public class AdminStatusChangeAttachmentController {
             throw new BusinessException(ErrorCode.NOT_FOUND, "附件不存在");
         }
         return row;
+    }
+
+    private Path resolveStoredPath(StatusChangeAttachmentMapper.AttachmentRow row) {
+        Path path = Paths.get(row.storedPath()).toAbsolutePath().normalize();
+        if (!path.startsWith(uploadRoot)) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "非法文件路径");
+        }
+        return path;
     }
 
     private AdminAttachmentDto toDto(StatusChangeAttachmentMapper.AttachmentRow row) {

@@ -11,6 +11,7 @@ import org.springframework.web.multipart.MultipartFile;
 import weidonglang.tianshiwebside.common.api.ApiResponse;
 import weidonglang.tianshiwebside.common.error.BusinessException;
 import weidonglang.tianshiwebside.common.error.ErrorCode;
+import weidonglang.tianshiwebside.audit.AuditLogService;
 
 import java.io.IOException;
 import java.net.URLEncoder;
@@ -33,19 +34,22 @@ public class StatusChangeAttachmentController {
     private final long maxSizeBytes;
     private final Set<String> allowedExtensions;
     private final Set<String> allowedContentTypes;
+    private final AuditLogService auditLogService;
 
     public StatusChangeAttachmentController(
             StatusChangeAttachmentMapper mapper,
             @Value("${app.upload-root:uploads}") String uploadRoot,
             @Value("${app.upload.max-size-bytes:10485760}") long maxSizeBytes,
             @Value("${app.upload.allowed-extensions:pdf,jpg,jpeg,png,doc,docx,xls,xlsx}") String allowedExtensions,
-            @Value("${app.upload.allowed-content-types:application/pdf,image/jpeg,image/png,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet}") String allowedContentTypes
+            @Value("${app.upload.allowed-content-types:application/pdf,image/jpeg,image/png,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet}") String allowedContentTypes,
+            AuditLogService auditLogService
     ) {
         this.mapper = mapper;
         this.uploadRoot = Paths.get(uploadRoot).toAbsolutePath().normalize();
         this.maxSizeBytes = maxSizeBytes;
         this.allowedExtensions = parseCsv(allowedExtensions);
         this.allowedContentTypes = parseCsv(allowedContentTypes);
+        this.auditLogService = auditLogService;
     }
 
     @GetMapping
@@ -56,7 +60,7 @@ public class StatusChangeAttachmentController {
 
     @PostMapping
     public ApiResponse<Void> upload(Principal principal, @PathVariable Long applicationId, @RequestParam("file") MultipartFile file) {
-        ensureOwned(applicationId, principal);
+        ensureOwnedAndUploadable(applicationId, principal);
         if (file.isEmpty()) {
             throw new BusinessException(ErrorCode.BAD_REQUEST, "文件不能为空");
         }
@@ -71,6 +75,8 @@ public class StatusChangeAttachmentController {
             }
             Files.copy(file.getInputStream(), target, StandardCopyOption.REPLACE_EXISTING);
             mapper.insertAttachment(applicationId, original, target.toString(), file.getContentType(), file.getSize(), Instant.now());
+            auditLogService.record(principal.getName(), "UPLOAD_STATUS_CHANGE_ATTACHMENT", "STATUS_CHANGE", applicationId,
+                    original + " (" + file.getSize() + " bytes)", null);
             return ApiResponse.success();
         } catch (IOException ex) {
             throw new BusinessException(ErrorCode.INTERNAL_ERROR, "文件保存失败");
@@ -87,10 +93,12 @@ public class StatusChangeAttachmentController {
         if (row == null) {
             throw new BusinessException(ErrorCode.NOT_FOUND, "附件不存在");
         }
-        Path path = Paths.get(row.storedPath()).toAbsolutePath().normalize();
+        Path path = resolveStoredPath(row);
         if (!Files.exists(path) || !Files.isRegularFile(path)) {
             throw new BusinessException(ErrorCode.NOT_FOUND, "文件不存在或已被移动");
         }
+        auditLogService.record(principal.getName(), "DOWNLOAD_STATUS_CHANGE_ATTACHMENT",
+                "STATUS_CHANGE_ATTACHMENT", row.id(), row.originalFilename(), null);
         String encodedName = URLEncoder.encode(row.originalFilename(), StandardCharsets.UTF_8).replace("+", "%20");
         MediaType mediaType = MediaType.APPLICATION_OCTET_STREAM;
         if (row.contentType() != null && !row.contentType().isBlank()) {
@@ -105,6 +113,14 @@ public class StatusChangeAttachmentController {
     private void ensureOwned(Long applicationId, Principal principal) {
         if (principal == null || mapper.countOwnedApplication(applicationId, principal.getName()) == 0) {
             throw new BusinessException(ErrorCode.NOT_FOUND, "申请不存在");
+        }
+    }
+
+    private void ensureOwnedAndUploadable(Long applicationId, Principal principal) {
+        ensureOwned(applicationId, principal);
+        String status = mapper.findOwnedApplicationStatus(applicationId, principal.getName());
+        if (!"SUBMITTED".equals(status) && !"UNDER_REVIEW".equals(status)) {
+            throw new BusinessException(ErrorCode.CONFLICT, "申请已审核，不能继续追加材料");
         }
     }
 
@@ -143,5 +159,13 @@ public class StatusChangeAttachmentController {
     private String formatSize(long bytes) {
         long megabytes = bytes / 1024 / 1024;
         return megabytes > 0 ? megabytes + "MB" : bytes + " bytes";
+    }
+
+    private Path resolveStoredPath(StatusChangeAttachmentMapper.AttachmentRow row) {
+        Path path = Paths.get(row.storedPath()).toAbsolutePath().normalize();
+        if (!path.startsWith(uploadRoot)) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "非法文件路径");
+        }
+        return path;
     }
 }

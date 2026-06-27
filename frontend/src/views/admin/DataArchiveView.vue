@@ -5,11 +5,12 @@ import PageHeader from '@/components/PageHeader.vue'
 import {
   dataArchiveArchiveApi,
   dataArchiveCleanupApi,
-  dataArchiveExportCsvUrl,
+  dataArchiveExportCsvApi,
   dataArchivePreviewApi,
   type ArchivePreview,
   type ArchiveRecordRow,
 } from '@/api/batchOps'
+import { saveBlob } from '@/utils/download'
 
 const objectType = ref('COURSE_SELECTION')
 const term = ref('2025-2026-1')
@@ -67,8 +68,12 @@ async function runAction(action: 'ARCHIVE' | 'CLEANUP', dryRun: boolean) {
   }
 }
 
-function exportCsv() {
-  window.open(dataArchiveExportCsvUrl(), '_blank')
+async function exportCsv() {
+  try {
+    saveBlob(await dataArchiveExportCsvApi(), 'data-archive-records.csv')
+  } catch (error) {
+    ElMessage.error(resolveErrorMessage(error, '归档记录导出失败'))
+  }
 }
 
 function resolveErrorMessage(error: unknown, fallback: string) {

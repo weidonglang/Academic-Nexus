@@ -301,6 +301,26 @@ public interface TeacherMapper {
             """)
     int countOwnedExam(@Param("teacherName") String teacherName, @Param("examId") Long examId);
 
+    @Select("""
+            select es.course_offering_id
+            from exam_schedule es
+            join course_offering co on co.id = es.course_offering_id
+            where es.id = #{examId}
+              and co.teacher_name = #{teacherName}
+            """)
+    Long findOwnedExamOfferingId(@Param("teacherName") String teacherName, @Param("examId") Long examId);
+
+    @Select("""
+            select u.id
+            from course_selection cs
+            join student s on s.id = cs.student_id
+            join sys_user u on u.id = s.user_id
+            join course_offering co on co.id = cs.offering_id
+            where co.id = #{offeringId}
+              and co.teacher_name = #{teacherName}
+            """)
+    List<Long> findSelectedUserIdsByOfferingId(@Param("teacherName") String teacherName, @Param("offeringId") Long offeringId);
+
     @Insert("""
             insert into exam_schedule (course_offering_id, exam_time, room, seat_no, exam_type, status, invigilator)
             values (#{offeringId}, #{examTime}, #{room}, #{seatNo}, #{examType}, #{status}, #{invigilator})

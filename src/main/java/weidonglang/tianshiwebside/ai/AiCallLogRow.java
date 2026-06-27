@@ -17,6 +17,9 @@ public record AiCallLogRow(
         String traceId,
         Long sessionId,
         Long modelId,
+        String selectedModelName,
+        String actualModelName,
+        String fallbackReason,
         Instant createdAt
 ) {
 }

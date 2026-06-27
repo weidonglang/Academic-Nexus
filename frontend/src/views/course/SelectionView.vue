@@ -7,6 +7,7 @@ import { ElMessage } from 'element-plus'
 import PageHeader from '@/components/PageHeader.vue'
 import {
   courseOfferingsApi,
+  currentTermApi,
   dropCourseApi,
   selectCourseApi,
   selectedCoursesApi,
@@ -24,6 +25,7 @@ const offeringTotal = ref(0)
 const selectedPage = ref(1)
 const selectedPageSize = ref(10)
 const selectedTotal = ref(0)
+const term = ref('')
 
 const statusText: Record<CourseOffering['windowStatus'], string> = {
   NOT_STARTED: '未开始',
@@ -37,7 +39,15 @@ const statusType: Record<CourseOffering['windowStatus'], 'info' | 'success' | 'w
   ENDED: 'warning',
 }
 
-onMounted(loadData)
+onMounted(async () => {
+  await loadCurrentTerm()
+  await loadData()
+})
+
+async function loadCurrentTerm() {
+  const response = await currentTermApi()
+  term.value = response.data.term
+}
 
 // 功能：加载选课页面全部数据。
 // 说明：同时查询可选教学班和当前学生已选课程，保证页面容量、按钮状态和已选列表同步。
@@ -53,7 +63,7 @@ async function loadData() {
 // 功能：分页查询可选教学班。
 // 说明：后端返回教学班容量、已选人数、选课时间窗口等信息，前端据此展示是否可抢。
 async function loadOfferings() {
-  const response = await courseOfferingsApi({ page: offeringPage.value, size: offeringPageSize.value })
+  const response = await courseOfferingsApi({ term: term.value, page: offeringPage.value, size: offeringPageSize.value })
   offerings.value = response.data.records
   offeringTotal.value = response.data.total
 }
@@ -61,9 +71,15 @@ async function loadOfferings() {
 // 功能：分页查询已选课程。
 // 说明：学生成功抢课或退课后重新加载，确保已选列表与数据库选课记录一致。
 async function loadSelectedCourses() {
-  const response = await selectedCoursesApi({ page: selectedPage.value, size: selectedPageSize.value })
+  const response = await selectedCoursesApi({ term: term.value, page: selectedPage.value, size: selectedPageSize.value })
   selectedCourses.value = response.data.records
   selectedTotal.value = response.data.total
+}
+
+async function changeTerm() {
+  offeringPage.value = 1
+  selectedPage.value = 1
+  await loadData()
 }
 
 function handleOfferingPageChange(nextPage: number) {
@@ -149,7 +165,10 @@ function resolveErrorMessage(error: unknown, fallback: string) {
   <section v-loading="loading" class="work-panel selection-panel">
     <div class="panel-heading">
       <h2>可选课程</h2>
-      <el-tag type="info">2025-2026-2</el-tag>
+      <div class="term-tools">
+        <el-input v-model="term" class="term-input" placeholder="学期" @keyup.enter="changeTerm" />
+        <el-button @click="changeTerm">切换</el-button>
+      </div>
     </div>
     <el-table :data="offerings" empty-text="暂无可选课程">
       <el-table-column prop="courseCode" label="课程号" width="110" />
@@ -242,5 +261,15 @@ function resolveErrorMessage(error: unknown, fallback: string) {
   display: flex;
   justify-content: flex-end;
   padding-top: 16px;
+}
+
+.term-tools {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.term-input {
+  width: 150px;
 }
 </style>

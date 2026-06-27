@@ -7,6 +7,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -154,6 +155,25 @@ public class BatchAndArchiveController {
                 .body(csv.toString());
     }
 
+    @GetMapping(value = "/batch-tasks/{taskId}/report.csv", produces = "text/csv;charset=UTF-8")
+    public ResponseEntity<String> exportBatchTaskReport(@PathVariable Long taskId) {
+        BatchTaskRow row = findBatchTask(taskId);
+        StringBuilder csv = new StringBuilder("\uFEFFtaskId,taskType,operator,status,successCount,failureCount,failureDetail,startedAt,endedAt\n");
+        csv.append(row.id()).append(',')
+                .append(csv(row.taskType())).append(',')
+                .append(csv(row.operator())).append(',')
+                .append(csv(row.status())).append(',')
+                .append(row.successCount()).append(',')
+                .append(row.failureCount()).append(',')
+                .append(csv(row.failureDetail())).append(',')
+                .append(row.startedAt()).append(',')
+                .append(row.endedAt() == null ? "" : row.endedAt()).append('\n');
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"batch-task-" + taskId + "-report.csv\"")
+                .contentType(MediaType.parseMediaType("text/csv;charset=UTF-8"))
+                .body(csv.toString());
+    }
+
     private ArchiveRecordRow insertArchiveRecord(Principal principal, String objectType, String term, String action,
                                                  boolean dryRun, int count, String detail) {
         Instant now = Instant.now();
@@ -175,6 +195,35 @@ public class BatchAndArchiveController {
                         values (?, ?, ?, ?, ?, ?, ?, ?)
                         """,
                 taskType, username(principal), failure > 0 ? "PARTIAL_SUCCESS" : "SUCCESS", success, failure, detail, now, now);
+    }
+
+    private BatchTaskRow findBatchTask(Long taskId) {
+        List<BatchTaskRow> rows = jdbcTemplate.query("""
+                        select id, task_type, operator, started_at, ended_at, status, success_count, failure_count, failure_detail, report_path
+                        from batch_task
+                        where id = ?
+                        """,
+                (rs, rowNum) -> new BatchTaskRow(
+                        rs.getLong("id"),
+                        rs.getString("task_type"),
+                        rs.getString("operator"),
+                        rs.getTimestamp("started_at").toInstant(),
+                        rs.getTimestamp("ended_at") == null ? null : rs.getTimestamp("ended_at").toInstant(),
+                        rs.getString("status"),
+                        rs.getInt("success_count"),
+                        rs.getInt("failure_count"),
+                        rs.getString("failure_detail"),
+                        rs.getString("report_path")
+                ),
+                taskId);
+        if (rows.isEmpty()) {
+            throw new BusinessException(ErrorCode.NOT_FOUND, "批量任务不存在");
+        }
+        return rows.get(0);
+    }
+
+    private String csv(String value) {
+        return "\"" + (value == null ? "" : value.replace("\"", "\"\"")) + "\"";
     }
 
     private int countObject(String objectType, String term) {

@@ -1,5 +1,6 @@
 package weidonglang.tianshiwebside.file;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.PathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
@@ -8,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
+import weidonglang.tianshiwebside.audit.AuditLogService;
 import weidonglang.tianshiwebside.common.api.ApiResponse;
 import weidonglang.tianshiwebside.common.error.BusinessException;
 import weidonglang.tianshiwebside.common.error.ErrorCode;
@@ -18,6 +20,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.Principal;
 import java.util.List;
 
 /**
@@ -31,9 +34,17 @@ import java.util.List;
 @PreAuthorize("hasAuthority('STATUS_REVIEW')")
 public class AdminFileController {
     private final StatusChangeAttachmentMapper mapper;
+    private final AuditLogService auditLogService;
+    private final Path uploadRoot;
 
-    public AdminFileController(StatusChangeAttachmentMapper mapper) {
+    public AdminFileController(
+            StatusChangeAttachmentMapper mapper,
+            AuditLogService auditLogService,
+            @Value("${app.upload-root:uploads}") String uploadRoot
+    ) {
         this.mapper = mapper;
+        this.auditLogService = auditLogService;
+        this.uploadRoot = Paths.get(uploadRoot).toAbsolutePath().normalize();
     }
 
     /**
@@ -52,12 +63,14 @@ public class AdminFileController {
      * 下载前会校验附件记录是否存在，并从 uploads 目录读取实际文件。
      */
     @GetMapping("/{attachmentId}/download")
-    public ResponseEntity<Resource> download(@PathVariable Long attachmentId) {
+    public ResponseEntity<Resource> download(@PathVariable Long attachmentId, Principal principal) {
         StatusChangeAttachmentMapper.AttachmentRow row = requireAttachment(attachmentId);
-        Path path = Paths.get(row.storedPath()).toAbsolutePath().normalize();
+        Path path = resolveStoredPath(row);
         if (!Files.exists(path) || !Files.isRegularFile(path)) {
             throw new BusinessException(ErrorCode.NOT_FOUND, "文件不存在或已被移动");
         }
+        auditLogService.record(principal == null ? "anonymous" : principal.getName(), "DOWNLOAD_STATUS_CHANGE_ATTACHMENT",
+                "STATUS_CHANGE_ATTACHMENT", row.id(), row.originalFilename(), null);
         String encodedName = URLEncoder.encode(row.originalFilename(), StandardCharsets.UTF_8).replace("+", "%20");
         MediaType mediaType = MediaType.APPLICATION_OCTET_STREAM;
         if (row.contentType() != null && !row.contentType().isBlank()) {
@@ -71,15 +84,17 @@ public class AdminFileController {
 
     @DeleteMapping("/{attachmentId}")
     @Transactional
-    public ApiResponse<Void> delete(@PathVariable Long attachmentId) {
+    public ApiResponse<Void> delete(@PathVariable Long attachmentId, Principal principal) {
         StatusChangeAttachmentMapper.AttachmentRow row = requireAttachment(attachmentId);
-        mapper.deleteById(attachmentId);
-        Path path = Paths.get(row.storedPath()).toAbsolutePath().normalize();
+        Path path = resolveStoredPath(row);
         try {
             Files.deleteIfExists(path);
         } catch (IOException ex) {
-            throw new BusinessException(ErrorCode.INTERNAL_ERROR, "文件记录已删除，但物理文件清理失败");
+            throw new BusinessException(ErrorCode.INTERNAL_ERROR, "物理文件清理失败，数据库记录已保留");
         }
+        mapper.deleteById(attachmentId);
+        auditLogService.record(principal == null ? "anonymous" : principal.getName(), "DELETE_STATUS_CHANGE_ATTACHMENT",
+                "STATUS_CHANGE_ATTACHMENT", row.id(), row.originalFilename(), null);
         return ApiResponse.success();
     }
 
@@ -89,5 +104,13 @@ public class AdminFileController {
             throw new BusinessException(ErrorCode.NOT_FOUND, "附件不存在");
         }
         return row;
+    }
+
+    private Path resolveStoredPath(StatusChangeAttachmentMapper.AttachmentRow row) {
+        Path path = Paths.get(row.storedPath()).toAbsolutePath().normalize();
+        if (!path.startsWith(uploadRoot)) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "非法文件路径");
+        }
+        return path;
     }
 }

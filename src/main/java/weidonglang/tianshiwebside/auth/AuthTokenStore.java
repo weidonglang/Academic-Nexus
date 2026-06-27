@@ -31,6 +31,7 @@ public class AuthTokenStore {
      */
     public void saveAccessToken(String token, String username, Duration ttl) {
         save("auth:access:" + token, token, username, ttl);
+        track("auth:user:" + username + ":access", token, ttl);
     }
 
     /**
@@ -40,19 +41,51 @@ public class AuthTokenStore {
      */
     public void saveRefreshToken(String token, String username, Duration ttl) {
         save("auth:refresh:" + token, token, username, ttl);
+        track("auth:user:" + username + ":refresh", token, ttl);
     }
 
     public Optional<String> findAccessTokenOwner(String token) {
         return find("auth:access:" + token, token);
     }
 
+    public Optional<String> findRefreshTokenOwner(String token) {
+        return find("auth:refresh:" + token, token);
+    }
+
     public void revokeAccessToken(String token) {
-        String key = "auth:access:" + token;
+        revoke("auth:access:" + token, token);
+    }
+
+    public void revokeRefreshToken(String token) {
+        revoke("auth:refresh:" + token, token);
+    }
+
+    public void revokeAllForUser(String username) {
+        revokeTracked(username, "access");
+        revokeTracked(username, "refresh");
+        fallbackTokens.entrySet().removeIf(entry -> entry.getValue().username().equals(username));
+    }
+
+    private void revoke(String key, String token) {
         fallbackTokens.remove(token);
         try {
             redisTemplate.delete(key);
         } catch (RuntimeException ignored) {
             // Local fallback may be active when Redis is not available.
+        }
+    }
+
+    private void revokeTracked(String username, String type) {
+        String setKey = "auth:user:" + username + ":" + type;
+        try {
+            var tokens = redisTemplate.opsForSet().members(setKey);
+            if (tokens != null && !tokens.isEmpty()) {
+                String prefix = "access".equals(type) ? "auth:access:" : "auth:refresh:";
+                redisTemplate.delete(tokens.stream().map(token -> prefix + token).toList());
+            }
+            redisTemplate.delete(setKey);
+        } catch (RuntimeException ignored) {
+            // Local fallback is handled by removing fallback tokens by username.
         }
     }
 
@@ -62,6 +95,15 @@ public class AuthTokenStore {
             redisTemplate.opsForValue().set(redisKey, username, ttl);
         } catch (RuntimeException ignored) {
             // Keep local development usable without Redis.
+        }
+    }
+
+    private void track(String key, String token, Duration ttl) {
+        try {
+            redisTemplate.opsForSet().add(key, token);
+            redisTemplate.expire(key, ttl);
+        } catch (RuntimeException ignored) {
+            // Reverse index is an optimization for Redis-backed revocation.
         }
     }
 

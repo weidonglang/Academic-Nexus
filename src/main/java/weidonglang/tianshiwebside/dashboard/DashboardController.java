@@ -5,6 +5,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 import weidonglang.tianshiwebside.common.api.ApiResponse;
 import weidonglang.tianshiwebside.common.cache.QueryCacheService;
+import weidonglang.tianshiwebside.academic.TermService;
 
 import java.security.Principal;
 import java.time.Duration;
@@ -17,14 +18,14 @@ import java.time.Duration;
  */
 @RestController
 public class DashboardController {
-    private static final String CURRENT_TERM = "2025-2026-2";
-
     private final DashboardMapper dashboardMapper;
     private final QueryCacheService queryCacheService;
+    private final TermService termService;
 
-    public DashboardController(DashboardMapper dashboardMapper, QueryCacheService queryCacheService) {
+    public DashboardController(DashboardMapper dashboardMapper, QueryCacheService queryCacheService, TermService termService) {
         this.dashboardMapper = dashboardMapper;
         this.queryCacheService = queryCacheService;
+        this.termService = termService;
     }
 
     /**
@@ -36,13 +37,14 @@ public class DashboardController {
     @GetMapping("/api/dashboard/me")
     public ApiResponse<DashboardOverview> overview(Principal principal) {
         String username = principal.getName();
+        String currentTerm = termService.resolveTerm(null);
         return ApiResponse.success(queryCacheService.get(
-                "query:dashboard:" + username + ":" + CURRENT_TERM,
+                "query:dashboard:" + username + ":" + currentTerm,
                 Duration.ofSeconds(20),
                 new TypeReference<DashboardOverview>() {
                 },
                 () -> new DashboardOverview(
-                        dashboardMapper.countTermOfferings(CURRENT_TERM),
+                        dashboardMapper.countTermOfferings(currentTerm),
                         dashboardMapper.countPendingEvaluations(username),
                         dashboardMapper.countUpcomingExams(username),
                         dashboardMapper.sumEarnedCredits(username),

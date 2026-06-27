@@ -15,6 +15,56 @@ NODE_SCRIPT = ROOT / "scripts" / "course-grab-load-test.js"
 WINDOWS_MYSQL_EXE = r"C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe"
 
 
+def extract_offering_records(payload):
+    data = payload.get("data") if isinstance(payload, dict) else None
+    if isinstance(data, dict) and isinstance(data.get("records"), list):
+        return data["records"], "data.records"
+    if isinstance(data, list):
+        return data, "data"
+    if isinstance(payload, dict) and isinstance(payload.get("records"), list):
+        return payload["records"], "records"
+    return [], type(data).__name__ if data is not None else type(payload).__name__
+
+
+def normalize_offering_item(item):
+    offering_id = item.get("offeringId") or item.get("id")
+    capacity = _to_int(item.get("capacity"))
+    selected = _to_int(item.get("selectedCount") or item.get("selected") or item.get("selected_count"))
+    return [
+        str(offering_id or ""),
+        str(item.get("courseCode") or item.get("code") or ""),
+        str(item.get("courseName") or item.get("name") or ""),
+        str(item.get("teacherName") or item.get("teacher") or ""),
+        str(capacity),
+        str(selected),
+        str(max(0, capacity - selected)),
+        str(item.get("scheduleText") or item.get("schedule") or ""),
+        str(item.get("classroom") or item.get("room") or ""),
+    ]
+
+
+def build_api_empty_diagnostics(http_status, path, payload, term, token_present):
+    records, record_path = extract_offering_records(payload)
+    data = payload.get("data") if isinstance(payload, dict) else payload
+    first_keys = []
+    if records and isinstance(records[0], dict):
+        first_keys = sorted(records[0].keys())
+    return (
+        "后端 API 返回 0 条教学班："
+        f"HTTP {http_status}，path={path}，dataType={type(data).__name__}，"
+        f"recordPath={record_path}，count={len(records)}，firstKeys={first_keys or '-'}，"
+        f"currentTerm={term or '-'}，tokenPresent={'yes' if token_present else 'no'}。"
+        "请检查学期筛选、管理员权限、后端是否已导入演示教学班。"
+    )
+
+
+def _to_int(value):
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
 class CourseGrabPanel(tk.Tk):
     def __init__(self):
         super().__init__()
@@ -43,6 +93,7 @@ class CourseGrabPanel(tk.Tk):
             "mysql_user": tk.StringVar(value=os.environ.get("DB_USERNAME", "root")),
             "mysql_password": tk.StringVar(value=os.environ.get("DB_PASSWORD", "")),
             "mysql_database": tk.StringVar(value=os.environ.get("DB_DATABASE", "tianshiwebside")),
+            "term": tk.StringVar(value=os.environ.get("TERM", os.environ.get("CURRENT_TERM", ""))),
             "smart_mode": tk.StringVar(value="random"),
             "capacity_value": tk.StringVar(value="100"),
             "smart_switch": tk.BooleanVar(value=True),
@@ -176,10 +227,12 @@ class CourseGrabPanel(tk.Tk):
         ttk.Entry(db_tools, textvariable=self.vars["mysql_database"], width=12).grid(row=0, column=5, sticky="ew", padx=4)
         ttk.Label(db_tools, text="课程容量").grid(row=1, column=0, sticky="w", pady=(8, 0))
         ttk.Entry(db_tools, textvariable=self.vars["capacity_value"], width=10).grid(row=1, column=1, sticky="ew", padx=(4, 12), pady=(8, 0))
-        ttk.Button(db_tools, text="修改所选容量", command=self.set_selected_capacity).grid(row=1, column=2, sticky="ew", padx=4, pady=(8, 0))
-        ttk.Button(db_tools, text="清空所选记录", command=self.clear_selected_records).grid(row=1, column=3, sticky="ew", padx=4, pady=(8, 0))
-        ttk.Button(db_tools, text="清空Redis库存", command=self.clear_selected_redis_stock).grid(row=1, column=4, sticky="ew", padx=4, pady=(8, 0))
-        ttk.Button(db_tools, text="刷新", command=self.refresh_courses).grid(row=1, column=5, sticky="ew", padx=4, pady=(8, 0))
+        ttk.Label(db_tools, text="学期").grid(row=1, column=2, sticky="w", pady=(8, 0))
+        ttk.Entry(db_tools, textvariable=self.vars["term"], width=12).grid(row=1, column=3, sticky="ew", padx=4, pady=(8, 0))
+        ttk.Button(db_tools, text="刷新", command=self.refresh_courses).grid(row=1, column=4, sticky="ew", padx=4, pady=(8, 0))
+        ttk.Button(db_tools, text="修改所选容量", command=self.set_selected_capacity).grid(row=1, column=5, sticky="ew", padx=4, pady=(8, 0))
+        ttk.Button(db_tools, text="清空所选记录", command=self.clear_selected_records).grid(row=2, column=3, sticky="ew", padx=4, pady=(8, 0))
+        ttk.Button(db_tools, text="清空Redis库存", command=self.clear_selected_redis_stock).grid(row=2, column=4, sticky="ew", padx=4, pady=(8, 0))
 
         help_box = ttk.LabelFrame(right, text="模式说明", padding=10)
         help_box.grid(row=2, column=0, sticky="ew", pady=(0, 8))
@@ -282,13 +335,19 @@ class CourseGrabPanel(tk.Tk):
 
     def _query_offerings_from_api(self):
         token = self._admin_token()
-        url = self.vars["base_url"].get().rstrip("/") + "/api/admin/course-offerings?" + parse.urlencode({
+        params = {
             "page": 1,
             "size": 200,
-        })
+        }
+        term = self.vars["term"].get().strip()
+        if term:
+            params["term"] = term
+        path = "/api/admin/course-offerings?" + parse.urlencode(params)
+        url = self.vars["base_url"].get().rstrip("/") + path
         try:
             req = request.Request(url, headers={"Authorization": f"Bearer {token}"})
             with request.urlopen(req, timeout=5) as response:
+                http_status = response.status
                 payload = json.loads(response.read().decode("utf-8"))
         except error.HTTPError as exc:
             if exc.code in (401, 403):
@@ -296,23 +355,10 @@ class CourseGrabPanel(tk.Tk):
             raise RuntimeError(f"后端 API 返回错误：HTTP {exc.code}")
         except error.URLError as exc:
             raise RuntimeError(f"后端 API 未启动或不可访问：{exc.reason}")
-        data = payload.get("data", {})
-        records = data.get("records", []) if isinstance(data, dict) else []
-        rows = []
-        for item in records:
-            capacity = int(item.get("capacity") or 0)
-            selected = int(item.get("selectedCount") or item.get("selected") or 0)
-            rows.append([
-                str(item.get("id")),
-                str(item.get("courseCode") or item.get("code") or ""),
-                str(item.get("courseName") or item.get("name") or ""),
-                str(item.get("teacherName") or ""),
-                str(capacity),
-                str(selected),
-                str(max(0, capacity - selected)),
-                str(item.get("scheduleText") or ""),
-                str(item.get("classroom") or ""),
-            ])
+        records, _record_path = extract_offering_records(payload)
+        rows = [normalize_offering_item(item) for item in records if isinstance(item, dict)]
+        if not rows:
+            self.output_queue.put(("text", build_api_empty_diagnostics(http_status, path, payload, term, bool(token)) + "\n"))
         return rows
 
     def _admin_token(self):

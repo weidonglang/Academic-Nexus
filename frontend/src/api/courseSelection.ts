@@ -40,13 +40,22 @@ export interface CourseSelection {
 
 // 功能：查询当前学期可选教学班。
 // 说明：选课页面用该接口加载课程表格，后端返回容量、已选人数、时间窗口和是否已选状态。
-export function courseOfferingsApi(params?: { page?: number; size?: number }) {
+export interface CurrentTermResponse {
+  term: string
+  source: string
+}
+
+export function currentTermApi() {
+  return http.get<never, ApiResponse<CurrentTermResponse>>('/academic/current-term')
+}
+
+export function courseOfferingsApi(params?: { term?: string; page?: number; size?: number }) {
   return http.get<never, ApiResponse<PageResponse<CourseOffering>>>('/course-selection/offerings', { params })
 }
 
 // 功能：查询当前学生已选课程。
 // 说明：用于选课页面下方“已选课程”分页表格，数据来自 course_selection 选课记录。
-export function selectedCoursesApi(params?: { page?: number; size?: number }) {
+export function selectedCoursesApi(params?: { term?: string; page?: number; size?: number }) {
   return http.get<never, ApiResponse<PageResponse<CourseSelection>>>('/course-selection/selected', { params })
 }
 

@@ -93,7 +93,7 @@ public class AcademicAdminController {
      * 体现成绩发布后的数据保护。
      */
     public ApiResponse<Void> updateGrade(Authentication authentication, @PathVariable Long gradeId, @Valid @RequestBody GradeRequest request) {
-        if (mapper.countLockedGrade(gradeId) > 0 && !Boolean.FALSE.equals(request.locked())) {
+        if (mapper.countLockedGrade(gradeId) > 0) {
             throw new BusinessException(ErrorCode.CONFLICT, "成绩已锁定，不能修改");
         }
         Long studentId = mapper.findStudentIdByStudentNo(request.studentNo().trim());
@@ -224,7 +224,13 @@ public class AcademicAdminController {
     @DeleteMapping("/exams/{examId}")
     @PreAuthorize("hasAuthority('EXAM_WRITE')")
     public ApiResponse<Void> deleteExam(Authentication authentication, @PathVariable Long examId) {
+        Long offeringId = mapper.findOfferingIdByExamId(examId);
         mapper.deleteExam(examId);
+        if (offeringId != null) {
+            notificationService.notifyUsers(mapper.findSelectedUserIdsByOfferingId(offeringId),
+                    "考试安排取消", "一条考试安排已取消，请以最新考试安排为准。",
+                    "EXAM", "EXAM", examId);
+        }
         auditLogService.record(authentication.getName(), "DELETE_EXAM", "EXAM", examId, null, null);
         evictAcademicCaches();
         return ApiResponse.success();
@@ -260,7 +266,8 @@ public class AcademicAdminController {
     }
 
     public record GradeRequest(@NotBlank String studentNo, @NotNull Long courseId, @NotBlank String term,
-                               @NotNull @Min(0) @Max(100) Integer score, @NotNull BigDecimal gradePoint,
+                               @NotNull @Min(0) @Max(100) Integer score,
+                               @NotNull @DecimalMin("0.00") @DecimalMax("5.00") BigDecimal gradePoint,
                                @NotBlank String examType, @NotBlank String gradeStatus, @NotNull Boolean locked) {
     }
 
