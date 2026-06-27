@@ -42,6 +42,15 @@ export interface StatusChangeApplication {
   reviewComment?: string
 }
 
+export interface StatusChangeAttachment {
+  id: number
+  applicationId: number
+  originalFilename: string
+  contentType: string
+  sizeBytes: number
+  uploadedAt: string
+}
+
 export interface SubmitStatusChangeRequest {
   type: StatusChangeType
   reason: string
@@ -53,4 +62,21 @@ export function statusChangeApplicationsApi(params?: { page?: number; size?: num
 
 export function submitStatusChangeApplicationApi(payload: SubmitStatusChangeRequest) {
   return http.post<never, ApiResponse<StatusChangeApplication>>('/students/me/status-changes', payload)
+}
+
+export function statusChangeAttachmentsApi(applicationId: number) {
+  return http.get<never, ApiResponse<StatusChangeAttachment[]>>(`/students/me/status-changes/${applicationId}/attachments`)
+}
+
+export function uploadStatusChangeAttachmentApi(applicationId: number, file: File) {
+  const form = new FormData()
+  form.append('file', file)
+  return http.post<never, ApiResponse<void>>(`/students/me/status-changes/${applicationId}/attachments`, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 60000,
+  })
+}
+
+export function statusChangeAttachmentDownloadUrl(applicationId: number, attachmentId: number) {
+  return `/api/students/me/status-changes/${applicationId}/attachments/${attachmentId}/download`
 }

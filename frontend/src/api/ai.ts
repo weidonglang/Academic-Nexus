@@ -22,6 +22,10 @@ export interface AiAssistantResponse {
 export interface AiChatResponse {
   answer: string
   serviceMode: string
+  modelName: string
+  searchUsed: boolean
+  searchSources: Array<{ title: string; link: string; summary: string; searchedAt: string }>
+  searchMessage: string
 }
 
 export interface AiServiceStatusResponse {
@@ -33,6 +37,15 @@ export interface AiServiceStatusResponse {
   currentMode: string
   lastLatencyMs: number
   lastError?: string
+  serviceName: string
+  discoveryEnabled: boolean
+  baseUrl: string
+  defaultChatModel: string
+  defaultRagModel: string
+  defaultSqlModel: string
+  searchEnabled: boolean
+  searchProvider: string
+  searchStatus?: string
   checkedAt: string
 }
 

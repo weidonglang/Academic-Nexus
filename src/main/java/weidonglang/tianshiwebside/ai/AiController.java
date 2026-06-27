@@ -30,6 +30,8 @@ public class AiController {
     private final AcademicProfileService academicProfileService;
     private final LoadTestAnalysisService loadTestAnalysisService;
     private final JdbcTemplate jdbcTemplate;
+    private final AiModelRegistryService modelRegistryService;
+    private final AiSearchService searchService;
 
     public AiController(
             AiAssistantService assistantService,
@@ -40,7 +42,9 @@ public class AiController {
             AiCallLogService callLogService,
             AcademicProfileService academicProfileService,
             LoadTestAnalysisService loadTestAnalysisService,
-            JdbcTemplate jdbcTemplate
+            JdbcTemplate jdbcTemplate,
+            AiModelRegistryService modelRegistryService,
+            AiSearchService searchService
     ) {
         this.assistantService = assistantService;
         this.chatService = chatService;
@@ -51,6 +55,8 @@ public class AiController {
         this.academicProfileService = academicProfileService;
         this.loadTestAnalysisService = loadTestAnalysisService;
         this.jdbcTemplate = jdbcTemplate;
+        this.modelRegistryService = modelRegistryService;
+        this.searchService = searchService;
     }
 
     @PostMapping("/api/ai/assistant/ask")
@@ -65,7 +71,28 @@ public class AiController {
 
     @GetMapping("/api/ai/status")
     public ApiResponse<AiServiceStatusResponse> status() {
-        return ApiResponse.success(remoteClient.status());
+        AiServiceStatusResponse status = remoteClient.status();
+        AiSearchDtos.SearchConfig searchConfig = searchService.config();
+        return ApiResponse.success(new AiServiceStatusResponse(
+                status.aiServiceOnline(),
+                status.ollamaEnabled(),
+                status.ollamaReachable(),
+                status.chatModel(),
+                status.sqlModel(),
+                status.currentMode(),
+                status.lastLatencyMs(),
+                status.lastError(),
+                status.serviceName(),
+                status.discoveryEnabled(),
+                status.baseUrl(),
+                modelRegistryService.defaultModelName("CHAT", status.chatModel()),
+                modelRegistryService.defaultModelName("RAG", status.chatModel()),
+                modelRegistryService.defaultModelName("SQL", status.sqlModel()),
+                searchConfig.enabled(),
+                searchConfig.provider(),
+                searchConfig.lastStatus(),
+                status.checkedAt()
+        ));
     }
 
     @PostMapping("/api/ai/feedback")

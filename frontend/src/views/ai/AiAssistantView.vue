@@ -132,7 +132,7 @@ function resolveError(error: unknown, fallback: string) {
         :type="status.aiServiceOnline ? 'success' : 'warning'"
         :closable="false"
         :title="`ai-service ${status.aiServiceOnline ? '在线' : '离线'} / ${status.currentMode} / 耗时 ${status.lastLatencyMs}ms`"
-        :description="status.aiServiceOnline ? `Ollama：${status.ollamaReachable ? '可用' : '不可用'}，模型：${status.chatModel || '-'} / ${status.sqlModel || '-'}` : status.lastError"
+        :description="status.aiServiceOnline ? `Ollama：${status.ollamaReachable ? '可用' : '不可用'}，默认模型：${status.defaultRagModel || status.chatModel || '-'} / ${status.defaultSqlModel || status.sqlModel || '-'}` : status.lastError"
       />
 
       <div v-if="result" class="answer-box">

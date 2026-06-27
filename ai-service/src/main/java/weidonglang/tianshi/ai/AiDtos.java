@@ -24,7 +24,8 @@ public class AiDtos {
     public record ChatRequest(@NotBlank String message) {
     }
 
-    public record ChatResponse(String answer, String serviceMode) {
+    public record ChatResponse(String answer, String serviceMode, String modelName, boolean searchUsed,
+                               List<Object> searchSources, String searchMessage) {
     }
 
     public record StatusResponse(boolean ollamaEnabled, boolean ollamaReachable, String chatModel, String sqlModel, String lastError) {

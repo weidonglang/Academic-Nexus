@@ -1,0 +1,45 @@
+services:
+  nacos:
+    image: nacos/nacos-server:v2.5.1
+    container_name: academic-nacos
+    environment:
+      MODE: standalone
+      NACOS_AUTH_ENABLE: "false"
+      JVM_XMS: 256m
+      JVM_XMX: 512m
+      JVM_XMN: 128m
+    ports:
+      - "8848:8848"
+      - "9848:9848"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8848/nacos/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+
+  mysql:
+    image: mysql:8.4
+    container_name: academic-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: 123123
+      MYSQL_DATABASE: tianshiwebside
+      TZ: Asia/Shanghai
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    ports:
+      - "3306:3306"
+    volumes:
+      - academic_mysql_data:/var/lib/mysql
+
+  redis:
+    image: redis:7.4-alpine
+    container_name: academic-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - academic_redis_data:/data
+
+volumes:
+  academic_mysql_data:
+  academic_redis_data:

@@ -11,11 +11,18 @@ public class AiAssistantService {
     private final RagKnowledgeService knowledgeService;
     private final AiRemoteClient remoteClient;
     private final AiCallLogService callLogService;
+    private final AiModelRegistryService modelRegistryService;
 
-    public AiAssistantService(RagKnowledgeService knowledgeService, AiRemoteClient remoteClient, AiCallLogService callLogService) {
+    public AiAssistantService(
+            RagKnowledgeService knowledgeService,
+            AiRemoteClient remoteClient,
+            AiCallLogService callLogService,
+            AiModelRegistryService modelRegistryService
+    ) {
         this.knowledgeService = knowledgeService;
         this.remoteClient = remoteClient;
         this.callLogService = callLogService;
+        this.modelRegistryService = modelRegistryService;
     }
 
     public AiAssistantResponse ask(String question, Principal principal) {
@@ -33,7 +40,8 @@ public class AiAssistantService {
         }
         return remoteClient.ask(question, sources)
                 .map(response -> {
-                    callLogService.record(principal, "RAG", question, response.serviceMode(), elapsedMillis(start), true, null);
+                    String modelName = modelRegistryService.defaultModelName("RAG", response.modelName());
+                    callLogService.record(principal, "RAG", question, modelName, elapsedMillis(start), true, null);
                     return response(response.answer(), sources, response.serviceMode(), "ANSWER", null, elapsedMillis(start));
                 })
                 .orElseGet(() -> {

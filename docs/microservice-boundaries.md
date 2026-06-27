@@ -1,14 +1,60 @@
 # Microservice Boundary Notes
 
-## Target Stack
+## Current Spring Cloud Stack
 
 - Backend: Spring Boot + Spring MVC + MyBatis + Redis.
+- Service discovery: Spring Cloud Alibaba Nacos Discovery.
+- Service call: Spring Cloud OpenFeign + LoadBalancer.
 - Frontend: Vue 3 + Element Plus.
 - Redis belongs to backend infrastructure. It is used for tokens, login lockout, cache, idempotency, and high-concurrency course selection.
 
 The current codebase still contains JPA-based persistence from the first prototype. New persistence work should move toward MyBatis mapper style.
 
-## First Candidate Service: Course Grab Service
+## Implemented Service Boundary: AI Service
+
+The first real Spring Cloud boundary is the AI service:
+
+```text
+academic-main:8080
+  -> OpenFeign + LoadBalancer
+  -> academic-ai-service:8090
+```
+
+Service names:
+
+```text
+spring.application.name=academic-main
+spring.application.name=academic-ai-service
+```
+
+Nacos defaults:
+
+```text
+NACOS_ADDR=127.0.0.1:8848
+NACOS_DISCOVERY_ENABLED=false
+NACOS_REGISTER_ENABLED=false
+AI_SERVICE_DISCOVERY_ENABLED=false
+```
+
+For local demos without Nacos, the main system keeps using:
+
+```text
+AI_SERVICE_URL=http://localhost:8090
+```
+
+For Spring Cloud demos, enable the three discovery flags. Then the main system calls the AI service by service name instead of a fixed URL. Multiple `academic-ai-service` instances can be started on different ports and discovered through Nacos.
+
+Current Feign contract:
+
+```text
+POST /internal/ai/rag/answer
+POST /internal/ai/chat
+POST /internal/ai/load-test/analyze
+POST /internal/ai/sql/generate
+GET  /internal/ai/status
+```
+
+## Next Candidate Service: Course Grab Service
 
 Course selection is the best first microservice boundary because it has:
 

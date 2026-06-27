@@ -56,7 +56,7 @@ public class AiInternalController {
         String answer = ollamaClient.generate(chatModel, prompt)
                 .orElseGet(() -> fallbackChatAnswer(request.message()));
         String mode = answer.startsWith("AI 聊天当前") ? "ai-service-fallback" : "ollama:" + chatModel;
-        return new AiDtos.ChatResponse(answer, mode);
+        return new AiDtos.ChatResponse(answer, mode, chatModel, false, List.of(), "ai-service 不直接执行联网搜索");
     }
 
     @GetMapping("/internal/ai/status")

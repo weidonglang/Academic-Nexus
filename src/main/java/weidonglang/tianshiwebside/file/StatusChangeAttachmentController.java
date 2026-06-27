@@ -1,6 +1,11 @@
 package weidonglang.tianshiwebside.file;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.PathResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import weidonglang.tianshiwebside.common.api.ApiResponse;
@@ -8,6 +13,8 @@ import weidonglang.tianshiwebside.common.error.BusinessException;
 import weidonglang.tianshiwebside.common.error.ErrorCode;
 
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.security.Principal;
 import java.time.Instant;
@@ -42,15 +49,14 @@ public class StatusChangeAttachmentController {
     }
 
     @GetMapping
-    public ApiResponse<List<StatusChangeAttachmentMapper.AttachmentRow>> list(@PathVariable Long applicationId) {
+    public ApiResponse<List<StatusChangeAttachmentMapper.AttachmentRow>> list(Principal principal, @PathVariable Long applicationId) {
+        ensureOwned(applicationId, principal);
         return ApiResponse.success(mapper.findByApplicationId(applicationId));
     }
 
     @PostMapping
     public ApiResponse<Void> upload(Principal principal, @PathVariable Long applicationId, @RequestParam("file") MultipartFile file) {
-        if (mapper.countOwnedApplication(applicationId, principal.getName()) == 0) {
-            throw new BusinessException(ErrorCode.NOT_FOUND, "申请不存在");
-        }
+        ensureOwned(applicationId, principal);
         if (file.isEmpty()) {
             throw new BusinessException(ErrorCode.BAD_REQUEST, "文件不能为空");
         }
@@ -68,6 +74,37 @@ public class StatusChangeAttachmentController {
             return ApiResponse.success();
         } catch (IOException ex) {
             throw new BusinessException(ErrorCode.INTERNAL_ERROR, "文件保存失败");
+        }
+    }
+
+    @GetMapping("/{attachmentId}/download")
+    public ResponseEntity<Resource> download(
+            Principal principal,
+            @PathVariable Long applicationId,
+            @PathVariable Long attachmentId
+    ) {
+        StatusChangeAttachmentMapper.AttachmentRow row = mapper.findOwnedById(applicationId, attachmentId, principal.getName());
+        if (row == null) {
+            throw new BusinessException(ErrorCode.NOT_FOUND, "附件不存在");
+        }
+        Path path = Paths.get(row.storedPath()).toAbsolutePath().normalize();
+        if (!Files.exists(path) || !Files.isRegularFile(path)) {
+            throw new BusinessException(ErrorCode.NOT_FOUND, "文件不存在或已被移动");
+        }
+        String encodedName = URLEncoder.encode(row.originalFilename(), StandardCharsets.UTF_8).replace("+", "%20");
+        MediaType mediaType = MediaType.APPLICATION_OCTET_STREAM;
+        if (row.contentType() != null && !row.contentType().isBlank()) {
+            mediaType = MediaType.parseMediaType(row.contentType());
+        }
+        return ResponseEntity.ok()
+                .contentType(mediaType)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + encodedName)
+                .body(new PathResource(path));
+    }
+
+    private void ensureOwned(Long applicationId, Principal principal) {
+        if (principal == null || mapper.countOwnedApplication(applicationId, principal.getName()) == 0) {
+            throw new BusinessException(ErrorCode.NOT_FOUND, "申请不存在");
         }
     }
 

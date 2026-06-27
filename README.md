@@ -8,6 +8,8 @@
 ![TypeScript](https://img.shields.io/badge/TypeScript-Frontend-blue)
 ![MySQL](https://img.shields.io/badge/MySQL-8-orange)
 ![Redis](https://img.shields.io/badge/Redis-7-red)
+![Spring Cloud](https://img.shields.io/badge/Spring%20Cloud-2025.1-brightgreen)
+![Nacos](https://img.shields.io/badge/Nacos-Discovery-blue)
 ![AI Assistant](https://img.shields.io/badge/AI-Academic%20Assistant-purple)
 ![License](https://img.shields.io/badge/License-MIT-lightgrey)
 
@@ -85,7 +87,8 @@ Spring Boot Main System
     +-- Redis 7
     +-- Flyway Migration
     +-- Spring Security
-    +-- AI Service
+    +-- Spring Cloud OpenFeign + Nacos
+    +-- AI Service (academic-ai-service)
             |
             +-- Ollama / Local Fallback
     |
@@ -142,7 +145,8 @@ Academic-Nexus can be used as a reference for the following undergraduate projec
 | 数据库 | MySQL 8、H2 测试库、Flyway 数据库迁移 |
 | 缓存 | Redis 7，可降级到数据库兜底 |
 | 前端 | Vue 3、Vite、TypeScript、Element Plus、Pinia、Vue Router |
-| AI 服务 | 独立 Spring Boot 微服务、Ollama、qwen3/qwen2.5-coder |
+| 微服务 | Spring Cloud 2025.1、Spring Cloud Alibaba Nacos Discovery、OpenFeign、LoadBalancer |
+| AI 服务 | 独立 Spring Boot 微服务、Ollama、qwen3/qwen2.5-coder、Qwythos-9B 预设 |
 | 测试 | JUnit 5、Spring Boot Test、前端 TypeScript 构建检查 |
 | 压测 | Node.js 压测脚本、压测报告 JSON/HTML |
 
@@ -187,6 +191,8 @@ Academic-Nexus can be used as a reference for the following undergraduate projec
 - 通用 AI 聊天：用于系统介绍、答辩准备、文本润色和普通问答。
 - 自然语言只读查库：管理员输入业务问题，AI 生成 `SELECT` 草稿，主系统做只读和敏感字段校验后执行。
 - AI 服务状态检测：展示 ai-service、Ollama、模型、模式、耗时和错误信息。
+- AI 模型注册：管理员维护 Qwen3、qwen2.5-coder、Qwythos-9B 等模型预设，支持启停、默认模型和连通性测试。
+- 联网搜索与安全审查：管理员配置搜索提供方，聊天入口按场景触发搜索；涉及个人数据、成绩、SQL、密码或密钥的问题会被拦截并写入日志。
 - AI 调用日志：记录 RAG、聊天、SQL、学业画像、压测解读等调用。
 - 学业画像：展示已修学分、剩余学分、挂科课程、毕业风险和 AI 建议。
 - AI 压测报告解读：对抢课压测数据生成结论、风险判断和优化建议。

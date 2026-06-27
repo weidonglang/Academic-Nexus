@@ -80,6 +80,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'admin/database-browser', component: () => import('@/views/admin/DatabaseBrowserView.vue') },
       { path: 'admin/ai-sql', component: () => import('@/views/admin/NaturalSqlAdminView.vue') },
       { path: 'admin/ai-logs', component: () => import('@/views/admin/AiCallLogAdminView.vue') },
+      { path: 'admin/ai-models', component: () => import('@/views/admin/AiModelAdminView.vue') },
     ],
   },
   {

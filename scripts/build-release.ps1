@@ -90,6 +90,7 @@ Invoke-Step "Assemble release directory" {
     Copy-RequiredFile -Source (Join-Path $Root "ai-service/target/tianshi-ai-service-0.0.1-SNAPSHOT.jar") -Destination (Join-Path $PackageDir "academic-nexus-ai-service.jar")
     Copy-RequiredFile -Source (Join-Path $Root "README.md") -Destination (Join-Path $PackageDir "README.md")
     Copy-RequiredFile -Source (Join-Path $Root "docs/startup-guide.md") -Destination (Join-Path $PackageDir "startup-guide.md")
+    Copy-RequiredFile -Source (Join-Path $Root "docker-compose.yml") -Destination (Join-Path $PackageDir "docker-compose.yml")
 
     @'
 # Academic-Nexus release environment
@@ -97,6 +98,11 @@ SPRING_PROFILES_ACTIVE=demo
 SERVER_PORT=8080
 AI_SERVICE_PORT=8090
 AI_SERVICE_URL=http://localhost:8090
+AI_SERVICE_NAME=academic-ai-service
+AI_SERVICE_DISCOVERY_ENABLED=false
+NACOS_DISCOVERY_ENABLED=false
+NACOS_REGISTER_ENABLED=false
+NACOS_ADDR=127.0.0.1:8848
 
 DB_URL=jdbc:mysql://localhost:3306/tianshiwebside?useUnicode=true&characterEncoding=utf8mb4&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
 DB_USERNAME=root
@@ -165,7 +171,7 @@ This package contains the built Spring Boot web application and the companion AI
 ## Quick start
 
 1. Install Java 17.
-2. Start MySQL and Redis.
+2. Start MySQL, Redis, and Nacos. You can run `docker compose up -d nacos mysql redis`.
 3. Create a database named `tianshiwebside`.
 4. Copy `.env.example` to `.env` and adjust database or Ollama settings if needed.
 5. Run `start-release.bat` on Windows, or `powershell -ExecutionPolicy Bypass -File .\start-release.ps1`.
@@ -176,7 +182,7 @@ Default demo accounts use password `123456`:
 - `teacher001`
 - `student001`
 
-The web application starts at `http://localhost:8080`.
+The web application starts at `http://localhost:8080`. To use Spring Cloud service discovery, set `NACOS_DISCOVERY_ENABLED=true`, `NACOS_REGISTER_ENABLED=true`, and `AI_SERVICE_DISCOVERY_ENABLED=true` in `.env`.
 "@ | Set-Content -Path (Join-Path $PackageDir "README-release.md") -Encoding UTF8
 }
 

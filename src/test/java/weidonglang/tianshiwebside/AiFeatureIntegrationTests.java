@@ -7,6 +7,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.authentication.TestingAuthenticationToken;
 import weidonglang.tianshiwebside.ai.AcademicProfileService;
 import weidonglang.tianshiwebside.ai.AiAssistantService;
+import weidonglang.tianshiwebside.ai.AiModelRegistryService;
+import weidonglang.tianshiwebside.ai.AiSearchService;
 import weidonglang.tianshiwebside.ai.NaturalSqlService;
 import weidonglang.tianshiwebside.common.error.BusinessException;
 
@@ -26,6 +28,10 @@ class AiFeatureIntegrationTests {
     private NaturalSqlService naturalSqlService;
     @Autowired
     private AcademicProfileService academicProfileService;
+    @Autowired
+    private AiModelRegistryService modelRegistryService;
+    @Autowired
+    private AiSearchService searchService;
 
     @Test
     void ragRefusesOffTopicAndPermissionOutOfScopeQuestions() {
@@ -101,6 +107,21 @@ class AiFeatureIntegrationTests {
         assertThat(profile.failedCourseCount()).isEqualTo(1);
         assertThat(profile.graduationRiskLevel()).isIn("中风险", "高风险");
         assertThat(profile.aiSuggestion()).contains("风险");
+    }
+
+    @Test
+    void modelRegistryContainsPresetsAndSearchBlocksSensitiveQueries() {
+        assertThat(modelRegistryService.models())
+                .anyMatch(model -> model.name().equals("Qwythos-9B-Claude-Mythos-5-1M"))
+                .anyMatch(model -> model.modelType().equals("SQL") && model.defaultModel());
+        assertThat(modelRegistryService.defaultModelName("CHAT", "fallback")).isEqualTo("qwen3:8b");
+
+        var response = searchService.search("admin_ai", "CHAT", "联网搜索某个学生成绩和学号");
+        Integer blocked = jdbcTemplate.queryForObject("select count(*) from ai_search_result_log where blocked = true", Integer.class);
+
+        assertThat(response.allowed()).isFalse();
+        assertThat(response.message()).contains("敏感");
+        assertThat(blocked).isNotNull().isPositive();
     }
 
     private void seedStudent(String username) {

@@ -119,6 +119,38 @@ $env:REDIS_CLUSTER_NODES="192.168.1.10:7000,192.168.1.10:7001,192.168.1.10:7002"
 
 当前答辩演示建议使用单机 Redis，链路更简单，也更容易讲清楚。
 
+## Spring Cloud + Nacos
+
+本项目从 1.1 版本开始接入 Spring Cloud：
+
+- 主系统服务名：`academic-main`，默认端口 `8080`
+- AI 服务名：`academic-ai-service`，默认端口 `8090`
+- 注册中心：Nacos，默认地址 `127.0.0.1:8848`
+- 服务调用：主系统通过 OpenFeign 按服务名调用 `academic-ai-service`
+
+本地准备基础设施：
+
+```powershell
+docker compose up -d nacos mysql redis
+```
+
+如果需要让两个 Java 服务注册到 Nacos，并让主系统走服务发现调用 AI 服务，设置：
+
+```powershell
+$env:NACOS_DISCOVERY_ENABLED="true"
+$env:NACOS_REGISTER_ENABLED="true"
+$env:AI_SERVICE_DISCOVERY_ENABLED="true"
+$env:NACOS_ADDR="127.0.0.1:8848"
+```
+
+启动后访问 Nacos 控制台：
+
+```text
+http://localhost:8848/nacos
+```
+
+在服务列表里应能看到 `academic-main` 和 `academic-ai-service`。如果不想启动 Nacos，可以保持默认配置，主系统会继续通过 `AI_SERVICE_URL=http://localhost:8090` 调用 AI 服务。
+
 ## 静态演示页
 
 ```powershell
@@ -172,18 +204,18 @@ $env:PREVIEW_PORT="8092"
 
 数据库账号密码请通过环境变量覆盖，例如 `DB_USERNAME` 和 `DB_PASSWORD`。脚本不会在控制台直接输出演示账号密码。
 
-## Release 1.0 打包
+## Release 打包
 
 生成可分发的 jar 和 zip：
 
 ```powershell
-.\scripts\build-release.ps1 -Version 1.0
+.\scripts\build-release.ps1 -Version 1.1
 ```
 
 打包产物位于：
 
 ```text
-release/Academic-Nexus-1.0.zip
+release/Academic-Nexus-1.1.zip
 ```
 
-压缩包内包含主系统 `academic-nexus-web.jar`、AI 服务 `academic-nexus-ai-service.jar`、`.env.example`、`start-release.ps1` 和 `start-release.bat`。部署机器需要 Java 17、MySQL 和 Redis；如需真实 Ollama 模型，把 `.env` 中的 `OLLAMA_ENABLED` 改为 `true` 并确认模型已经拉取。
+压缩包内包含主系统 `academic-nexus-web.jar`、AI 服务 `academic-nexus-ai-service.jar`、`docker-compose.yml`、`.env.example`、`start-release.ps1` 和 `start-release.bat`。部署机器需要 Java 17；MySQL、Redis、Nacos 可以用压缩包里的 Docker Compose 启动。如需真实 Ollama 模型，把 `.env` 中的 `OLLAMA_ENABLED` 改为 `true` 并确认模型已经拉取。
