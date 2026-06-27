@@ -1,6 +1,7 @@
 package weidonglang.tianshiwebside.governance;
 
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
 import weidonglang.tianshiwebside.common.error.BusinessException;
 import weidonglang.tianshiwebside.common.error.ErrorCode;
@@ -13,6 +14,7 @@ import java.util.Comparator;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 
 @Service
 public class ContentModerationService {
@@ -27,92 +29,97 @@ public class ContentModerationService {
     }
 
     public ModerationResult checkConfigured(String scene, String content, String operator) {
-        SafetyConfig config = safetyConfig(scene);
-        if (config == null) {
-            return checkWithStrategy(scene, content, operator, "block", false);
+        try {
+            SafetyConfig config = safetyConfig(scene);
+            if (config == null) {
+                return checkWithStrategy(scene, content, operator, "block", false);
+            }
+            if (!config.enabled()) {
+                String safeContent = content == null ? "" : content;
+                log(config.scene(), safeContent, "", "LOW", "DISABLED", operator);
+                return new ModerationResult(config.scene(), "", "LOW", "DISABLED");
+            }
+            return checkWithStrategy(config.scene(), content, operator, config.strategy(), true);
+        } catch (DataAccessException ex) {
+            return new ModerationResult(normalizeScene(scene), "", "LOW", "SKIPPED");
         }
-        if (!config.enabled()) {
-            String safeContent = content == null ? "" : content;
-            log(config.scene(), safeContent, "", "LOW", "DISABLED", operator);
-            return new ModerationResult(config.scene(), "", "LOW", "DISABLED");
-        }
-        return checkWithStrategy(config.scene(), content, operator, config.strategy(), true);
     }
 
     public List<SafetyConfig> safetyConfigs() {
-        return jdbcTemplate.query("""
-                        select id, scene, enabled, strategy, description, updated_at
-                        from ai_safety_config
-                        order by scene asc
-                        """,
-                (rs, rowNum) -> new SafetyConfig(
-                        rs.getLong("id"),
-                        rs.getString("scene"),
-                        rs.getBoolean("enabled"),
-                        rs.getString("strategy"),
-                        rs.getString("description"),
-                        rs.getObject("updated_at", Instant.class)
-                ));
+        try {
+            return jdbcTemplate.query("""
+                            select id, scene, enabled, strategy, description, updated_at
+                            from ai_safety_config
+                            order by scene asc
+                            """,
+                    (rs, rowNum) -> new SafetyConfig(
+                            rs.getLong("id"),
+                            rs.getString("scene"),
+                            rs.getBoolean("enabled"),
+                            rs.getString("strategy"),
+                            rs.getString("description"),
+                            rs.getObject("updated_at", Instant.class)
+                    ));
+        } catch (DataAccessException ex) {
+            return defaultSafetyConfigs();
+        }
     }
 
     public SafetyConfig updateSafetyConfig(String scene, boolean enabled, String strategy, String description) {
         String normalizedScene = normalizeScene(scene);
         String normalizedStrategy = normalizeStrategy(strategy);
         String cleanDescription = description == null || description.isBlank() ? null : description.trim();
-        Long count = jdbcTemplate.queryForObject("select count(*) from ai_safety_config where scene = ?", Long.class, normalizedScene);
-        if (count != null && count > 0) {
-            jdbcTemplate.update("""
-                            update ai_safety_config
-                            set enabled = ?, strategy = ?, description = ?, updated_at = ?
-                            where scene = ?
-                            """,
-                    enabled, normalizedStrategy, cleanDescription, Instant.now(), normalizedScene);
-        } else {
-            jdbcTemplate.update("""
-                            insert into ai_safety_config (scene, enabled, strategy, description, updated_at)
-                            values (?, ?, ?, ?, ?)
-                            """,
-                    normalizedScene, enabled, normalizedStrategy, cleanDescription, Instant.now());
+        try {
+            Long count = jdbcTemplate.queryForObject("select count(*) from ai_safety_config where scene = ?", Long.class, normalizedScene);
+            if (count != null && count > 0) {
+                jdbcTemplate.update("""
+                                update ai_safety_config
+                                set enabled = ?, strategy = ?, description = ?, updated_at = ?
+                                where scene = ?
+                                """,
+                        enabled, normalizedStrategy, cleanDescription, Instant.now(), normalizedScene);
+            } else {
+                jdbcTemplate.update("""
+                                insert into ai_safety_config (scene, enabled, strategy, description, updated_at)
+                                values (?, ?, ?, ?, ?)
+                                """,
+                        normalizedScene, enabled, normalizedStrategy, cleanDescription, Instant.now());
+            }
+            return safetyConfig(normalizedScene);
+        } catch (DataAccessException ex) {
+            throw new BusinessException(ErrorCode.CONFLICT, "AI 安全配置表不可用，请先完成 Flyway 迁移");
         }
-        return safetyConfig(normalizedScene);
     }
 
     public SafetyConfig safetyConfig(String scene) {
-        List<SafetyConfig> rows = jdbcTemplate.query("""
-                        select id, scene, enabled, strategy, description, updated_at
-                        from ai_safety_config
-                        where scene = ?
-                        """,
-                (rs, rowNum) -> new SafetyConfig(
-                        rs.getLong("id"),
-                        rs.getString("scene"),
-                        rs.getBoolean("enabled"),
-                        rs.getString("strategy"),
-                        rs.getString("description"),
-                        rs.getObject("updated_at", Instant.class)
-                ),
-                normalizeScene(scene));
-        return rows.isEmpty() ? null : rows.get(0);
+        String normalizedScene = normalizeScene(scene);
+        try {
+            List<SafetyConfig> rows = jdbcTemplate.query("""
+                            select id, scene, enabled, strategy, description, updated_at
+                            from ai_safety_config
+                            where scene = ?
+                            """,
+                    (rs, rowNum) -> new SafetyConfig(
+                            rs.getLong("id"),
+                            rs.getString("scene"),
+                            rs.getBoolean("enabled"),
+                            rs.getString("strategy"),
+                            rs.getString("description"),
+                            rs.getObject("updated_at", Instant.class)
+                    ),
+                    normalizedScene);
+            return rows.isEmpty() ? null : rows.get(0);
+        } catch (DataAccessException ex) {
+            Optional<SafetyConfig> fallback = defaultSafetyConfigs().stream()
+                    .filter(config -> config.scene().equals(normalizedScene))
+                    .findFirst();
+            return fallback.orElse(null);
+        }
     }
 
     private ModerationResult checkWithStrategy(String scene, String content, String operator, String strategy, boolean configurable) {
         String safeContent = content == null ? "" : content;
-        List<SensitiveWordRow> words = jdbcTemplate.query("""
-                        select id, word, category, risk_level, enabled, created_at, updated_at
-                        from sensitive_word
-                        where enabled = true
-                        order by risk_level desc, word asc
-                        """,
-                (rs, rowNum) -> new SensitiveWordRow(
-                        rs.getLong("id"),
-                        rs.getString("word"),
-                        rs.getString("category"),
-                        rs.getString("risk_level"),
-                        rs.getBoolean("enabled"),
-                        rs.getObject("created_at", Instant.class),
-                        rs.getObject("updated_at", Instant.class)
-                )
-        );
+        List<SensitiveWordRow> words = sensitiveWords();
         List<SensitiveWordRow> matched = words.stream()
                 .filter(word -> !word.word().isBlank() && safeContent.contains(word.word()))
                 .toList();
@@ -152,19 +159,58 @@ public class ContentModerationService {
     }
 
     private void log(String scene, String content, String matchedWords, String riskLevel, String action, String operator) {
-        jdbcTemplate.update("""
-                        insert into content_moderation_log
-                          (scene, content_hash, matched_words, risk_level, action, operator, trace_id, created_at)
-                        values (?, ?, ?, ?, ?, ?, ?, ?)
-                        """,
-                normalizeScene(scene),
-                sha256(content),
-                matchedWords,
-                riskLevel,
-                action,
-                operator,
-                TraceIdHolder.get(),
-                Instant.now()
+        try {
+            jdbcTemplate.update("""
+                            insert into content_moderation_log
+                              (scene, content_hash, matched_words, risk_level, action, operator, trace_id, created_at)
+                            values (?, ?, ?, ?, ?, ?, ?, ?)
+                            """,
+                    normalizeScene(scene),
+                    sha256(content),
+                    matchedWords,
+                    riskLevel,
+                    action,
+                    operator,
+                    TraceIdHolder.get(),
+                    Instant.now()
+            );
+        } catch (DataAccessException ignored) {
+            // Demo startup should not turn content review logging drift into a user-facing 500.
+        }
+    }
+
+    private List<SensitiveWordRow> sensitiveWords() {
+        try {
+            return jdbcTemplate.query("""
+                            select id, word, category, risk_level, enabled, created_at, updated_at
+                            from sensitive_word
+                            where enabled = true
+                            order by risk_level desc, word asc
+                            """,
+                    (rs, rowNum) -> new SensitiveWordRow(
+                            rs.getLong("id"),
+                            rs.getString("word"),
+                            rs.getString("category"),
+                            rs.getString("risk_level"),
+                            rs.getBoolean("enabled"),
+                            rs.getObject("created_at", Instant.class),
+                            rs.getObject("updated_at", Instant.class)
+                    )
+            );
+        } catch (DataAccessException ex) {
+            return List.of();
+        }
+    }
+
+    private List<SafetyConfig> defaultSafetyConfigs() {
+        Instant now = Instant.now();
+        return List.of(
+                new SafetyConfig(0L, "AI_INPUT", true, "block", "AI 输入安全审查默认策略。", now),
+                new SafetyConfig(0L, "AI_OUTPUT", true, "warn", "AI 输出安全审查默认策略。", now),
+                new SafetyConfig(0L, "NOTICE", true, "block", "公告发布安全审查默认策略。", now),
+                new SafetyConfig(0L, "SEARCH_RESULT", true, "block", "联网搜索结果安全审查默认策略。", now),
+                new SafetyConfig(0L, "SENSITIVE_WORD", true, "block", "通用敏感词默认策略。", now),
+                new SafetyConfig(0L, "STUDENT_CONTENT", true, "block", "学生提交内容默认策略。", now)
         );
     }
 

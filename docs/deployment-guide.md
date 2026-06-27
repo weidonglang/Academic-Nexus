@@ -1,8 +1,8 @@
-# Academic-Nexus v1.2 Deployment Guide
+# Academic-Nexus v1.3.0 Deployment Guide
 
 Updated: 2026-06-27
 
-This guide covers the deployable v1.2 package, Docker Compose deployment, and the plain jar mode.
+This guide covers the deployable v1.3.0 package, Docker Compose deployment, and the plain jar mode.
 
 ## Requirements
 
@@ -48,16 +48,16 @@ docker compose down -v
 
 ## Jar Package Deployment
 
-Build the v1.2 release zip:
+Build the v1.3.0 release zip:
 
 ```powershell
-.\scripts\build-release.ps1 -Version 1.2
+.\scripts\build-release.ps1 -Version 1.3.0
 ```
 
 Expected artifact:
 
 ```text
-release/Academic-Nexus-1.2.zip
+release/Academic-Nexus-1.3.0.zip
 ```
 
 The zip contains:
@@ -146,15 +146,15 @@ cd ..
 cd ai-service
 ..\mvnw.cmd test
 cd ..
-.\scripts\build-release.ps1 -Version 1.2
+.\scripts\build-release.ps1 -Version 1.3.0
 ```
 
-Expected results for v1.2:
+Expected results for v1.3.0:
 
 - Compose config resolves successfully.
 - `npm audit` reports 0 vulnerabilities.
 - Frontend production build passes.
-- Main backend test suite passes with 26 tests.
+- Main backend test suite passes, including the v1.3.0 HTTP regression tests for #39, #41, and #44.
 - AI service module builds successfully.
 - Release zip is generated under `release/`.
 

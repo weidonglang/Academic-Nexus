@@ -1,5 +1,5 @@
 param(
-    [string]$Version = "1.2",
+    [string]$Version = "1.3.0",
     [switch]$SkipTests
 )
 
@@ -94,6 +94,8 @@ Invoke-Step "Assemble release directory" {
     Copy-RequiredFile -Source (Join-Path $Root "docs/spring-cloud-verification.md") -Destination (Join-Path $PackageDir "spring-cloud-verification.md")
     Copy-RequiredFile -Source (Join-Path $Root "docs/demo-checklist.md") -Destination (Join-Path $PackageDir "demo-checklist.md")
     Copy-RequiredFile -Source (Join-Path $Root "docs/issue-completion-matrix.md") -Destination (Join-Path $PackageDir "issue-completion-matrix.md")
+    Copy-RequiredFile -Source (Join-Path $Root "docs/qa/v1.3-issue-closure-report.md") -Destination (Join-Path $PackageDir "v1.3-issue-closure-report.md")
+    Copy-RequiredFile -Source (Join-Path $Root "CHANGELOG.md") -Destination (Join-Path $PackageDir "CHANGELOG.md")
     Copy-RequiredFile -Source (Join-Path $Root "docker-compose.yml") -Destination (Join-Path $PackageDir "docker-compose.yml")
 
     @'

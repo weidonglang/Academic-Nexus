@@ -28,7 +28,12 @@ public interface UserAccountMapper {
             from sys_role r
             join sys_user_role ur on ur.role_id = r.id
             where ur.user_id = #{userId}
-            order by r.code asc
+            order by case r.code
+              when 'ADMIN' then 1
+              when 'TEACHER' then 2
+              when 'STUDENT' then 3
+              else 99
+            end, r.code asc
             """)
     List<String> findRoleCodesByUserId(@Param("userId") Long userId);
 

@@ -119,7 +119,7 @@ public class AiRemoteClient {
                     "",
                     "主系统本地兜底模式",
                     elapsedMillis(start),
-                    ex.getClass().getSimpleName() + ": " + ex.getMessage(),
+                    friendlyAiError(ex),
                     serviceName,
                     discoveryEnabled,
                     baseUrl,
@@ -214,6 +214,17 @@ public class AiRemoteClient {
 
     private long elapsedMillis(long startNanos) {
         return Duration.ofNanos(System.nanoTime() - startNanos).toMillis();
+    }
+
+    private String friendlyAiError(Exception ex) {
+        String message = ex.getMessage() == null ? "" : ex.getMessage();
+        if (message.contains("Load balancer does not contain an instance") || message.contains("No servers available")) {
+            return "academic-ai-service 未在注册中心发现，已切换主系统本地兜底模式";
+        }
+        if (message.contains("Connection refused")) {
+            return "academic-ai-service 连接失败，已切换主系统本地兜底模式";
+        }
+        return ex.getClass().getSimpleName() + ": " + message;
     }
 
     private String stripTrailingSlash(String value) {
