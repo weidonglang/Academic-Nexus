@@ -300,7 +300,7 @@ class SystemInteroperabilityIntegrationTests {
 
         adminFileController.delete(attachmentId);
 
-        assertThat(attachmentController.list(application.id()).data()).noneMatch(row -> row.id().equals(attachmentId));
+        assertThat(attachmentController.list(auth(username, "ROLE_STUDENT"), application.id()).data()).noneMatch(row -> row.id().equals(attachmentId));
     }
 
     @Test

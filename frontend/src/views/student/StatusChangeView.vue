@@ -1,11 +1,15 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
+import type { UploadRequestOptions } from 'element-plus'
 import { ElMessage } from 'element-plus'
 import PageHeader from '@/components/PageHeader.vue'
 import {
+  statusChangeAttachmentsApi,
   statusChangeApplicationsApi,
   submitStatusChangeApplicationApi,
+  uploadStatusChangeAttachmentApi,
   type ApplicationStatus,
+  type StatusChangeAttachment,
   type StatusChangeApplication,
   type StatusChangeType,
 } from '@/api/student'
@@ -16,6 +20,11 @@ const records = ref<StatusChangeApplication[]>([])
 const page = ref(1)
 const size = ref(10)
 const total = ref(0)
+const attachmentDialogVisible = ref(false)
+const attachmentLoading = ref(false)
+const attachmentUploading = ref(false)
+const currentApplication = ref<StatusChangeApplication>()
+const attachments = ref<StatusChangeAttachment[]>([])
 
 const form = reactive({
   type: 'SUSPEND' as StatusChangeType,
@@ -77,6 +86,45 @@ async function submitApplication() {
   } finally {
     submitting.value = false
   }
+}
+
+async function openAttachments(row: StatusChangeApplication) {
+  currentApplication.value = row
+  attachmentDialogVisible.value = true
+  await loadAttachments()
+}
+
+async function loadAttachments() {
+  if (!currentApplication.value) return
+  attachmentLoading.value = true
+  try {
+    const response = await statusChangeAttachmentsApi(currentApplication.value.id)
+    attachments.value = response.data
+  } catch (error) {
+    ElMessage.error(resolveErrorMessage(error, '附件列表加载失败'))
+  } finally {
+    attachmentLoading.value = false
+  }
+}
+
+async function uploadAttachment(options: UploadRequestOptions) {
+  if (!currentApplication.value) return
+  attachmentUploading.value = true
+  try {
+    await uploadStatusChangeAttachmentApi(currentApplication.value.id, options.file as File)
+    ElMessage.success('附件已上传')
+    await loadAttachments()
+  } catch (error) {
+    ElMessage.error(resolveErrorMessage(error, '附件上传失败'))
+  } finally {
+    attachmentUploading.value = false
+  }
+}
+
+function formatFileSize(value?: number) {
+  if (!value) return '-'
+  if (value >= 1024 * 1024) return `${(value / 1024 / 1024).toFixed(1)} MB`
+  return `${Math.max(1, Math.round(value / 1024))} KB`
 }
 
 function formatDateTime(value?: string) {
@@ -145,6 +193,11 @@ function resolveErrorMessage(error: unknown, fallback: string) {
         <el-table-column label="审核意见" min-width="160" show-overflow-tooltip>
           <template #default="{ row }">{{ row.reviewComment || '-' }}</template>
         </el-table-column>
+        <el-table-column label="材料" width="100">
+          <template #default="{ row }">
+            <el-button text type="primary" @click="openAttachments(row)">附件</el-button>
+          </template>
+        </el-table-column>
       </el-table>
       <el-pagination
         v-model:current-page="page"
@@ -158,4 +211,51 @@ function resolveErrorMessage(error: unknown, fallback: string) {
       />
     </article>
   </section>
+
+  <el-dialog v-model="attachmentDialogVisible" title="申请材料" width="680px">
+    <div class="attachment-toolbar">
+      <span v-if="currentApplication">
+        {{ typeText[currentApplication.type] }} / {{ statusText[currentApplication.status] }}
+      </span>
+      <el-upload :show-file-list="false" :http-request="uploadAttachment" :disabled="attachmentUploading">
+        <el-button type="primary" :loading="attachmentUploading">上传材料</el-button>
+      </el-upload>
+    </div>
+    <el-alert
+      class="upload-tip"
+      type="info"
+      :closable="false"
+      title="支持 PDF、图片、Word、Excel，单个文件不超过 10MB。"
+    />
+    <el-table v-loading="attachmentLoading" :data="attachments" empty-text="暂无附件">
+      <el-table-column prop="originalFilename" label="文件名" min-width="220" show-overflow-tooltip />
+      <el-table-column label="大小" width="100">
+        <template #default="{ row }">{{ formatFileSize(row.sizeBytes) }}</template>
+      </el-table-column>
+      <el-table-column label="上传时间" width="180">
+        <template #default="{ row }">{{ formatDateTime(row.uploadedAt) }}</template>
+      </el-table-column>
+    </el-table>
+  </el-dialog>
 </template>
+
+<style scoped>
+.attachment-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.upload-tip {
+  margin-bottom: 12px;
+}
+
+@media (max-width: 720px) {
+  .attachment-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+</style>

@@ -121,7 +121,8 @@ public class MenuController {
                     "admin-load-test-reports",
                     "admin-database-browser",
                     "admin-ai-sql",
-                    "admin-ai-logs"
+                    "admin-ai-logs",
+                    "admin-ai-models"
             ));
         }
         if (roleCodes.contains("TEACHER")) {

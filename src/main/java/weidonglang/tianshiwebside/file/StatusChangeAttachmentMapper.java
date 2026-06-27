@@ -67,6 +67,21 @@ public interface StatusChangeAttachmentMapper {
             """)
     AttachmentRow findById(@Param("attachmentId") Long attachmentId);
 
+    @Select("""
+            select att.id, att.application_id as application_id, att.original_filename as original_filename,
+                   att.stored_path as stored_path, att.content_type as content_type, att.size_bytes as size_bytes,
+                   att.uploaded_at as uploaded_at
+            from status_change_attachment att
+            join student_status_change_application a on a.id = att.application_id
+            join student s on s.id = a.student_id
+            join sys_user u on u.id = s.user_id
+            where att.id = #{attachmentId}
+              and att.application_id = #{applicationId}
+              and u.username = #{username}
+            """)
+    AttachmentRow findOwnedById(@Param("applicationId") Long applicationId, @Param("attachmentId") Long attachmentId,
+                                @Param("username") String username);
+
     @Delete("""
             delete from status_change_attachment
             where id = #{attachmentId}

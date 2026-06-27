@@ -9,6 +9,8 @@ interface Message {
   role: 'user' | 'assistant'
   content: string
   mode?: string
+  modelName?: string
+  searchUsed?: boolean
 }
 
 const input = ref('帮我总结一下今天应该如何准备教务系统答辩')
@@ -42,7 +44,13 @@ async function send() {
   await scrollToBottom()
   try {
     const response = (await aiChatApi(text)).data
-    messages.value.push({ role: 'assistant', content: response.answer, mode: response.serviceMode })
+    messages.value.push({
+      role: 'assistant',
+      content: response.answer,
+      mode: response.serviceMode,
+      modelName: response.modelName,
+      searchUsed: response.searchUsed,
+    })
   } catch (error) {
     const message = resolveErrorMessage(error, 'AI 聊天暂不可用，请确认后端和 ai-service 已启动。')
     messages.value.push({ role: 'assistant', content: `发送失败：${message}`, mode: 'error' })
@@ -91,7 +99,7 @@ function resolveErrorMessage(error: unknown, fallback: string) {
       :type="status.aiServiceOnline ? 'success' : 'warning'"
       :closable="false"
       :title="`ai-service ${status.aiServiceOnline ? '在线' : '离线'} / ${status.currentMode}`"
-      :description="`Ollama：${status.ollamaReachable ? '可用' : '不可用'}，模型：${status.chatModel || '-'}，耗时：${status.lastLatencyMs}ms`"
+      :description="`调用：${status.discoveryEnabled ? status.serviceName : status.baseUrl}，默认模型：${status.defaultChatModel || status.chatModel || '-'}，搜索：${status.searchEnabled ? status.searchProvider : '未启用'}，耗时：${status.lastLatencyMs}ms`"
     />
     <el-alert
       v-else-if="statusError"
@@ -105,7 +113,10 @@ function resolveErrorMessage(error: unknown, fallback: string) {
       <div v-for="(message, index) in messages" :key="index" :class="['chat-message', message.role]">
         <Bot v-if="message.role === 'assistant'" :size="18" />
         <p>{{ message.content }}</p>
-        <small v-if="message.mode">{{ message.mode }}</small>
+        <small v-if="message.mode">
+          {{ message.mode }}<template v-if="message.modelName"> / {{ message.modelName }}</template>
+          <template v-if="message.searchUsed"> / 已联网搜索</template>
+        </small>
       </div>
     </article>
 

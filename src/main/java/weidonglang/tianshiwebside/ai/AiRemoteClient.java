@@ -2,6 +2,7 @@ package weidonglang.tianshiwebside.ai;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -20,15 +21,29 @@ public class AiRemoteClient {
     private final ObjectMapper objectMapper;
     private final HttpClient httpClient;
     private final String baseUrl;
+    private final String serviceName;
+    private final boolean discoveryEnabled;
+    private final ObjectProvider<AiServiceFeignClient> feignClientProvider;
 
-    public AiRemoteClient(@Value("${app.ai-service.base-url:http://localhost:8090}") String baseUrl) {
+    public AiRemoteClient(
+            @Value("${app.ai-service.base-url:http://localhost:8090}") String baseUrl,
+            @Value("${app.ai-service.name:academic-ai-service}") String serviceName,
+            @Value("${app.ai-service.discovery-enabled:false}") boolean discoveryEnabled,
+            ObjectProvider<AiServiceFeignClient> feignClientProvider
+    ) {
         this.objectMapper = new ObjectMapper().findAndRegisterModules();
         this.httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)).build();
         this.baseUrl = stripTrailingSlash(baseUrl);
+        this.serviceName = serviceName;
+        this.discoveryEnabled = discoveryEnabled;
+        this.feignClientProvider = feignClientProvider;
     }
 
     public Optional<AiAssistantResponse> ask(String question, List<AiSourceDocument> documents) {
         try {
+            if (discoveryEnabled) {
+                return Optional.of(feign().ask(new AiServiceFeignClient.RagAnswerPayload(question, documents)));
+            }
             Map<String, Object> payload = Map.of(
                     "question", question,
                     "documents", documents
@@ -42,6 +57,9 @@ public class AiRemoteClient {
 
     public Optional<AiChatResponse> chat(String message) {
         try {
+            if (discoveryEnabled) {
+                return Optional.of(feign().chat(new AiServiceFeignClient.ChatPayload(message)));
+            }
             String response = post("/internal/ai/chat", Map.of("message", message), Duration.ofSeconds(90));
             return Optional.of(objectMapper.readValue(response, AiChatResponse.class));
         } catch (Exception ex) {
@@ -51,6 +69,9 @@ public class AiRemoteClient {
 
     public Optional<LoadTestAnalysisResponse> analyzeLoadTest(Object report) {
         try {
+            if (discoveryEnabled) {
+                return Optional.of(feign().analyzeLoadTest(Map.of("report", report)));
+            }
             String response = post("/internal/ai/load-test/analyze", Map.of("report", report), Duration.ofSeconds(180));
             return Optional.of(objectMapper.readValue(response, LoadTestAnalysisResponse.class));
         } catch (Exception ex) {
@@ -61,9 +82,14 @@ public class AiRemoteClient {
     public AiServiceStatusResponse status() {
         long start = System.nanoTime();
         try {
-            String response = get("/internal/ai/status");
-            Map<String, Object> raw = objectMapper.readValue(response, new TypeReference<>() {
-            });
+            Map<String, Object> raw;
+            if (discoveryEnabled) {
+                raw = feign().status();
+            } else {
+                String response = get("/internal/ai/status");
+                raw = objectMapper.readValue(response, new TypeReference<>() {
+                });
+            }
             return new AiServiceStatusResponse(
                     true,
                     booleanValue(raw.get("ollamaEnabled")),
@@ -73,6 +99,15 @@ public class AiRemoteClient {
                     booleanValue(raw.get("ollamaReachable")) ? "AI 模式" : "本地兜底模式",
                     elapsedMillis(start),
                     String.valueOf(raw.getOrDefault("lastError", "")),
+                    serviceName,
+                    discoveryEnabled,
+                    baseUrl,
+                    "",
+                    "",
+                    "",
+                    false,
+                    "",
+                    "",
                     Instant.now()
             );
         } catch (Exception ex) {
@@ -85,6 +120,15 @@ public class AiRemoteClient {
                     "主系统本地兜底模式",
                     elapsedMillis(start),
                     ex.getClass().getSimpleName() + ": " + ex.getMessage(),
+                    serviceName,
+                    discoveryEnabled,
+                    baseUrl,
+                    "",
+                    "",
+                    "",
+                    false,
+                    "",
+                    "",
                     Instant.now()
             );
         }
@@ -92,13 +136,18 @@ public class AiRemoteClient {
 
     public Optional<NaturalSqlGenerateResponse> generateSql(String question, List<SqlSchemaService.TableSchema> schemas) {
         try {
-            Map<String, Object> payload = Map.of(
-                    "question", question,
-                    "schemas", schemas
-            );
-            String response = post("/internal/ai/sql/generate", payload, Duration.ofSeconds(90));
-            Map<String, Object> raw = objectMapper.readValue(response, new TypeReference<>() {
-            });
+            Map<String, Object> raw;
+            if (discoveryEnabled) {
+                raw = feign().generateSql(new AiServiceFeignClient.SqlGeneratePayload(question, schemas));
+            } else {
+                Map<String, Object> payload = Map.of(
+                        "question", question,
+                        "schemas", schemas
+                );
+                String response = post("/internal/ai/sql/generate", payload, Duration.ofSeconds(90));
+                raw = objectMapper.readValue(response, new TypeReference<>() {
+                });
+            }
             String sql = String.valueOf(raw.getOrDefault("sql", ""));
             String explanation = String.valueOf(raw.getOrDefault("explanation", ""));
             @SuppressWarnings("unchecked")
@@ -146,6 +195,14 @@ public class AiRemoteClient {
             throw new IllegalStateException("ai-service status " + response.statusCode());
         }
         return response.body();
+    }
+
+    private AiServiceFeignClient feign() {
+        AiServiceFeignClient client = feignClientProvider.getIfAvailable();
+        if (client == null) {
+            throw new IllegalStateException("ai-service OpenFeign client is unavailable");
+        }
+        return client;
     }
 
     private boolean booleanValue(Object value) {

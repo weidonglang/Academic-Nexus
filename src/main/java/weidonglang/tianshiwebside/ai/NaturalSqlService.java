@@ -30,6 +30,7 @@ public class NaturalSqlService {
     private final NaturalSqlFallbackService fallbackService;
     private final AuditLogService auditLogService;
     private final AiCallLogService callLogService;
+    private final AiModelRegistryService modelRegistryService;
 
     public NaturalSqlService(
             JdbcTemplate jdbcTemplate,
@@ -37,7 +38,8 @@ public class NaturalSqlService {
             AiRemoteClient remoteClient,
             NaturalSqlFallbackService fallbackService,
             AuditLogService auditLogService,
-            AiCallLogService callLogService
+            AiCallLogService callLogService,
+            AiModelRegistryService modelRegistryService
     ) {
         this.jdbcTemplate = jdbcTemplate;
         this.schemaService = schemaService;
@@ -45,6 +47,7 @@ public class NaturalSqlService {
         this.fallbackService = fallbackService;
         this.auditLogService = auditLogService;
         this.callLogService = callLogService;
+        this.modelRegistryService = modelRegistryService;
     }
 
     public NaturalSqlGenerateResponse generate(String question, Principal principal) {
@@ -67,7 +70,8 @@ public class NaturalSqlService {
             );
             auditLogService.record(operator(principal), "AI_SQL_GENERATE", "AI_SQL", null,
                     "question=" + truncate(question, 180) + "; sql=" + truncate(safeSql, 300), null);
-            callLogService.record(principal, "SQL_GENERATE", question, response.serviceMode(), elapsedMillis(start), true, null);
+            callLogService.record(principal, "SQL_GENERATE", question,
+                    modelRegistryService.defaultModelName("SQL", response.serviceMode()), elapsedMillis(start), true, null);
             return safeResponse;
         } catch (RuntimeException ex) {
             callLogService.record(principal, "SQL_GENERATE", question, "security-check", elapsedMillis(start), false, ex.getMessage());

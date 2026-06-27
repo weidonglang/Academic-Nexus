@@ -195,6 +195,7 @@ public class DataInitializer {
             seedMenu("admin-database-browser", "\u6570\u636e\u5e93\u53ea\u8bfb\u6d4f\u89c8", "/admin/database-browser", "TableProperties", "admin", 79);
             seedMenu("admin-ai-sql", "\u81ea\u7136\u8bed\u8a00\u67e5\u5e93", "/admin/ai-sql", "Sparkles", "admin", 80);
             seedMenu("admin-ai-logs", "AI\u8c03\u7528\u65e5\u5fd7", "/admin/ai-logs", "ScrollText", "admin", 81);
+            seedMenu("admin-ai-models", "AI\u6a21\u578b\u4e0e\u8054\u7f51\u641c\u7d22", "/admin/ai-models", "BrainCircuit", "admin", 82);
             seedPermission("COURSE_WRITE", "\u8bfe\u7a0b\u5199\u5165", "\u7ef4\u62a4\u8bfe\u7a0b\u548c\u6559\u5b66\u73ed");
             seedPermission("GRADE_READ", "\u6210\u7ee9\u67e5\u770b", "\u67e5\u770b\u6210\u7ee9\u6570\u636e");
             seedPermission("GRADE_WRITE", "\u6210\u7ee9\u5199\u5165", "\u5f55\u5165\u548c\u4fee\u6539\u6210\u7ee9");
@@ -271,7 +272,8 @@ public class DataInitializer {
                     "admin-load-test-reports",
                     "admin-database-browser",
                     "admin-ai-sql",
-                    "admin-ai-logs"
+                    "admin-ai-logs",
+                    "admin-ai-models"
             ));
             removeRoleMenus(adminRole.getCode(), List.of(
                     "student",
