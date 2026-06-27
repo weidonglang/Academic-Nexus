@@ -121,7 +121,7 @@ $env:REDIS_CLUSTER_NODES="192.168.1.10:7000,192.168.1.10:7001,192.168.1.10:7002"
 
 ## Spring Cloud + Nacos
 
-本项目从 1.1 版本开始接入 Spring Cloud，v1.2 补齐 Docker Compose、Nacos 注册发现和 OpenFeign 验证文档：
+本项目从 1.1 版本开始接入 Spring Cloud，v1.2 补齐 Docker Compose、Nacos 注册发现和 OpenFeign 验证文档，v1.3.0 继续补充 AI 服务离线时的可读兜底提示和回归测试：
 
 - 主系统服务名：`academic-main`，默认端口 `8080`
 - AI 服务名：`academic-ai-service`，默认端口 `8090`
@@ -209,18 +209,18 @@ $env:PREVIEW_PORT="8092"
 生成可分发的 jar 和 zip：
 
 ```powershell
-.\scripts\build-release.ps1 -Version 1.2
+.\scripts\build-release.ps1 -Version 1.3.0
 ```
 
 打包产物位于：
 
 ```text
-release/Academic-Nexus-1.2.zip
+release/Academic-Nexus-1.3.0.zip
 ```
 
 压缩包内包含主系统 `academic-nexus-web.jar`、AI 服务 `academic-nexus-ai-service.jar`、`docker-compose.yml`、`.env.example`、`start-release.ps1` 和 `start-release.bat`。部署机器需要 Java 17；MySQL、Redis、Nacos 可以用压缩包里的 Docker Compose 启动。如需真实 Ollama 模型，把 `.env` 中的 `OLLAMA_ENABLED` 改为 `true` 并确认模型已经拉取。
 
-## v1.2 Docker Compose 全栈启动
+## v1.3.0 Docker Compose 全栈启动
 
 如果 Docker Desktop 已启动，可以直接运行：
 

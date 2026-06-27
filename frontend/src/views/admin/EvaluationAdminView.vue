@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { ElMessage } from 'element-plus'
 import PageHeader from '@/components/PageHeader.vue'
 import {
   adminEvaluationRecordsApi,
@@ -42,6 +43,8 @@ async function loadData() {
     ])
     summaries.value = summaryResponse.data
     records.value = recordResponse.data
+  } catch (error) {
+    ElMessage.error(resolveErrorMessage(error, '评价数据加载失败'))
   } finally {
     loading.value = false
   }
@@ -54,9 +57,11 @@ async function selectSummary(row: EvaluationSummary) {
 }
 
 async function clearOfferingFilter() {
+  const hadFilter = selectedOfferingId.value !== undefined
   selectedOfferingId.value = undefined
   recordPage.value = 1
   await loadData()
+  ElMessage.info(hadFilter ? '已切换为全部评价明细' : '当前已经是全部评价明细')
 }
 
 function search() {
@@ -82,6 +87,18 @@ function formatDateTime(value?: string) {
     return '-'
   }
   return new Date(value).toLocaleString('zh-CN')
+}
+
+function resolveErrorMessage(error: unknown, fallback: string) {
+  if (
+    typeof error === 'object' &&
+    error !== null &&
+    'response' in error &&
+    typeof (error as { response?: { data?: { message?: string } } }).response?.data?.message === 'string'
+  ) {
+    return (error as { response: { data: { message: string } } }).response.data.message
+  }
+  return fallback
 }
 </script>
 

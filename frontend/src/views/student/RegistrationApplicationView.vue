@@ -96,6 +96,8 @@ async function loadRecords() {
     page.value = response.data.page
     size.value = response.data.size
     total.value = response.data.total
+  } catch (error) {
+    ElMessage.error(resolveErrorMessage(error, '申请记录加载失败'))
   } finally {
     loading.value = false
   }

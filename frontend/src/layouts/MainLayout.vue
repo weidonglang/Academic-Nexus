@@ -16,6 +16,13 @@ const router = useRouter()
 const route = useRoute()
 
 const activePath = computed(() => route.path)
+const roleLabel = computed(() => {
+  const roles = auth.user?.roles ?? []
+  if (roles.includes('ADMIN')) return '管理员'
+  if (roles.includes('TEACHER')) return '教师'
+  if (roles.includes('STUDENT')) return '学生'
+  return '访客'
+})
 
 onMounted(async () => {
   await menu.loadMenus(true)
@@ -42,8 +49,8 @@ function hasChildren(item: MenuItem) {
         <span>天津天狮学院教学综合信息服务平台</span>
       </div>
       <div class="zf-user">
-        <span>{{ auth.user?.displayName ?? '学生用户' }}</span>
-        <small>{{ auth.user?.username ?? 'dev-student' }}</small>
+        <span>{{ auth.user?.displayName ?? '未登录用户' }}</span>
+        <small>{{ auth.user?.username ?? 'dev-student' }} · {{ roleLabel }}</small>
         <el-button :icon="LogOut" text @click="logout">退出</el-button>
       </div>
     </header>

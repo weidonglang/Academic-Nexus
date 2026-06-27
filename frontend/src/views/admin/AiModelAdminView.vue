@@ -61,10 +61,20 @@ onMounted(loadAll)
 async function loadAll() {
   loading.value = true
   try {
-    const [modelResponse, configResponse, safetyResponse] = await Promise.all([aiModelsApi(), aiSearchConfigApi(), aiSafetyConfigsApi()])
-    models.value = modelResponse.data
-    searchConfig.value = configResponse.data
-    safetyConfigs.value = safetyResponse.data
+    const results = await Promise.allSettled([aiModelsApi(), aiSearchConfigApi(), aiSafetyConfigsApi()])
+    if (results[0].status === 'fulfilled') {
+      models.value = results[0].value.data
+    }
+    if (results[1].status === 'fulfilled') {
+      searchConfig.value = results[1].value.data
+    }
+    if (results[2].status === 'fulfilled') {
+      safetyConfigs.value = results[2].value.data
+    }
+    const failed = results.some((result) => result.status === 'rejected')
+    if (failed) {
+      ElMessage.warning('部分 AI 管理配置加载失败，请检查后端迁移和服务状态')
+    }
   } finally {
     loading.value = false
   }
@@ -115,24 +125,34 @@ async function saveModel() {
     ElMessage.success('模型配置已保存')
     dialogVisible.value = false
     await loadAll()
+  } catch (error) {
+    ElMessage.error(resolveErrorMessage(error, '模型配置保存失败'))
   } finally {
     saving.value = false
   }
 }
 
 async function toggleModel(row: AiModelRecord) {
-  if (row.enabled) {
-    await disableAiModelApi(row.id)
-  } else {
-    await enableAiModelApi(row.id)
+  try {
+    if (row.enabled) {
+      await disableAiModelApi(row.id)
+    } else {
+      await enableAiModelApi(row.id)
+    }
+    await loadAll()
+  } catch (error) {
+    ElMessage.error(resolveErrorMessage(error, '模型状态更新失败'))
   }
-  await loadAll()
 }
 
 async function setDefault(row: AiModelRecord) {
-  await setDefaultAiModelApi(row.id)
-  ElMessage.success('默认模型已更新')
-  await loadAll()
+  try {
+    await setDefaultAiModelApi(row.id)
+    ElMessage.success('默认模型已更新')
+    await loadAll()
+  } catch (error) {
+    ElMessage.error(resolveErrorMessage(error, '默认模型更新失败'))
+  }
 }
 
 async function testModel(row: AiModelRecord) {
@@ -141,6 +161,8 @@ async function testModel(row: AiModelRecord) {
     const response = await testAiModelApi(row.id)
     response.data.success ? ElMessage.success(response.data.message) : ElMessage.warning(response.data.message)
     await loadAll()
+  } catch (error) {
+    ElMessage.error(resolveErrorMessage(error, '模型测试失败'))
   } finally {
     testingId.value = undefined
   }
@@ -160,6 +182,8 @@ async function saveSearchConfig() {
     })
     ElMessage.success('搜索配置已保存')
     await loadAll()
+  } catch (error) {
+    ElMessage.error(resolveErrorMessage(error, '搜索配置保存失败'))
   } finally {
     searchSaving.value = false
   }
@@ -172,6 +196,8 @@ async function testSearch() {
     searchResults.value = response.data.results
     response.data.allowed ? ElMessage.success(response.data.message) : ElMessage.warning(response.data.message)
     await loadAll()
+  } catch (error) {
+    ElMessage.error(resolveErrorMessage(error, '搜索测试失败'))
   } finally {
     searchTesting.value = false
   }
@@ -188,6 +214,8 @@ async function saveSafetyConfigs() {
     })))
     ElMessage.success('安全策略已保存')
     await loadAll()
+  } catch (error) {
+    ElMessage.error(resolveErrorMessage(error, '安全策略保存失败'))
   } finally {
     safetySaving.value = false
   }
@@ -198,6 +226,18 @@ function statusTag(status?: string) {
   if (status === 'DOWN') return 'danger'
   if (status === 'SKIPPED') return 'warning'
   return 'info'
+}
+
+function resolveErrorMessage(error: unknown, fallback: string) {
+  if (
+    typeof error === 'object' &&
+    error !== null &&
+    'response' in error &&
+    typeof (error as { response?: { data?: { message?: string } } }).response?.data?.message === 'string'
+  ) {
+    return (error as { response: { data: { message: string } } }).response.data.message
+  }
+  return fallback
 }
 </script>
 

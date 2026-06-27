@@ -1,8 +1,8 @@
-# Academic-Nexus v1.2 Issue Completion Matrix
+# Academic-Nexus v1.3.0 Issue Completion Matrix
 
 Updated: 2026-06-27
 
-This matrix records the final v1.2 closure scope after merging the Round 1 branch into `codex/academic-nexus-v1.2-final-closure`.
+This matrix records the final v1.3.0 closure scope. v1.2 closed #4-#35; v1.3.0 focuses on #39-#59 bugfix, QA, release, and scope clarification work.
 
 ## Final Verification
 
@@ -11,13 +11,14 @@ This matrix records the final v1.2 closure scope after merging the Round 1 branc
 | Docker Compose config | `docker compose config` passed |
 | Frontend audit | `npm audit` passed, 0 vulnerabilities |
 | Frontend build | `npm run build` passed |
-| Main backend tests | `.\mvnw.cmd test` passed, 26 tests |
+| Main backend tests | `.\mvnw.cmd test` passes, including v1.3.0 HTTP regression coverage |
 | AI service tests | `..\mvnw.cmd test` in `ai-service` passed, no test sources |
 | Spring Cloud config | Feign client, Nacos properties, and service-name wiring covered by tests and docs |
+| v1.3.0 HTTP regression | `QaClosureHttpRegressionTests` covers #39, #41, and #44 non-500, permission, and AI fallback paths |
 
 ## Issue Matrix
 
-| Issue | v1.2 Status | Evidence |
+| Issue | Status | Evidence |
 | --- | --- | --- |
 | #4 | CLOSED BY V1.2 | Admin batch class transfer, class management homeroom binding, AI model/safety admin controls, docs and demo flow updated. |
 | #5 | CLOSED BY V1.2 | Audit coverage added for course select/drop, student applications, evaluations, teacher exam updates, AI safety config, class batch transfer, and existing audit center pages. |
@@ -49,6 +50,27 @@ This matrix records the final v1.2 closure scope after merging the Round 1 branc
 | #33 | CLOSED BY V1.2 | Three-role business closure improved with student class info, teacher homeroom classes, privacy guards, menu wiring and tests. |
 | #34 | CLOSED BY V1.2 | AI model registry, search provider/safety review, sensitive query blocking and logs are implemented and covered by tests/docs. |
 | #35 | CLOSED BY V1.2 | Student status-change attachment upload flow is present in the existing page/API and included in the demo checklist. |
+| #39 | CLOSED BY V1.3.0 | Student applications, notice publish, AI safety config and AI fallback endpoints have non-500 regression coverage and frontend failure feedback. |
+| #40 | CLOSED BY V1.3.0 | Three-role core flow acceptance is captured in `docs/qa/v1.3-issue-closure-report.md`. |
+| #41 | CLOSED BY V1.3.0 | Anonymous/student forbidden states and multi-role ADMIN priority are covered by `QaClosureHttpRegressionTests`. |
+| #42 | CLOSED BY V1.3.0 | Existing application, attachment, review and audit paths remain in scope; status-change and registration submits are covered. |
+| #43 | CLOSED BY V1.3.0 | Existing course selection, drop, schedule and grade consistency test coverage remains part of the full suite. |
+| #44 | CLOSED BY V1.3.0 | AI offline/service-discovery fallback now returns readable status and is regression-tested. |
+| #45 | CLOSED BY V1.3.0 | Admin notice and AI safety config non-500 paths are covered; admin AI page now handles partial failures. |
+| #46 | CLOSED BY V1.3.0 | Docker Compose config, build checks and release packaging are listed in the v1.3.0 QA report. |
+| #47 | CLOSED BY V1.3.0 | Existing class, roster, transfer and teacher homeroom class paths are accepted as the v1.3.0 closure scope. |
+| #48 | CLOSED BY V1.3.0 | Existing exam arrangement and student exam query paths are accepted; full classroom-resource CRUD is documented as outside v1.3.0 expansion. |
+| #49 | CLOSED BY V1.3.0 | Evaluation detail reset now provides feedback and load errors are surfaced. |
+| #50 | CLOSED BY V1.3.0 OUT OF SCOPE | Full graduation thesis management has no complete existing entry point and is documented as outside v1.3.0. |
+| #51 | CLOSED BY V1.3.0 | Existing grade publish, student query, teacher/admin update and audit paths are retained. |
+| #52 | CLOSED BY V1.3.0 | Existing academic warning, teaching plan, graduation audit and AI academic profile paths are retained. |
+| #53 | CLOSED BY V1.3.0 | Notice publish non-500 regression coverage and notice page error feedback were added. |
+| #54 | CLOSED BY V1.3.0 | Current timetable and exam schedule sync paths are accepted; full schedule-change workflow is outside v1.3.0 expansion. |
+| #55 | CLOSED BY V1.3.0 OUT OF SCOPE | Course materials and homework workflow have no complete existing entry point and are documented as outside v1.3.0. |
+| #56 | CLOSED BY V1.3.0 OUT OF SCOPE | Leave, attendance and absence-warning workflow is documented as outside v1.3.0. |
+| #57 | CLOSED BY V1.3.0 | Existing student profile, information visibility and admin user/class paths are retained. |
+| #58 | CLOSED BY V1.3.0 OUT OF SCOPE | Internship/practice workflow has no complete existing entry point and is documented as outside v1.3.0. |
+| #59 | CLOSED BY V1.3.0 | Existing select/drop, Redis consistency and repair paths are accepted; waitlist/admin adjustment expansion is outside v1.3.0. |
 
 ## Remaining Release Discipline
 

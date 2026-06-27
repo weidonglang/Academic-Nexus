@@ -47,6 +47,8 @@ async function loadData() {
       stats.value = []
       console.warn('通知已读未读统计接口暂不可用，请重启后端后再刷新统计。')
     }
+  } catch (error) {
+    ElMessage.error(resolveErrorMessage(error, '公告数据加载失败'))
   } finally {
     loading.value = false
   }
