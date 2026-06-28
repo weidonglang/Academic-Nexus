@@ -35,6 +35,8 @@ export interface PublishNoticePayload {
   category: string
   pinned: boolean
   roleCode?: string
+  targetType?: string
+  targetValue?: string
 }
 
 export interface NoticeStat {
@@ -46,6 +48,12 @@ export interface NoticeStat {
   targetTotal: number
   readCount: number
   unreadCount: number
+}
+
+export interface NoticeTargetPreview {
+  summary: string
+  receiverCount: number
+  samples: Array<{ id: number; username: string; displayName: string }>
 }
 
 // 功能：查询首页公告。
@@ -76,4 +84,8 @@ export function publishNoticeApi(payload: PublishNoticePayload) {
 // 说明：管理端用于展示公告目标人数、已读数和未读数，体现通知管理闭环。
 export function adminNoticeStatsApi() {
   return http.get<never, ApiResponse<NoticeStat[]>>('/admin/notices/stats')
+}
+
+export function noticeTargetPreviewApi(payload: { targetType?: string; targetValue?: string; roleCode?: string }) {
+  return http.post<never, ApiResponse<NoticeTargetPreview>>('/admin/notices/target-preview', payload)
 }

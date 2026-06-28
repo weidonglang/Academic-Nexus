@@ -78,7 +78,7 @@ public class BatchAndArchiveController {
             @RequestParam String objectType,
             @RequestParam(required = false) String term
     ) {
-        return ApiResponse.success(new ArchivePreview(objectType, term, countObject(objectType, term), true,
+        return ApiResponse.success(new ArchivePreview(objectType, term, countObject(objectType, term), true, true,
                 "dry-run 仅统计，不改变数据库。当前学期和被引用数据不会被清理。"));
     }
 
@@ -92,7 +92,7 @@ public class BatchAndArchiveController {
     ) {
         int count = countObject(objectType, term);
         ArchiveRecordRow row = insertArchiveRecord(principal, objectType, term, "ARCHIVE", dryRun, count,
-                dryRun ? "dry-run preview" : "safe archive record only");
+                dryRun ? "dry-run preview" : "demo-safe archive record only; no physical delete");
         insertBatchTask(principal, "ARCHIVE_" + objectType, count, 0, row.detail());
         auditLogService.record(username(principal), dryRun ? "ARCHIVE_DRY_RUN" : "ARCHIVE_RECORD", "DATA_ARCHIVE",
                 row.id(), objectType + ", term=" + term + ", affected=" + count, null);
@@ -112,7 +112,7 @@ public class BatchAndArchiveController {
         }
         int count = countObject(objectType, term);
         ArchiveRecordRow row = insertArchiveRecord(principal, objectType, term, "CLEANUP", dryRun, count,
-                dryRun ? "dry-run preview" : "cleanup task recorded; destructive delete is intentionally disabled in demo mode");
+                dryRun ? "dry-run preview" : "demo-safe cleanup plan recorded; no physical delete");
         insertBatchTask(principal, "CLEANUP_" + objectType, dryRun ? 0 : count, 0, row.detail());
         auditLogService.record(username(principal), dryRun ? "CLEANUP_DRY_RUN" : "CLEANUP_RECORDED", "DATA_ARCHIVE",
                 row.id(), objectType + ", term=" + term + ", affected=" + count, null);
@@ -172,6 +172,18 @@ public class BatchAndArchiveController {
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"batch-task-" + taskId + "-report.csv\"")
                 .contentType(MediaType.parseMediaType("text/csv;charset=UTF-8"))
                 .body(csv.toString());
+    }
+
+    @GetMapping("/batch-tasks/{taskId}")
+    public ApiResponse<BatchTaskDetail> batchTaskDetail(@PathVariable Long taskId) {
+        BatchTaskRow row = findBatchTask(taskId);
+        List<String> failures = row.failureDetail() == null || row.failureDetail().isBlank()
+                ? List.of()
+                : java.util.Arrays.stream(row.failureDetail().split("\\s*\\|\\s*"))
+                .filter(item -> !item.isBlank())
+                .toList();
+        return ApiResponse.success(new BatchTaskDetail(row, failures,
+                "/api/admin/batch-tasks/" + taskId + "/report.csv"));
     }
 
     private ArchiveRecordRow insertArchiveRecord(Principal principal, String objectType, String term, String action,
@@ -262,10 +274,14 @@ public class BatchAndArchiveController {
                                String reportPath) {
     }
 
-    public record ArchivePreview(String objectType, String term, Integer affectedCount, boolean dryRun, String message) {
+    public record ArchivePreview(String objectType, String term, Integer affectedCount, boolean dryRun,
+                                 boolean demoSafe, String message) {
     }
 
     public record ArchiveRecordRow(Long id, String objectType, String term, String action, Boolean dryRun,
                                    Integer affectedCount, String operator, String detail, Instant createdAt) {
+    }
+
+    public record BatchTaskDetail(BatchTaskRow task, List<String> failureItems, String reportUrl) {
     }
 }

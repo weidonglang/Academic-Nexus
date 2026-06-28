@@ -90,6 +90,8 @@ public class AdminFileController {
         try {
             Files.deleteIfExists(path);
         } catch (IOException ex) {
+            auditLogService.record(principal == null ? "anonymous" : principal.getName(), "DELETE_STATUS_CHANGE_ATTACHMENT_FAILED",
+                    "STATUS_CHANGE_ATTACHMENT", row.id(), row.originalFilename(), null, false, "physical file delete failed");
             throw new BusinessException(ErrorCode.INTERNAL_ERROR, "物理文件清理失败，数据库记录已保留");
         }
         mapper.deleteById(attachmentId);

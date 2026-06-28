@@ -79,6 +79,32 @@
 
 ## 14. 数据库安全查询
 
+## 15. 批量导入闭环
+
+- 管理员打开 `/admin/users`，粘贴用户 CSV，先执行预检，再正式导入。
+- 打开 `/admin/course-offerings`，分别演示课程和教学班 CSV 预检、导入。
+- 打开 `/admin/batch-tasks`，查看导入任务、成功/失败数和报告下载。
+- 说明预检不写库，正式导入写用户、角色、学生档案、课程、教学班、审计和批量任务。
+
+## 16. 批量审核与教师只读感知
+
+- 管理员打开 `/admin/status-changes` 或 `/admin/registration-applications`，多选待审核记录并批量通过或驳回。
+- 学生端刷新后查看申请状态和通知。
+- 教师端通过班主任班级或任课相关申请概要查看只读状态，不允许审核、不能看附件。
+
+## 17. 目标通知闭环
+
+- 管理员打开 `/admin/notices`，选择班级、年级、专业、角色或教学班目标。
+- 先预览接收人数，确认非 0 后发布。
+- 目标学生/教师登录后查看通知，非目标用户不可见。
+
+## 18. Docker 复刻部署
+
+- 执行 `copy .env.example .env`，根据需要调整宿主机端口。
+- 执行 `.\scripts\check-ports.ps1` 检查 8088、5174、13306、16379、18848、19848、18090。
+- 执行 `.\scripts\docker-build.ps1` 和 `docker compose up -d`。
+- 访问 `http://localhost:5174`，说明容器内部端口和宿主机端口不同，Nacos 注册由 Spring Cloud 完成。
+
 - 管理员打开 `/admin/ai-sql`。
 - 输入自然语言生成 SQL，展示 SELECT only、安全检查、确认执行。
 - 说明敏感字段和高风险 SQL 会被拦截。

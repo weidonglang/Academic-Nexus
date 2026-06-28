@@ -6,6 +6,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import weidonglang.tianshiwebside.audit.AuditLogService;
 import weidonglang.tianshiwebside.common.api.ApiResponse;
+import weidonglang.tianshiwebside.common.error.BusinessException;
+import weidonglang.tianshiwebside.common.error.ErrorCode;
 import weidonglang.tianshiwebside.common.trace.TraceIdHolder;
 
 import java.security.Principal;
@@ -45,14 +47,26 @@ public class CourseSelectionConsistencyController {
     }
 
     @PostMapping("/repair")
-    public ApiResponse<ConsistencyReport> repair(Principal principal, @RequestParam(defaultValue = "50") int limit) {
+    public ApiResponse<ConsistencyReport> repair(Principal principal,
+                                                 @RequestParam(defaultValue = "50") int limit,
+                                                 @RequestParam(defaultValue = "false") boolean confirm) {
+        if (!confirm) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "一致性修复需要二次确认");
+        }
         ConsistencyReport before = buildReport(Math.min(Math.max(limit, 1), 200), true);
+        if (!before.redisReachable()) {
+            auditLogService.record(principal.getName(), "REPAIR_SELECTION_STOCK_DEGRADED", "COURSE_SELECTION",
+                    null, before.redisMessage(), TraceIdHolder.get(), false, before.redisMessage());
+            throw new BusinessException(ErrorCode.CONFLICT, before.redisMessage());
+        }
         for (ConsistencyRow row : before.rows()) {
             redisTemplate.opsForValue().set(stockKey(row.offeringId()), String.valueOf(row.expectedStock()), Duration.ofMinutes(30));
         }
+        ConsistencyReport after = buildReport(Math.min(Math.max(limit, 1), 200), true);
         auditLogService.record(principal.getName(), "REPAIR_SELECTION_STOCK", "COURSE_SELECTION",
-                null, "count=" + before.rows().size() + ", inconsistent=" + before.inconsistentCount(), TraceIdHolder.get());
-        return ApiResponse.success(buildReport(Math.min(Math.max(limit, 1), 200), true));
+                null, "beforeInconsistent=" + before.inconsistentCount() + ", afterInconsistent=" + after.inconsistentCount()
+                        + ", count=" + before.rows().size(), TraceIdHolder.get());
+        return ApiResponse.success(after);
     }
 
     private ConsistencyReport buildReport(int limit, boolean checkedNow) {

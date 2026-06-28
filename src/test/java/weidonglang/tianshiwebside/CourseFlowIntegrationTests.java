@@ -65,7 +65,7 @@ class CourseFlowIntegrationTests {
         String suffix = uniqueSuffix();
         String teacherUsername = "teacher_" + suffix;
         String teacherName = "互通老师" + suffix;
-        seedUser(teacherUsername, teacherName);
+        seedUser(teacherUsername, teacherName, "TEACHER");
 
         AdminCourseRow course = adminCourseController.createCourse(new AdminCourseController.CourseCreateRequest(
                 "FLOW" + suffix,
@@ -99,7 +99,7 @@ class CourseFlowIntegrationTests {
         String teacherUsername = "teacher_" + suffix;
         String teacherName = "选课可见老师" + suffix;
         String studentUsername = "student_" + suffix;
-        seedUser(teacherUsername, teacherName);
+        seedUser(teacherUsername, teacherName, "TEACHER");
         seedStudent(studentUsername, "选课学生" + suffix);
 
         AdminCourseRow course = adminCourseController.createCourse(new AdminCourseController.CourseCreateRequest(

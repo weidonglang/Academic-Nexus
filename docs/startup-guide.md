@@ -8,16 +8,33 @@
 | --- | --- |
 | 本地 IDEA 后端开发 | `http://localhost:8080` |
 | Docker Compose 演示后端 | `http://localhost:8088` |
-| 前端开发服务 | `http://localhost:5173` |
-| AI Service | `http://localhost:8090` |
-| Nacos 控制台 | `http://localhost:8848/nacos` |
+| Docker Compose 前端 | `http://localhost:5174` |
+| Docker Compose AI Service | `http://localhost:18090` |
+| Docker Compose Nacos 控制台 | `http://localhost:18848/nacos` |
+| Docker Compose MySQL | `localhost:13306` |
+| Docker Compose Redis | `localhost:16379` |
+| 本地前端开发服务 | `http://localhost:5173` |
+| 本地 AI Service | `http://localhost:8090` |
+| 本地 Nacos 控制台 | `http://localhost:8848/nacos` |
 
-Docker 模式下，`academic-main` 容器内部仍监听 `8080`，前端容器仍访问 `academic-main:8080`。宿主机默认映射为 `8088`，如与本机服务冲突可覆盖：
+Docker 模式下只改变宿主机端口，容器内部端口保持不变：`academic-main:8080`、`academic-ai-service:8090`、`mysql:3306`、`redis:6379`、`nacos:8848`。首次复刻建议：
 
 ```powershell
-$env:MAIN_HOST_PORT="18080"
-docker compose up -d --build
+copy .env.example .env
+.\scripts\check-ports.ps1
+.\scripts\docker-build.ps1
+docker compose up -d
 ```
+
+如果本机已安装 MySQL、Redis、Nacos 或已有 Vite 开发服务，占用端口时修改 `.env` 中的 `MYSQL_HOST_PORT`、`REDIS_HOST_PORT`、`NACOS_HOST_PORT`、`FRONTEND_HOST_PORT` 等变量即可。
+
+Maven 依赖下载遇到 `bad_record_mac` 或 Central 超时，使用：
+
+```powershell
+.\scripts\docker-build.ps1 -MavenMirror aliyun
+```
+
+更完整排障见 `docs/docker-troubleshooting.md`。
 
 ## 推荐方式：MySQL + demo profile
 
@@ -163,7 +180,7 @@ $env:NACOS_ADDR="127.0.0.1:8848"
 启动后访问 Nacos 控制台：
 
 ```text
-http://localhost:8848/nacos
+http://localhost:18848/nacos
 ```
 
 在服务列表里应能看到 `academic-main` 和 `academic-ai-service`。如果不想启动 Nacos，可以保持默认配置，主系统会继续通过 `AI_SERVICE_URL=http://localhost:8090` 调用 AI 服务。

@@ -102,8 +102,8 @@ function resolveErrorMessage(error: unknown, fallback: string) {
       </el-select>
       <el-input v-model="term" class="small-input" clearable placeholder="学期/日期关键词" @keyup.enter="runPreview" />
       <el-button type="primary" :loading="loading" @click="runPreview">dry-run 预览</el-button>
-      <el-button :loading="loading" @click="runAction('ARCHIVE', false)">正式归档</el-button>
-      <el-button type="warning" plain :loading="loading" @click="runAction('CLEANUP', false)">正式清理</el-button>
+      <el-button :loading="loading" @click="runAction('ARCHIVE', false)">记录归档任务</el-button>
+      <el-button type="warning" plain :loading="loading" @click="runAction('CLEANUP', false)">生成清理计划</el-button>
       <el-button @click="exportCsv">导出记录 CSV</el-button>
     </div>
   </section>
@@ -140,6 +140,7 @@ function resolveErrorMessage(error: unknown, fallback: string) {
       <el-descriptions-item label="筛选条件">{{ preview.term || '-' }}</el-descriptions-item>
       <el-descriptions-item label="影响记录">{{ preview.affectedCount }}</el-descriptions-item>
       <el-descriptions-item label="说明">{{ preview.message }}</el-descriptions-item>
+      <el-descriptions-item label="安全模式">{{ preview.demoSafe ? '演示安全：不物理删除' : '正式模式' }}</el-descriptions-item>
     </el-descriptions>
 
     <el-empty v-else description="请先执行 dry-run 预览" />

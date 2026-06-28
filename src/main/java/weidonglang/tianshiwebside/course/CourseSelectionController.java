@@ -2,6 +2,7 @@ package weidonglang.tianshiwebside.course;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import com.fasterxml.jackson.core.type.TypeReference;
 import org.springframework.security.core.Authentication;
@@ -309,7 +310,9 @@ public class CourseSelectionController {
 
     public record CourseGrabRequest(
             @NotNull(message = "offeringId 不能为空") Long offeringId,
-            @Size(max = 80) String requestId
+            @Size(max = 80, message = "requestId 不能超过 80 个字符")
+            @Pattern(regexp = "^[A-Za-z0-9._:-]*$", message = "requestId 只能包含字母、数字、点、下划线、冒号或短横线")
+            String requestId
     ) {
     }
 

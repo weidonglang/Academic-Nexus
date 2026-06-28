@@ -64,3 +64,10 @@ export function adminStatusChangeAttachmentDownloadApi(applicationId: number, at
     responseType: 'blob',
   })
 }
+
+export function batchReviewStatusChangesApi(payload: { ids: number[]; decision: ReviewDecision; comment: string }) {
+  return http.post<never, ApiResponse<{ taskId: number; successCount: number; failureCount: number; items: Array<{ id: number; success: boolean; reason: string }> }>>(
+    '/admin/status-changes/batch-review',
+    payload,
+  )
+}

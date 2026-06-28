@@ -1,18 +1,21 @@
 # Academic-Nexus Issue Completion Matrix
 
-Updated: 2026-06-27
+Updated: 2026-06-28
 
-This matrix records the closure scope through v1.4.1-open-issues-closure. v1.2 closed #4-#35; v1.3.0 closed #39-#59; v1.4.0-final-polish focused on #61-#74; v1.4.1 stabilizes the #76-#101 open-issue sweep.
+This matrix records the closure scope through v1.4.1-final-closure. v1.2 closed #4-#35; v1.3.0 closed #39-#59; v1.4.0-final-polish focused on #61-#74; v1.4.1-final-closure stabilizes #76-#104 without publishing a release or closing issues before PR merge.
 
 ## Final Verification
 
 | Check | Result |
 | --- | --- |
 | Docker Compose config | `docker compose config` passed |
+| Docker build | `.\scripts\docker-build.ps1` passed |
+| Docker compose up smoke | `docker compose up -d` passed; frontend 5174, main 8088, and AI service 18090 were reachable |
 | Frontend audit | `npm audit` passed, 0 vulnerabilities |
 | Frontend build | `npm run build` passed |
-| Main backend tests | `.\mvnw.cmd test` passes, including v1.3.0 HTTP regression coverage |
+| Main backend tests | `.\mvnw.cmd test` passes, 49 tests |
 | AI service tests | `..\mvnw.cmd test` in `ai-service` passed, no test sources |
+| Python script tests | `py -m pytest scripts/tests -q` passed, 5 tests |
 | Spring Cloud config | Feign client, Nacos properties, and service-name wiring covered by tests and docs |
 | v1.3.0 HTTP regression | `QaClosureHttpRegressionTests` covers #39, #41, and #44 non-500, permission, and AI fallback paths |
 | v1.4.0 HTTP regression | `AiCallLogAdminRegressionTests`, `AiChatSessionRegressionTests`, `StatusChangeAttachmentAdminRegressionTests` passed |
@@ -89,12 +92,12 @@ This matrix records the closure scope through v1.4.1-open-issues-closure. v1.2 c
 | #76 | FIXED BY V1.4.1 | AI chat selected model is propagated to ai-service and actual/fallback model details are logged. |
 | #77 | FIXED BY V1.4.1 | Sensitive-word and moderation-log pages handle backend/table drift independently. |
 | #78 | FIXED BY V1.4.1 | Load-test panel supports backend API array/paged shapes, `offeringId`, term filtering, and diagnostics. |
-| #79 | PARTIAL | Full two-stage batch user import remains a larger follow-up; not closed by v1.4.1. |
-| #80 | PARTIAL | Full two-stage batch course/offering import remains a larger follow-up; not closed by v1.4.1. |
-| #81 | PARTIAL | Single review remains stable; complete batch review partial-success UI is still follow-up. |
-| #82 | PARTIAL | Role-targeted notices and stats are stable; grade/major/class/offering targeting is still follow-up. |
-| #83 | FIXED BY V1.4.1 | Locked grades are immutable through admin updates; grade-point range validation added. |
-| #84 | PARTIAL | Teacher readonly awareness for application summaries is still follow-up. |
+| #79 | FIXED BY V1.4.1 FINAL CLOSURE | Two-stage CSV user import now previews without writes, commits valid rows to user/role/student/class data, records batch task and audit, and is covered by `BatchUserImportClosureTests`. |
+| #80 | FIXED BY V1.4.1 FINAL CLOSURE | Two-stage course/offering import validates teacher, schedule, term, capacity and selection window; commits real rows, prewarms Redis when available, records task/audit, and is covered by `BatchCourseOfferingImportClosureTests`. |
+| #81 | FIXED BY V1.4.1 FINAL CLOSURE | Batch status-change and registration review APIs/UI support partial success, skip reasons, task records, notifications, cache eviction and audit; covered by `BatchReviewClosureTests`. |
+| #82 | FIXED BY V1.4.1 FINAL CLOSURE | Notices support target preview and publish for all/role/student/teacher/admin/grade/major/class/offering with zero-recipient guard and targeted audit; covered by `NotificationTargetingClosureTests`. |
+| #83 | FIXED BY V1.4.1 FINAL CLOSURE | Admin grade changes record old/new score/status, reason, trace/audit, high-risk locked updates and student notifications. |
+| #84 | FIXED BY V1.4.1 FINAL CLOSURE | Teacher readonly awareness endpoints expose homeroom class and course-related application summaries without attachments or write actions; covered by `TeacherApplicationAwarenessClosureTests`. |
 | #85 | IMPROVED BY V1.4.1 | Download failures, DB browser partial failures, sensitive-word errors, schedule anomalies and auth refresh states improved. |
 | #86 | IMPROVED BY V1.4.1 | Batch task center now downloads CSV reports. |
 | #87 | FIXED BY V1.4.1 | Exam create/update/delete now notifies affected students in admin and teacher flows. |
@@ -112,6 +115,8 @@ This matrix records the closure scope through v1.4.1-open-issues-closure. v1.2 c
 | #99 | FIXED BY V1.4.1 | Current term is resolved dynamically instead of hardcoded. |
 | #100 | FIXED BY V1.4.1 | Abnormal schedule text is detected and surfaced. |
 | #101 | FIXED BY V1.4.1 | Course grab requires `offeringId` with a readable validation error. |
+| #103 | FIXED BY V1.4.1 FINAL CLOSURE | Docker Maven builds use BuildKit cache mounts, `dependency:go-offline`, mirror settings and build scripts; `.\scripts\docker-build.ps1` passed. |
+| #104 | FIXED BY V1.4.1 FINAL CLOSURE | Compose host ports are configurable with non-conflicting defaults; port-check script passed and compose smoke succeeded after Nacos startup-order hardening. |
 
 ## Remaining Release Discipline
 

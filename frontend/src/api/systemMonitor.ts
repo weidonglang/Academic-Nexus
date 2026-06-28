@@ -116,7 +116,7 @@ export function checkCourseSelectionConsistencyApi(limit = 50) {
 
 export function repairCourseSelectionConsistencyApi(limit = 50) {
   return http.post<never, ApiResponse<CourseSelectionConsistencyReport>>('/admin/course-selection/consistency/repair', null, {
-    params: { limit },
+    params: { limit, confirm: true },
   })
 }
 

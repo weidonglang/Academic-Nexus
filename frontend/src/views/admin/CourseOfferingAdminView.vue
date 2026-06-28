@@ -11,16 +11,21 @@ import {
   adminCourseOfferingStudentsApi,
   adminCoursesApi,
   closeAdminCourseOfferingApi,
+  commitAdminCoursesImportApi,
+  commitAdminOfferingsImportApi,
   createAdminCourseApi,
   createAdminCourseOfferingApi,
   deleteAdminCourseApi,
   deleteAdminCourseOfferingApi,
+  previewAdminCoursesImportApi,
+  previewAdminOfferingsImportApi,
   publishAdminCourseOfferingApi,
   updateAdminCourseApi,
   updateAdminCourseOfferingApi,
   type AdminCourse,
   type AdminCourseOffering,
   type CourseOfferingPayload,
+  type ImportPreview,
   type OfferingStudent,
 } from '@/api/adminCourse'
 
@@ -45,6 +50,11 @@ const coursePage = ref(1)
 const coursePageSize = ref(8)
 const offeringPage = ref(1)
 const offeringPageSize = ref(10)
+const courseImportCsv = ref('')
+const offeringImportCsv = ref('')
+const courseImportPreview = ref<ImportPreview>()
+const offeringImportPreview = ref<ImportPreview>()
+const importing = ref(false)
 
 const courseForm = reactive({
   code: '',
@@ -345,6 +355,58 @@ function resolveErrorMessage(error: unknown, fallback: string) {
   }
   return fallback
 }
+
+async function previewCourseImport() {
+  importing.value = true
+  try {
+    courseImportPreview.value = (await previewAdminCoursesImportApi(courseImportCsv.value)).data
+    ElMessage.success(`课程预检完成：可导入 ${courseImportPreview.value.validRows} 行`)
+  } catch (error) {
+    ElMessage.error(resolveErrorMessage(error, '课程导入预检失败'))
+  } finally {
+    importing.value = false
+  }
+}
+
+async function commitCourseImport() {
+  await ElMessageBox.confirm('正式导入会写入课程基础表，确认继续？', '批量导入课程', { type: 'warning' })
+  importing.value = true
+  try {
+    const result = (await commitAdminCoursesImportApi(courseImportCsv.value)).data
+    ElMessage.success(`课程导入完成：成功 ${result.successCount} 行，失败 ${result.failureCount} 行`)
+    await loadData()
+  } catch (error) {
+    ElMessage.error(resolveErrorMessage(error, '课程批量导入失败'))
+  } finally {
+    importing.value = false
+  }
+}
+
+async function previewOfferingImport() {
+  importing.value = true
+  try {
+    offeringImportPreview.value = (await previewAdminOfferingsImportApi(offeringImportCsv.value)).data
+    ElMessage.success(`教学班预检完成：可导入 ${offeringImportPreview.value.validRows} 行`)
+  } catch (error) {
+    ElMessage.error(resolveErrorMessage(error, '教学班导入预检失败'))
+  } finally {
+    importing.value = false
+  }
+}
+
+async function commitOfferingImport() {
+  await ElMessageBox.confirm('正式导入会写入教学班并重建 Redis 库存，确认继续？', '批量导入教学班', { type: 'warning' })
+  importing.value = true
+  try {
+    const result = (await commitAdminOfferingsImportApi(offeringImportCsv.value)).data
+    ElMessage.success(`教学班导入完成：成功 ${result.successCount} 行，失败 ${result.failureCount} 行`)
+    await loadData()
+  } catch (error) {
+    ElMessage.error(resolveErrorMessage(error, '教学班批量导入失败'))
+  } finally {
+    importing.value = false
+  }
+}
 </script>
 
 <template>
@@ -373,6 +435,27 @@ function resolveErrorMessage(error: unknown, fallback: string) {
   </section>
 
   <section v-loading="loading" class="course-admin-layout">
+    <article class="work-panel import-wide-panel">
+      <el-collapse>
+        <el-collapse-item title="批量导入课程 CSV" name="course-import">
+          <el-input v-model="courseImportCsv" type="textarea" :rows="4" placeholder="courseCode,courseName,credit,category,courseType,department,description" />
+          <div class="import-actions">
+            <el-button :loading="importing" @click="previewCourseImport">预检</el-button>
+            <el-button type="primary" :loading="importing" :disabled="!courseImportCsv.trim()" @click="commitCourseImport">正式导入</el-button>
+            <span v-if="courseImportPreview">总 {{ courseImportPreview.totalRows }}，可导入 {{ courseImportPreview.validRows }}，错误 {{ courseImportPreview.errorRows }}</span>
+          </div>
+        </el-collapse-item>
+        <el-collapse-item title="批量导入教学班 CSV" name="offering-import">
+          <el-input v-model="offeringImportCsv" type="textarea" :rows="4" placeholder="courseCode,term,teacherName,capacity,scheduleText,classroom,selectionStartAt,selectionEndAt,status" />
+          <div class="import-actions">
+            <el-button :loading="importing" @click="previewOfferingImport">预检</el-button>
+            <el-button type="primary" :loading="importing" :disabled="!offeringImportCsv.trim()" @click="commitOfferingImport">正式导入</el-button>
+            <span v-if="offeringImportPreview">总 {{ offeringImportPreview.totalRows }}，可导入 {{ offeringImportPreview.validRows }}，错误 {{ offeringImportPreview.errorRows }}</span>
+          </div>
+        </el-collapse-item>
+      </el-collapse>
+    </article>
+
     <article class="work-panel course-list-panel">
       <div class="section-heading course-panel-heading">
         <div>
@@ -541,3 +624,16 @@ function resolveErrorMessage(error: unknown, fallback: string) {
     </el-table>
   </el-dialog>
 </template>
+
+<style scoped>
+.import-wide-panel {
+  grid-column: 1 / -1;
+}
+
+.import-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+</style>

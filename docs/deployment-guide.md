@@ -1,8 +1,8 @@
-# Academic-Nexus v1.4.0 Deployment Guide
+# Academic-Nexus v1.4.1 Deployment Guide
 
 Updated: 2026-06-27
 
-This guide covers the deployable v1.4.0 package, Docker Compose deployment, and the plain jar mode.
+This guide covers the deployable v1.4.1 package, Docker Compose deployment, and the plain jar mode.
 
 ## Requirements
 
@@ -18,28 +18,39 @@ This guide covers the deployable v1.4.0 package, Docker Compose deployment, and 
 From the project root:
 
 ```powershell
-docker compose up -d --build
+copy .env.example .env
+.\scripts\check-ports.ps1
+.\scripts\docker-build.ps1
+docker compose up -d
 ```
 
 Services:
 
 | Service | URL |
 | --- | --- |
-| Frontend dev server | `http://localhost:5173` |
+| Frontend dev server | `http://localhost:5174` |
 | Main backend from host | `http://localhost:8088` |
 | Main backend inside Compose network | `http://academic-main:8080` |
-| AI service | `http://localhost:8090` |
-| Nacos console | `http://localhost:8848/nacos` |
-| MySQL | `localhost:3306` |
-| Redis | `localhost:6379` |
+| AI service | `http://localhost:18090` |
+| Nacos console | `http://localhost:18848/nacos` |
+| MySQL | `localhost:13306` |
+| Redis | `localhost:16379` |
 
-Default Compose mode enables Nacos discovery and OpenFeign service-name calls between `academic-main` and `academic-ai-service`. The backend container still listens on `8080`, while the host maps it to `${MAIN_HOST_PORT:-8088}` to avoid collisions with local Java or search services.
+Default Compose mode enables Nacos discovery and OpenFeign service-name calls between `academic-main` and `academic-ai-service`. Containers keep stable internal ports while host ports are configurable through `.env`.
 
-Override the host port if needed:
+Override host ports only when your machine ports are free:
+
+```env
+MAIN_HOST_PORT=18080
+MYSQL_HOST_PORT=3306
+REDIS_HOST_PORT=6379
+FRONTEND_HOST_PORT=5173
+```
+
+If Docker Maven build fails with `bad_record_mac`, Central timeouts, or proxy problems, see `docs/docker-troubleshooting.md` and retry with:
 
 ```powershell
-$env:MAIN_HOST_PORT="18080"
-docker compose up -d --build
+.\scripts\docker-build.ps1 -MavenMirror aliyun
 ```
 
 Stop services:
@@ -56,16 +67,16 @@ docker compose down -v
 
 ## Jar Package Deployment
 
-Build the v1.4.0 release zip:
+Build the v1.4.1 release zip:
 
 ```powershell
-.\scripts\build-release.ps1 -Version 1.4.0
+.\scripts\build-release.ps1 -Version 1.4.1
 ```
 
 Expected artifact:
 
 ```text
-release/Academic-Nexus-1.4.0.zip
+release/Academic-Nexus-1.4.1.zip
 ```
 
 The zip contains:
@@ -96,12 +107,12 @@ Set environment variables:
 
 ```powershell
 $env:SPRING_PROFILES_ACTIVE="demo"
-$env:DB_URL="jdbc:mysql://localhost:3306/tianshiwebside?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true"
+$env:DB_URL="jdbc:mysql://localhost:13306/tianshiwebside?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true"
 $env:DB_USERNAME="root"
 $env:DB_PASSWORD="123123"
 $env:REDIS_HOST="localhost"
-$env:REDIS_PORT="6379"
-$env:NACOS_ADDR="127.0.0.1:8848"
+$env:REDIS_PORT="16379"
+$env:NACOS_ADDR="127.0.0.1:18848"
 $env:NACOS_DISCOVERY_ENABLED="true"
 $env:NACOS_REGISTER_ENABLED="true"
 $env:AI_SERVICE_DISCOVERY_ENABLED="true"
@@ -155,10 +166,12 @@ cd ai-service
 ..\mvnw.cmd test
 cd ..
 .\scripts\health-check.ps1
-.\scripts\build-release.ps1 -Version 1.4.0
+.\scripts\check-ports.ps1
+.\scripts\docker-build.ps1
+.\scripts\build-release.ps1 -Version 1.4.1
 ```
 
-Expected results for v1.4.0:
+Expected results for v1.4.1:
 
 - Compose config resolves successfully.
 - `npm audit` reports 0 vulnerabilities.

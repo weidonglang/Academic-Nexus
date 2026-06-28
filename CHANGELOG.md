@@ -1,5 +1,17 @@
 # Changelog
 
+## v1.4.1-final-closure - 2026-06-28
+
+- Added real CSV preview/commit flows for batch user import, including student profile/class data, batch tasks, audit records, and regression tests.
+- Added real CSV preview/commit flows for course and offering import, including teacher/schedule/window validation, batch tasks, audit records, and Redis stock prewarm.
+- Added batch review APIs and UI for status-change and registration applications with partial-success details, skipped processed rows, notifications, cache eviction, batch tasks, and audit.
+- Added targeted notice preview/publish for role, grade, major, class, and offering scopes with zero-recipient protection and targeted audit.
+- Added teacher read-only awareness APIs for homeroom class applications and course-related registration summaries.
+- Enhanced admin grade updates with old/new audit details, high-risk locked-grade audit, traceability, and student notifications.
+- Hardened Docker reproducible builds with BuildKit cache, Maven `dependency:go-offline`, mirror settings, and build scripts.
+- Made Docker host ports configurable with non-conflicting defaults and fixed a Nacos startup race by waiting for Nacos health and disabling discovery fail-fast in Compose.
+- Added final closure QA reports for batch import, three-role flow, notifications, grade audit, Docker build, and Docker ports.
+
 ## v1.4.1-open-issues-closure - 2026-06-27
 
 - Propagated the selected AI chat model from frontend session calls through the main system to ai-service, and recorded selected model, actual model, fallback flag, and fallback reason in AI call logs.

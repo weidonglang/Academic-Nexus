@@ -70,6 +70,28 @@ public interface AcademicAdminMapper {
     List<GradeAdminRow> findGradesForExport(@Param("term") String term, @Param("keyword") String keyword);
 
     @Select("""
+            select
+              ag.id as grade_id,
+              s.student_no as student_no,
+              u.display_name as student_name,
+              c.id as course_id,
+              c.code as course_code,
+              c.name as course_name,
+              ag.term as term,
+              ag.score as score,
+              ag.grade_point as grade_point,
+              ag.exam_type as exam_type,
+              ag.grade_status as grade_status,
+              ag.locked as locked
+            from academic_grade ag
+            join student s on s.id = ag.student_id
+            join sys_user u on u.id = s.user_id
+            join course c on c.id = ag.course_id
+            where ag.id = #{gradeId}
+            """)
+    GradeAdminRow findGradeById(@Param("gradeId") Long gradeId);
+
+    @Select("""
             select id
             from student
             where student_no = #{studentNo}
@@ -108,6 +130,21 @@ public interface AcademicAdminMapper {
             where id = #{id}
             """)
     int updateGrade(GradeCommand command);
+
+    @Select("select student_id from academic_grade where id = #{gradeId}")
+    Long findStudentIdByGradeId(@Param("gradeId") Long gradeId);
+
+    @Insert("""
+            insert into grade_change_log (grade_id, old_score, new_score, reason, operator, operator_role, trace_id, created_at)
+            values (#{gradeId}, #{oldScore}, #{newScore}, #{reason}, #{operator}, #{operatorRole}, #{traceId}, current_timestamp)
+            """)
+    int insertGradeChangeLog(@Param("gradeId") Long gradeId,
+                             @Param("oldScore") Integer oldScore,
+                             @Param("newScore") Integer newScore,
+                             @Param("reason") String reason,
+                             @Param("operator") String operator,
+                             @Param("operatorRole") String operatorRole,
+                             @Param("traceId") String traceId);
 
     @Select("""
             select

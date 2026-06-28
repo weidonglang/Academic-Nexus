@@ -10,12 +10,15 @@ import {
   adminUserRolesApi,
   adminUsersApi,
   createAdminUserApi,
+  commitAdminUsersImportApi,
   deleteAdminUserApi,
+  previewAdminUsersImportApi,
   resetAdminUserPasswordApi,
   updateAdminUserApi,
   updateAdminUserRolesApi,
   type AdminRole,
   type AdminUser,
+  type ImportPreview,
   type UserStatus,
 } from '@/api/adminUser'
 
@@ -32,6 +35,9 @@ const roles = ref<AdminRole[]>([])
 const page = ref(1)
 const pageSize = ref(50)
 const total = ref(0)
+const importCsv = ref('')
+const importPreview = ref<ImportPreview>()
+const importing = ref(false)
 
 const userForm = reactive({
   username: '',
@@ -233,6 +239,42 @@ async function removeUser(row: AdminUser) {
   }
 }
 
+async function previewImport() {
+  if (!importCsv.value.trim()) {
+    ElMessage.warning('请先粘贴 CSV 内容')
+    return
+  }
+  importing.value = true
+  try {
+    importPreview.value = (await previewAdminUsersImportApi(importCsv.value)).data
+    ElMessage.success(`预检完成：可导入 ${importPreview.value.validRows} 行`)
+  } catch (error) {
+    ElMessage.error(resolveErrorMessage(error, '用户导入预检失败'))
+  } finally {
+    importing.value = false
+  }
+}
+
+async function commitImport() {
+  if (!importPreview.value) {
+    await previewImport()
+  }
+  await ElMessageBox.confirm('正式导入会创建账号、角色绑定和学生档案，确认继续？', '批量导入用户', {
+    type: 'warning',
+  })
+  importing.value = true
+  try {
+    const result = (await commitAdminUsersImportApi(importCsv.value)).data
+    ElMessage.success(`导入完成：成功 ${result.successCount} 行，失败 ${result.failureCount} 行，任务 #${result.taskId}`)
+    importPreview.value = undefined
+    await loadData()
+  } catch (error) {
+    ElMessage.error(resolveErrorMessage(error, '用户批量导入失败'))
+  } finally {
+    importing.value = false
+  }
+}
+
 function formatDateTime(value?: string) {
   return value ? new Date(value).toLocaleString('zh-CN') : '-'
 }
@@ -277,6 +319,30 @@ function resolveErrorMessage(error: unknown, fallback: string) {
   </section>
 
   <section v-loading="loading" class="work-panel">
+    <el-collapse class="import-panel">
+      <el-collapse-item title="批量导入用户 CSV" name="user-import">
+        <el-input
+          v-model="importCsv"
+          type="textarea"
+          :rows="5"
+          placeholder="username,displayName,roleCodes,password,studentNo,college,major,grade,className,phone,email"
+        />
+        <div class="import-actions">
+          <el-button :loading="importing" @click="previewImport">预检</el-button>
+          <el-button type="primary" :loading="importing" :disabled="!importCsv.trim()" @click="commitImport">正式导入</el-button>
+          <span v-if="importPreview">
+            总 {{ importPreview.totalRows }}，可导入 {{ importPreview.validRows }}，错误 {{ importPreview.errorRows }}
+          </span>
+        </div>
+        <el-table v-if="importPreview?.errors.length" :data="importPreview.errors" size="small" max-height="180">
+          <el-table-column prop="rowNumber" label="行号" width="80" />
+          <el-table-column prop="column" label="列" width="120" />
+          <el-table-column prop="reason" label="原因" />
+          <el-table-column prop="suggestion" label="建议" />
+        </el-table>
+      </el-collapse-item>
+    </el-collapse>
+
     <el-table :data="users" empty-text="暂无账号">
       <el-table-column prop="username" label="账号" width="130" />
       <el-table-column prop="displayName" label="姓名" width="130" />
@@ -379,5 +445,16 @@ function resolveErrorMessage(error: unknown, fallback: string) {
   display: flex;
   justify-content: flex-end;
   padding-top: 16px;
+}
+
+.import-panel {
+  margin-bottom: 16px;
+}
+
+.import-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 12px 0;
 }
 </style>
