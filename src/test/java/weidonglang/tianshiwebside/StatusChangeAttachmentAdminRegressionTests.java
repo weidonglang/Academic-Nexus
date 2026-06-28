@@ -7,6 +7,8 @@ import org.springframework.http.HttpStatus;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.time.Instant;
 import java.util.List;
 
@@ -63,5 +65,51 @@ class StatusChangeAttachmentAdminRegressionTests extends HttpRegressionTestSuppo
                 .isEqualTo(HttpStatus.NOT_FOUND.value());
         assertThat(get("/api/admin/status-changes/" + applicationId + "/attachments", login(teacher)).statusCode())
                 .isEqualTo(HttpStatus.FORBIDDEN.value());
+    }
+
+    @Test
+    void studentCanUploadBeforeReviewButCannotAppendAfterReviewed() throws Exception {
+        String suffix = suffix();
+        String owner = "v141_attach_owner_" + suffix;
+        seedStudent(owner, "附件状态学生");
+
+        String ownerToken = login(owner);
+        JsonNode application = json(post("/api/students/me/status-changes", ownerToken, """
+                {"type":"OTHER","reason":"补充附件状态验证"}
+                """), HttpStatus.OK);
+        long applicationId = application.at("/data/id").asLong();
+
+        json(uploadAttachment(applicationId, ownerToken, "before-review.pdf", "application/pdf", "%PDF-1.4\nok\n"), HttpStatus.OK);
+        Integer auditCount = jdbcTemplate.queryForObject("""
+                select count(*)
+                from operation_audit_log
+                where action = 'UPLOAD_STATUS_CHANGE_ATTACHMENT'
+                  and target_id = ?
+                """, Integer.class, String.valueOf(applicationId));
+        assertThat(auditCount).isNotNull().isPositive();
+
+        jdbcTemplate.update("update student_status_change_application set status = 'APPROVED' where id = ?", applicationId);
+        assertThat(uploadAttachment(applicationId, ownerToken, "after-review.pdf", "application/pdf", "%PDF-1.4\nlate\n").statusCode())
+                .isEqualTo(HttpStatus.CONFLICT.value());
+    }
+
+    private HttpResponse<String> uploadAttachment(
+            long applicationId,
+            String token,
+            String filename,
+            String contentType,
+            String content
+    ) throws Exception {
+        String boundary = "----CodexBoundary" + suffix();
+        String body = "--" + boundary + "\r\n"
+                + "Content-Disposition: form-data; name=\"file\"; filename=\"" + filename + "\"\r\n"
+                + "Content-Type: " + contentType + "\r\n\r\n"
+                + content + "\r\n"
+                + "--" + boundary + "--\r\n";
+        HttpRequest.Builder builder = HttpRequest.newBuilder(uri("/api/students/me/status-changes/" + applicationId + "/attachments"))
+                .header("Content-Type", "multipart/form-data; boundary=" + boundary)
+                .POST(HttpRequest.BodyPublishers.ofString(body));
+        authorize(builder, token);
+        return httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofString());
     }
 }

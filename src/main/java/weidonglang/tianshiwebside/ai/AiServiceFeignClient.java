@@ -28,7 +28,7 @@ public interface AiServiceFeignClient {
     record RagAnswerPayload(String question, List<AiSourceDocument> documents) {
     }
 
-    record ChatPayload(String message) {
+    record ChatPayload(String message, String modelName, Long modelId, Long sessionId) {
     }
 
     record SqlGeneratePayload(String question, List<SqlSchemaService.TableSchema> schemas) {

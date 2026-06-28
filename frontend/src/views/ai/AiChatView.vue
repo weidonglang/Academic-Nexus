@@ -234,6 +234,9 @@ function resolveErrorMessage(error: unknown, fallback: string) {
             {{ message.serviceMode }}<template v-if="message.modelName"> / {{ message.modelName }}</template>
             <template v-if="message.searchUsed"> / 已联网搜索</template>
           </small>
+          <small v-if="message.role === 'assistant' && message.serviceMode?.includes('fallback')" class="fallback-line">
+            模型兜底：{{ message.modelName || '本地兜底' }}
+          </small>
         </div>
       </article>
 

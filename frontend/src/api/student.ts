@@ -98,6 +98,8 @@ export function uploadStatusChangeAttachmentApi(applicationId: number, file: Fil
   })
 }
 
-export function statusChangeAttachmentDownloadUrl(applicationId: number, attachmentId: number) {
-  return `/api/students/me/status-changes/${applicationId}/attachments/${attachmentId}/download`
+export function statusChangeAttachmentDownloadApi(applicationId: number, attachmentId: number) {
+  return http.get<never, Blob>(`/students/me/status-changes/${applicationId}/attachments/${attachmentId}/download`, {
+    responseType: 'blob',
+  })
 }

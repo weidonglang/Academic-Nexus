@@ -21,6 +21,7 @@ const slots = [
 ]
 
 const totalCredits = computed(() => entries.value.length)
+const invalidEntries = computed(() => entries.value.filter((entry) => entry.scheduleValid === false || entry.slot === 'UNKNOWN'))
 
 onMounted(async () => {
   loading.value = true
@@ -61,5 +62,30 @@ function cellEntries(dayOfWeek: number, slot: string) {
         </div>
       </template>
     </div>
+
+    <el-alert
+      v-if="invalidEntries.length"
+      class="schedule-warning"
+      type="warning"
+      :closable="false"
+      title="存在时间格式异常的课程"
+      description="这些课程不会被放入周课表格，请联系管理员修正教学班上课时间。"
+    />
+    <el-table v-if="invalidEntries.length" class="invalid-table" :data="invalidEntries" size="small">
+      <el-table-column prop="courseCode" label="课程号" width="110" />
+      <el-table-column prop="courseName" label="课程名称" min-width="160" />
+      <el-table-column prop="scheduleText" label="原始时间" min-width="160" />
+      <el-table-column prop="scheduleMessage" label="提示" width="140" />
+    </el-table>
   </section>
 </template>
+
+<style scoped>
+.schedule-warning {
+  margin-top: 16px;
+}
+
+.invalid-table {
+  margin-top: 12px;
+}
+</style>

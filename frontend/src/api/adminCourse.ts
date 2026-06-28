@@ -60,6 +60,27 @@ export interface CourseOfferingPayload {
   selectionEndAt: string
 }
 
+export interface ImportIssue {
+  rowNumber: number
+  column: string
+  reason: string
+  suggestion: string
+}
+
+export interface ImportPreview {
+  totalRows: number
+  validRows: number
+  errorRows: number
+  errors: ImportIssue[]
+}
+
+export interface ImportCommitResult {
+  taskId: number
+  successCount: number
+  failureCount: number
+  items: ImportIssue[]
+}
+
 export function adminCoursesApi() {
   return http.get<never, ApiResponse<AdminCourse[]>>('/admin/courses')
 }
@@ -108,4 +129,20 @@ export function updateAdminCourseOfferingApi(offeringId: number, payload: Course
 
 export function deleteAdminCourseOfferingApi(offeringId: number) {
   return http.delete<never, ApiResponse<void>>(`/admin/course-offerings/${offeringId}`)
+}
+
+export function previewAdminCoursesImportApi(content: string) {
+  return http.post<never, ApiResponse<ImportPreview>>('/admin/courses/import-preview', { content })
+}
+
+export function commitAdminCoursesImportApi(content: string) {
+  return http.post<never, ApiResponse<ImportCommitResult>>('/admin/courses/import-commit', { content })
+}
+
+export function previewAdminOfferingsImportApi(content: string) {
+  return http.post<never, ApiResponse<ImportPreview>>('/admin/course-offerings/import-preview', { content })
+}
+
+export function commitAdminOfferingsImportApi(content: string) {
+  return http.post<never, ApiResponse<ImportCommitResult>>('/admin/course-offerings/import-commit', { content })
 }

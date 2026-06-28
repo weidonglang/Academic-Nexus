@@ -25,6 +25,7 @@ export interface ArchivePreview {
   term?: string
   affectedCount: number
   dryRun: boolean
+  demoSafe?: boolean
   message: string
 }
 
@@ -56,6 +57,18 @@ export function dataArchiveCleanupApi(params: { objectType: string; term?: strin
   return http.post<never, ApiResponse<ArchiveRecordRow>>('/admin/data-archive/cleanup', null, { params })
 }
 
-export function dataArchiveExportCsvUrl() {
-  return '/api/admin/data-archive/export.csv'
+export function dataArchiveExportCsvApi() {
+  return http.get<never, Blob>('/admin/data-archive/export.csv', {
+    responseType: 'blob',
+  })
+}
+
+export function batchTaskReportCsvApi(taskId: number) {
+  return http.get<never, Blob>(`/admin/batch-tasks/${taskId}/report.csv`, {
+    responseType: 'blob',
+  })
+}
+
+export function batchTaskDetailApi(taskId: number) {
+  return http.get<never, ApiResponse<{ task: BatchTaskRow; failureItems: string[]; reportUrl: string }>>(`/admin/batch-tasks/${taskId}`)
 }

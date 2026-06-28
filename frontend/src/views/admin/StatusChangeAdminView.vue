@@ -5,14 +5,16 @@ import PageHeader from '@/components/PageHeader.vue'
 import {
   adminStatusChangesApi,
   adminStatusChangeAttachmentsApi,
-  adminStatusChangeAttachmentDownloadUrl,
-  adminStatusChangeAttachmentPreviewUrl,
+  adminStatusChangeAttachmentDownloadApi,
+  adminStatusChangeAttachmentPreviewApi,
+  batchReviewStatusChangesApi,
   reviewStatusChangeApi,
   type AdminStatusChangeAttachment,
   type AdminStatusChangeApplication,
   type ReviewDecision,
 } from '@/api/adminStatusChange'
 import type { ApplicationStatus, StatusChangeType } from '@/api/student'
+import { openBlob, saveBlob } from '@/utils/download'
 
 const loading = ref(false)
 const saving = ref(false)
@@ -22,6 +24,7 @@ const attachmentLoading = ref(false)
 const currentApplication = ref<AdminStatusChangeApplication | null>(null)
 const attachments = ref<AdminStatusChangeAttachment[]>([])
 const records = ref<AdminStatusChangeApplication[]>([])
+const selectedRows = ref<AdminStatusChangeApplication[]>([])
 const page = ref(1)
 const size = ref(10)
 const total = ref(0)
@@ -137,12 +140,46 @@ async function openAttachmentDialog(row: AdminStatusChangeApplication) {
   }
 }
 
-function previewAttachment(row: AdminStatusChangeAttachment) {
-  window.open(adminStatusChangeAttachmentPreviewUrl(row.applicationId, row.id), '_blank')
+async function previewAttachment(row: AdminStatusChangeAttachment) {
+  try {
+    openBlob(await adminStatusChangeAttachmentPreviewApi(row.applicationId, row.id))
+  } catch (error) {
+    ElMessage.error(resolveErrorMessage(error, '附件预览失败'))
+  }
 }
 
-function downloadAttachment(row: AdminStatusChangeAttachment) {
-  window.open(adminStatusChangeAttachmentDownloadUrl(row.applicationId, row.id), '_blank')
+async function batchReview(decision: ReviewDecision) {
+  const ids = selectedRows.value.filter(canReview).map((row) => row.id)
+  if (!ids.length) {
+    ElMessage.warning('请选择待审核记录')
+    return
+  }
+  const comment = decision === 'APPROVE'
+    ? '批量审核通过。'
+    : window.prompt('请输入统一驳回原因') || ''
+  if (decision === 'REJECT' && !comment.trim()) {
+    ElMessage.warning('批量驳回必须填写原因')
+    return
+  }
+  saving.value = true
+  try {
+    const result = (await batchReviewStatusChangesApi({ ids, decision, comment })).data
+    ElMessage.success(`批量审核完成：成功 ${result.successCount} 条，失败 ${result.failureCount} 条，任务 #${result.taskId}`)
+    selectedRows.value = []
+    await loadRecords()
+  } catch (error) {
+    ElMessage.error(resolveErrorMessage(error, '批量审核失败'))
+  } finally {
+    saving.value = false
+  }
+}
+
+async function downloadAttachment(row: AdminStatusChangeAttachment) {
+  try {
+    saveBlob(await adminStatusChangeAttachmentDownloadApi(row.applicationId, row.id), row.originalFilename || 'attachment')
+  } catch (error) {
+    ElMessage.error(resolveErrorMessage(error, '附件下载失败'))
+  }
 }
 
 function canReview(row: AdminStatusChangeApplication) {
@@ -203,11 +240,14 @@ function resolveErrorMessage(error: unknown, fallback: string) {
       </el-select>
       <el-input v-model="filters.keyword" class="keyword-input" placeholder="学号、姓名、专业、班级" clearable />
       <el-button type="primary" @click="search">查询</el-button>
+      <el-button :disabled="!selectedRows.length" :loading="saving" @click="batchReview('APPROVE')">批量通过</el-button>
+      <el-button type="danger" plain :disabled="!selectedRows.length" :loading="saving" @click="batchReview('REJECT')">批量驳回</el-button>
     </div>
   </section>
 
   <section v-loading="loading" class="work-panel">
-    <el-table :data="records" empty-text="暂无学籍异动申请">
+    <el-table :data="records" empty-text="暂无学籍异动申请" @selection-change="selectedRows = $event">
+      <el-table-column type="selection" width="45" />
       <el-table-column prop="studentNo" label="学号" width="110" />
       <el-table-column prop="studentName" label="姓名" width="100" />
       <el-table-column prop="major" label="专业" min-width="130" />

@@ -27,6 +27,11 @@ export interface AiChatResponse {
   searchUsed: boolean
   searchSources: Array<{ title: string; link: string; summary: string; searchedAt: string }>
   searchMessage: string
+  selectedModelId?: number
+  selectedModelName?: string
+  actualModelName?: string
+  fallback?: boolean
+  fallbackReason?: string
 }
 
 export interface AiServiceStatusResponse {
@@ -121,6 +126,9 @@ export interface AiCallLogRow {
   traceId?: string
   sessionId?: number
   modelId?: number
+  selectedModelName?: string
+  actualModelName?: string
+  fallbackReason?: string
   createdAt: string
 }
 

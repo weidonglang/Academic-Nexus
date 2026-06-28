@@ -8,6 +8,8 @@ export interface ScheduleEntry {
   scheduleText: string
   dayOfWeek: number
   slot: string
+  scheduleValid: boolean
+  scheduleMessage?: string
 }
 
 export function personalScheduleApi() {

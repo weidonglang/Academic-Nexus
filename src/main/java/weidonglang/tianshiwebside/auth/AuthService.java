@@ -67,11 +67,40 @@ public class AuthService {
         userAccountMapper.updateLastLoginAt(user.id(), Instant.now());
         var roles = userAccountMapper.findRoleCodesByUserId(user.id());
 
+        return issueSession(user, roles);
+    }
+
+    public LoginResponse refresh(String refreshToken) {
+        if (refreshToken == null || refreshToken.isBlank()) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED, "Refresh token is required");
+        }
+        String token = refreshToken.trim();
+        String username = tokenStore.findRefreshTokenOwner(token)
+                .orElseThrow(() -> new BusinessException(ErrorCode.UNAUTHORIZED, "Refresh token is invalid or expired"));
+        UserAccountMapper.UserAccountRow user = userAccountMapper.findByUsername(username);
+        if (user == null || user.status() != UserStatus.ACTIVE) {
+            tokenStore.revokeRefreshToken(token);
+            throw new BusinessException(ErrorCode.UNAUTHORIZED, "Account is unavailable");
+        }
+        tokenStore.revokeRefreshToken(token);
+        return issueSession(user, userAccountMapper.findRoleCodesByUserId(user.id()));
+    }
+
+    public void logout(String accessToken, String refreshToken) {
+        if (accessToken != null && !accessToken.isBlank()) {
+            tokenStore.revokeAccessToken(accessToken.trim());
+        }
+        if (refreshToken != null && !refreshToken.isBlank()) {
+            tokenStore.revokeRefreshToken(refreshToken.trim());
+        }
+    }
+
+    private LoginResponse issueSession(UserAccountMapper.UserAccountRow user, java.util.List<String> roles) {
         Instant expiresAt = Instant.now().plus(securityProperties.accessTokenTtl());
         String accessToken = "dev-access-" + UUID.randomUUID();
         String refreshToken = "dev-refresh-" + UUID.randomUUID();
-        tokenStore.saveAccessToken(accessToken, username, securityProperties.accessTokenTtl());
-        tokenStore.saveRefreshToken(refreshToken, username, securityProperties.refreshTokenTtl());
+        tokenStore.saveAccessToken(accessToken, user.username(), securityProperties.accessTokenTtl());
+        tokenStore.saveRefreshToken(refreshToken, user.username(), securityProperties.refreshTokenTtl());
 
         return new LoginResponse(
                 accessToken,

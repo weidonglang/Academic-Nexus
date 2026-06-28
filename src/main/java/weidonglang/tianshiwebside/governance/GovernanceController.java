@@ -4,6 +4,9 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -19,6 +22,8 @@ import java.util.List;
 
 @RestController
 public class GovernanceController {
+    private static final Logger log = LoggerFactory.getLogger(GovernanceController.class);
+
     private final JdbcTemplate jdbcTemplate;
     private final ContentModerationService moderationService;
     private final AuditLogService auditLogService;
@@ -41,26 +46,31 @@ public class GovernanceController {
     ) {
         int safePage = Pagination.safePage(page);
         int safeSize = Pagination.safeSize(size);
-        List<ContentModerationService.SensitiveWordRow> records = jdbcTemplate.query("""
-                        select id, word, category, risk_level, enabled, created_at, updated_at
-                        from sensitive_word
-                        order by updated_at desc, id desc
-                        limit ? offset ?
-                        """,
-                (rs, rowNum) -> new ContentModerationService.SensitiveWordRow(
-                        rs.getLong("id"),
-                        rs.getString("word"),
-                        rs.getString("category"),
-                        rs.getString("risk_level"),
-                        rs.getBoolean("enabled"),
-                        rs.getObject("created_at", Instant.class),
-                        rs.getObject("updated_at", Instant.class)
-                ),
-                safeSize,
-                Pagination.offset(safePage, safeSize)
-        );
-        Long total = jdbcTemplate.queryForObject("select count(*) from sensitive_word", Long.class);
-        return ApiResponse.success(new PageResponse<>(records, safePage, safeSize, total == null ? 0 : total));
+        try {
+            List<ContentModerationService.SensitiveWordRow> records = jdbcTemplate.query("""
+                            select id, word, category, risk_level, enabled, created_at, updated_at
+                            from sensitive_word
+                            order by updated_at desc, id desc
+                            limit ? offset ?
+                            """,
+                    (rs, rowNum) -> new ContentModerationService.SensitiveWordRow(
+                            rs.getLong("id"),
+                            rs.getString("word"),
+                            rs.getString("category"),
+                            rs.getString("risk_level"),
+                            rs.getBoolean("enabled"),
+                            rs.getObject("created_at", Instant.class),
+                            rs.getObject("updated_at", Instant.class)
+                    ),
+                    safeSize,
+                    Pagination.offset(safePage, safeSize)
+            );
+            Long total = jdbcTemplate.queryForObject("select count(*) from sensitive_word", Long.class);
+            return ApiResponse.success(new PageResponse<>(records, safePage, safeSize, total == null ? 0 : total));
+        } catch (DataAccessException ex) {
+            log.warn("Sensitive word table is unavailable or has migration drift. traceId={}", TraceIdHolder.get(), ex);
+            return ApiResponse.success(new PageResponse<>(List.of(), safePage, safeSize, 0));
+        }
     }
 
     @PostMapping("/api/admin/sensitive-words")
@@ -118,28 +128,33 @@ public class GovernanceController {
     ) {
         int safePage = Pagination.safePage(page);
         int safeSize = Pagination.safeSize(size);
-        List<ModerationLogRow> records = jdbcTemplate.query("""
-                        select id, scene, content_hash, matched_words, risk_level, action, operator, trace_id, created_at
-                        from content_moderation_log
-                        order by created_at desc
-                        limit ? offset ?
-                        """,
-                (rs, rowNum) -> new ModerationLogRow(
-                        rs.getLong("id"),
-                        rs.getString("scene"),
-                        rs.getString("content_hash"),
-                        rs.getString("matched_words"),
-                        rs.getString("risk_level"),
-                        rs.getString("action"),
-                        rs.getString("operator"),
-                        rs.getString("trace_id"),
-                        rs.getObject("created_at", Instant.class)
-                ),
-                safeSize,
-                Pagination.offset(safePage, safeSize)
-        );
-        Long total = jdbcTemplate.queryForObject("select count(*) from content_moderation_log", Long.class);
-        return ApiResponse.success(new PageResponse<>(records, safePage, safeSize, total == null ? 0 : total));
+        try {
+            List<ModerationLogRow> records = jdbcTemplate.query("""
+                            select id, scene, content_hash, matched_words, risk_level, action, operator, trace_id, created_at
+                            from content_moderation_log
+                            order by created_at desc
+                            limit ? offset ?
+                            """,
+                    (rs, rowNum) -> new ModerationLogRow(
+                            rs.getLong("id"),
+                            rs.getString("scene"),
+                            rs.getString("content_hash"),
+                            rs.getString("matched_words"),
+                            rs.getString("risk_level"),
+                            rs.getString("action"),
+                            rs.getString("operator"),
+                            rs.getString("trace_id"),
+                            rs.getObject("created_at", Instant.class)
+                    ),
+                    safeSize,
+                    Pagination.offset(safePage, safeSize)
+            );
+            Long total = jdbcTemplate.queryForObject("select count(*) from content_moderation_log", Long.class);
+            return ApiResponse.success(new PageResponse<>(records, safePage, safeSize, total == null ? 0 : total));
+        } catch (DataAccessException ex) {
+            log.warn("Content moderation log table is unavailable or has migration drift. traceId={}", TraceIdHolder.get(), ex);
+            return ApiResponse.success(new PageResponse<>(List.of(), safePage, safeSize, 0));
+        }
     }
 
     public record SensitiveWordRequest(

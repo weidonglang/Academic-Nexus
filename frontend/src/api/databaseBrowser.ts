@@ -159,12 +159,11 @@ export function databaseHistoryApi(params?: { page?: number; size?: number }) {
   return http.get<never, ApiResponse<PageResponse<DatabaseHistoryRow>>>('/admin/database-browser/history', { params })
 }
 
-export function databaseExportCsvUrl(tableName: string, params?: { keyword?: string; sortBy?: string; sortDir?: string }) {
-  const search = new URLSearchParams()
-  Object.entries(params ?? {}).forEach(([key, value]) => {
-    if (value) search.set(key, value)
+export function databaseExportCsvApi(tableName: string, params?: { keyword?: string; sortBy?: string; sortDir?: string }) {
+  return http.get<never, Blob>(`/admin/database-browser/tables/${encodeURIComponent(tableName)}/export.csv`, {
+    params,
+    responseType: 'blob',
   })
-  return `/api/admin/database-browser/tables/${encodeURIComponent(tableName)}/export.csv${search.size ? `?${search}` : ''}`
 }
 
 export function databaseTemplatesApi() {
@@ -178,10 +177,9 @@ export function databaseRunTemplateApi(templateCode: string, params?: { keyword?
   )
 }
 
-export function databaseTemplateExportCsvUrl(templateCode: string, params?: { keyword?: string; term?: string }) {
-  const search = new URLSearchParams()
-  Object.entries(params ?? {}).forEach(([key, value]) => {
-    if (value) search.set(key, value)
+export function databaseTemplateExportCsvApi(templateCode: string, params?: { keyword?: string; term?: string }) {
+  return http.get<never, Blob>(`/admin/database-browser/templates/${encodeURIComponent(templateCode)}/export.csv`, {
+    params,
+    responseType: 'blob',
   })
-  return `/api/admin/database-browser/templates/${encodeURIComponent(templateCode)}/export.csv${search.size ? `?${search}` : ''}`
 }

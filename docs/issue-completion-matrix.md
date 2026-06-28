@@ -1,18 +1,21 @@
 # Academic-Nexus Issue Completion Matrix
 
-Updated: 2026-06-27
+Updated: 2026-06-28
 
-This matrix records the closure scope through v1.4.0-final-polish. v1.2 closed #4-#35; v1.3.0 closed #39-#59; v1.4.0-final-polish focuses on #61-#74 final business closure and release polish.
+This matrix records the closure scope through v2.0.0 Stable Complete Edition. v1.2 closed #4-#35; v1.3.0 closed #39-#59; v1.4.0-final-polish focused on #61-#74; v1.4.1-final-closure stabilized #76-#104; v2.0.0 adds final release stabilization for #106-#108.
 
 ## Final Verification
 
 | Check | Result |
 | --- | --- |
 | Docker Compose config | `docker compose config` passed |
+| Docker build | `.\scripts\docker-build.ps1` passed |
+| Docker compose up smoke | `docker compose up -d` passed; frontend 5174, main 8088, and AI service 18090 were reachable |
 | Frontend audit | `npm audit` passed, 0 vulnerabilities |
 | Frontend build | `npm run build` passed |
-| Main backend tests | `.\mvnw.cmd test` passes, including v1.3.0 HTTP regression coverage |
+| Main backend tests | `.\mvnw.cmd test` passed, 56 tests |
 | AI service tests | `..\mvnw.cmd test` in `ai-service` passed, no test sources |
+| Python script tests | `py -m pytest scripts/tests -q` passed, 5 tests |
 | Spring Cloud config | Feign client, Nacos properties, and service-name wiring covered by tests and docs |
 | v1.3.0 HTTP regression | `QaClosureHttpRegressionTests` covers #39, #41, and #44 non-500, permission, and AI fallback paths |
 | v1.4.0 HTTP regression | `AiCallLogAdminRegressionTests`, `AiChatSessionRegressionTests`, `StatusChangeAttachmentAdminRegressionTests` passed |
@@ -86,6 +89,37 @@ This matrix records the closure scope through v1.4.0-final-polish. v1.2 closed #
 | #72 | CLOSED BY V1.4.0 | Audit traceability updated for AI, database templates, archive cleanup and attachment flows. |
 | #73 | CLOSED BY V1.4.0 | New pages use loading, empty and error states; existing global 401/403 handling retained. |
 | #74 | CLOSED BY V1.4.0 | Health-check scripts generate Markdown/JSON reports under `reports/`. |
+| #76 | FIXED BY V1.4.1 | AI chat selected model is propagated to ai-service and actual/fallback model details are logged. |
+| #77 | FIXED BY V1.4.1 | Sensitive-word and moderation-log pages handle backend/table drift independently. |
+| #78 | FIXED BY V1.4.1 | Load-test panel supports backend API array/paged shapes, `offeringId`, term filtering, and diagnostics. |
+| #79 | FIXED BY V1.4.1 FINAL CLOSURE | Two-stage CSV user import now previews without writes, commits valid rows to user/role/student/class data, records batch task and audit, and is covered by `BatchUserImportClosureTests`. |
+| #80 | FIXED BY V1.4.1 FINAL CLOSURE | Two-stage course/offering import validates teacher, schedule, term, capacity and selection window; commits real rows, prewarms Redis when available, records task/audit, and is covered by `BatchCourseOfferingImportClosureTests`. |
+| #81 | FIXED BY V1.4.1 FINAL CLOSURE | Batch status-change and registration review APIs/UI support partial success, skip reasons, task records, notifications, cache eviction and audit; covered by `BatchReviewClosureTests`. |
+| #82 | FIXED BY V1.4.1 FINAL CLOSURE | Notices support target preview and publish for all/role/student/teacher/admin/grade/major/class/offering with zero-recipient guard and targeted audit; covered by `NotificationTargetingClosureTests`. |
+| #83 | FIXED BY V1.4.1 FINAL CLOSURE | Admin grade changes record old/new score/status, reason, trace/audit, high-risk locked updates and student notifications. |
+| #84 | FIXED BY V1.4.1 FINAL CLOSURE | Teacher readonly awareness endpoints expose homeroom class and course-related application summaries without attachments or write actions; covered by `TeacherApplicationAwarenessClosureTests`. |
+| #85 | IMPROVED BY V1.4.1 | Download failures, DB browser partial failures, sensitive-word errors, schedule anomalies and auth refresh states improved. |
+| #86 | IMPROVED BY V1.4.1 | Batch task center now downloads CSV reports. |
+| #87 | FIXED BY V1.4.1 | Exam create/update/delete now notifies affected students in admin and teacher flows. |
+| #88 | RETAINED | Evaluation submit and summary cache eviction remain covered by existing controller flow. |
+| #89 | RETAINED | Archive cleanup remains non-destructive in demo mode and documented in UI wording. |
+| #90 | FIXED BY V1.4.1 | Refresh/logout/session revocation and disabled-user rejection implemented. |
+| #91 | FIXED BY V1.4.1 | File/CSV/report downloads use authenticated blob requests instead of raw `window.open('/api/...')`. |
+| #92 | FIXED BY V1.4.1 | Frontend fallback menu now exposes all implemented admin pages. |
+| #93 | FIXED BY V1.4.1 | Sensitive DB browser fields have broader masking. |
+| #94 | FIXED BY V1.4.1 | Attachment file root checks and audit logs added for file operations. |
+| #95 | IMPROVED BY V1.4.1 | Redis prewarm/repair remains DB-authoritative and prewarm operations are audited. |
+| #96 | FIXED BY V1.4.1 | Health center includes runtime config, Nacos, demo data, release zip and existing dependency checks. |
+| #97 | FIXED BY V1.4.1 | DB browser loads schema/index/FK sections independently. |
+| #98 | FIXED BY V1.4.1 | Uploading extra materials after review is rejected. |
+| #99 | FIXED BY V1.4.1 | Current term is resolved dynamically instead of hardcoded. |
+| #100 | FIXED BY V1.4.1 | Abnormal schedule text is detected and surfaced. |
+| #101 | FIXED BY V1.4.1 | Course grab requires `offeringId` with a readable validation error. |
+| #103 | FIXED BY V1.4.1 FINAL CLOSURE | Docker Maven builds use BuildKit cache mounts, `dependency:go-offline`, mirror settings and build scripts; `.\scripts\docker-build.ps1` passed. |
+| #104 | FIXED BY V1.4.1 FINAL CLOSURE | Compose host ports are configurable with non-conflicting defaults; port-check script passed and compose smoke succeeded after Nacos startup-order hardening. |
+| #106 | FIXED BY V2.0.0 | AI model registry supports safe soft delete; default and enabled models are protected, active lists hide deleted models, historical logs remain readable, and `AiModelDeleteRegressionTests` covers the closure. |
+| #107 | FIXED BY V2.0.0 | AI web search and safety review expose preset templates, local-demo search verification, safety block/log-only tests, frontend result cards, `.env.example` placeholders and `docs/ai-search-and-safety-config.md`; covered by `AiSearchSafetyConfigTemplateTests`. |
+| #108 | FIXED BY V2.0.0 | Dashboard `/api/dashboard/me` returns role-scoped cards for students, teachers and admins, and the frontend renders those cards without misleading global labels; covered by `DashboardRoleScopeRegressionTests`. |
 
 ## Remaining Release Discipline
 

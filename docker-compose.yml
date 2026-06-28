@@ -9,8 +9,8 @@ services:
       JVM_XMX: 512m
       JVM_XMN: 128m
     ports:
-      - "8848:8848"
-      - "9848:9848"
+      - "${NACOS_HOST_PORT:-18848}:8848"
+      - "${NACOS_GRPC_HOST_PORT:-19848}:9848"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8848/nacos/actuator/health"]
       interval: 15s
@@ -28,7 +28,7 @@ services:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
     ports:
-      - "3306:3306"
+      - "${MYSQL_HOST_PORT:-13306}:3306"
     volumes:
       - academic_mysql_data:/var/lib/mysql
     healthcheck:
@@ -41,7 +41,7 @@ services:
     image: redis:7.4-alpine
     container_name: academic-redis
     ports:
-      - "6379:6379"
+      - "${REDIS_HOST_PORT:-16379}:6379"
     volumes:
       - academic_redis_data:/data
     healthcheck:
@@ -52,26 +52,32 @@ services:
 
   academic-ai-service:
     build:
-      context: ./ai-service
+      context: .
+      dockerfile: ai-service/Dockerfile
+      args:
+        MAVEN_MIRROR_URL: ${MAVEN_MIRROR_URL:-https://repo.maven.apache.org/maven2}
     container_name: academic-ai-service
     environment:
       SERVER_PORT: 8090
       NACOS_ADDR: nacos:8848
       NACOS_DISCOVERY_ENABLED: "true"
       NACOS_REGISTER_ENABLED: "true"
+      SPRING_CLOUD_NACOS_DISCOVERY_FAIL_FAST: "false"
       OLLAMA_ENABLED: ${OLLAMA_ENABLED:-false}
       OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
       OLLAMA_CHAT_MODEL: ${OLLAMA_CHAT_MODEL:-qwen3:8b}
       OLLAMA_SQL_MODEL: ${OLLAMA_SQL_MODEL:-qwen2.5-coder:7b}
     ports:
-      - "8090:8090"
+      - "${AI_SERVICE_HOST_PORT:-18090}:8090"
     depends_on:
       nacos:
-        condition: service_started
+        condition: service_healthy
 
   academic-main:
     build:
       context: .
+      args:
+        MAVEN_MIRROR_URL: ${MAVEN_MIRROR_URL:-https://repo.maven.apache.org/maven2}
     container_name: academic-main
     environment:
       SPRING_PROFILES_ACTIVE: demo
@@ -84,6 +90,7 @@ services:
       NACOS_ADDR: nacos:8848
       NACOS_DISCOVERY_ENABLED: "true"
       NACOS_REGISTER_ENABLED: "true"
+      SPRING_CLOUD_NACOS_DISCOVERY_FAIL_FAST: "false"
       AI_SERVICE_NAME: academic-ai-service
       AI_SERVICE_DISCOVERY_ENABLED: "true"
       AI_SERVICE_URL: http://academic-ai-service:8090
@@ -95,7 +102,7 @@ services:
       redis:
         condition: service_healthy
       nacos:
-        condition: service_started
+        condition: service_healthy
       academic-ai-service:
         condition: service_started
 
@@ -107,7 +114,7 @@ services:
       VITE_DEV_PORT: 5173
       VITE_API_PROXY_TARGET: http://academic-main:8080
     ports:
-      - "5173:5173"
+      - "${FRONTEND_HOST_PORT:-5174}:5173"
     depends_on:
       academic-main:
         condition: service_started

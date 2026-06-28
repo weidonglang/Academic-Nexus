@@ -5,7 +5,7 @@ import { ElMessage } from 'element-plus'
 import PageHeader from '@/components/PageHeader.vue'
 import {
   statusChangeAttachmentsApi,
-  statusChangeAttachmentDownloadUrl,
+  statusChangeAttachmentDownloadApi,
   statusChangeApplicationsApi,
   submitStatusChangeApplicationApi,
   uploadStatusChangeAttachmentApi,
@@ -14,6 +14,7 @@ import {
   type StatusChangeApplication,
   type StatusChangeType,
 } from '@/api/student'
+import { saveBlob } from '@/utils/download'
 
 const loading = ref(false)
 const submitting = ref(false)
@@ -137,9 +138,13 @@ function formatDateTime(value?: string) {
   return new Date(value).toLocaleString('zh-CN')
 }
 
-function downloadAttachment(row: StatusChangeAttachment) {
+async function downloadAttachment(row: StatusChangeAttachment) {
   if (!currentApplication.value) return
-  window.open(statusChangeAttachmentDownloadUrl(currentApplication.value.id, row.id), '_blank')
+  try {
+    saveBlob(await statusChangeAttachmentDownloadApi(currentApplication.value.id, row.id), row.originalFilename || 'attachment')
+  } catch (error) {
+    ElMessage.error(resolveErrorMessage(error, '附件下载失败'))
+  }
 }
 
 function resolveErrorMessage(error: unknown, fallback: string) {

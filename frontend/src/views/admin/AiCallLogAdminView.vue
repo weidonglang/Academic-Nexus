@@ -135,6 +135,8 @@ function resolveErrorMessage(error: unknown, fallback: string) {
       <el-table-column prop="username" label="用户" width="120" />
       <el-table-column prop="functionType" label="功能" width="150" />
       <el-table-column prop="modelName" label="模型" width="160" show-overflow-tooltip />
+      <el-table-column prop="selectedModelName" label="选择模型" width="180" show-overflow-tooltip />
+      <el-table-column prop="actualModelName" label="实际模型" width="180" show-overflow-tooltip />
       <el-table-column prop="serviceMode" label="serviceMode" width="160" show-overflow-tooltip />
       <el-table-column prop="durationMs" label="耗时(ms)" width="100" />
       <el-table-column label="状态" width="90">
@@ -144,6 +146,7 @@ function resolveErrorMessage(error: unknown, fallback: string) {
       </el-table-column>
       <el-table-column prop="traceId" label="traceId" width="170" show-overflow-tooltip />
       <el-table-column prop="promptSummary" label="输入摘要" min-width="260" show-overflow-tooltip />
+      <el-table-column prop="fallbackReason" label="兜底原因" min-width="220" show-overflow-tooltip />
       <el-table-column prop="errorMessage" label="错误" min-width="220" show-overflow-tooltip />
     </el-table>
     <el-pagination

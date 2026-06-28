@@ -22,15 +22,18 @@ public class PersonalScheduleController {
     private final StudentMapper studentMapper;
     private final CourseSelectionReadMapper selectionReadMapper;
     private final QueryCacheService queryCacheService;
+    private final ScheduleParser scheduleParser;
 
     public PersonalScheduleController(
             StudentMapper studentMapper,
             CourseSelectionReadMapper selectionReadMapper,
-            QueryCacheService queryCacheService
+            QueryCacheService queryCacheService,
+            ScheduleParser scheduleParser
     ) {
         this.studentMapper = studentMapper;
         this.selectionReadMapper = selectionReadMapper;
         this.queryCacheService = queryCacheService;
+        this.scheduleParser = scheduleParser;
     }
 
     @GetMapping("/me/personal")
@@ -41,7 +44,7 @@ public class PersonalScheduleController {
                 Duration.ofSeconds(20),
                 new TypeReference<List<ScheduleEntryResponse>>() {
                 },
-                () -> selectionReadMapper.findSelectedCourses(username, 200, 0).stream()
+                () -> selectionReadMapper.findSelectedCourses(username, null, 200, 0).stream()
                         .map(this::toResponse)
                         .toList()
         ));
@@ -58,7 +61,7 @@ public class PersonalScheduleController {
     }
 
     private ScheduleEntryResponse toResponse(CourseSelectionRow row) {
-        ParsedSchedule parsed = parseSchedule(row.scheduleText());
+        ScheduleParser.ParsedSchedule parsed = scheduleParser.parse(row.scheduleText());
         return new ScheduleEntryResponse(
                 row.courseCode(),
                 row.courseName(),
@@ -66,38 +69,10 @@ public class PersonalScheduleController {
                 row.classroom(),
                 row.scheduleText(),
                 parsed.dayOfWeek(),
-                parsed.slot()
+                parsed.slot(),
+                parsed.valid(),
+                parsed.message()
         );
-    }
-
-    private ParsedSchedule parseSchedule(String scheduleText) {
-        int dayOfWeek = 1;
-        if (scheduleText.contains("\u5468\u4e8c")) {
-            dayOfWeek = 2;
-        } else if (scheduleText.contains("\u5468\u4e09")) {
-            dayOfWeek = 3;
-        } else if (scheduleText.contains("\u5468\u56db")) {
-            dayOfWeek = 4;
-        } else if (scheduleText.contains("\u5468\u4e94")) {
-            dayOfWeek = 5;
-        } else if (scheduleText.contains("\u5468\u516d")) {
-            dayOfWeek = 6;
-        } else if (scheduleText.contains("\u5468\u65e5")) {
-            dayOfWeek = 7;
-        }
-
-        String slot = "1-2";
-        if (scheduleText.contains("3-4")) {
-            slot = "3-4";
-        } else if (scheduleText.contains("5-6")) {
-            slot = "5-6";
-        } else if (scheduleText.contains("7-8")) {
-            slot = "7-8";
-        } else if (scheduleText.contains("9-10")) {
-            slot = "9-10";
-        }
-
-        return new ParsedSchedule(dayOfWeek, slot);
     }
 
     public record ScheduleEntryResponse(
@@ -107,10 +82,9 @@ public class PersonalScheduleController {
             String classroom,
             String scheduleText,
             int dayOfWeek,
-            String slot
+            String slot,
+            boolean scheduleValid,
+            String scheduleMessage
     ) {
-    }
-
-    private record ParsedSchedule(int dayOfWeek, String slot) {
     }
 }

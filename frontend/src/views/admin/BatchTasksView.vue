@@ -2,7 +2,8 @@
 import { onMounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import PageHeader from '@/components/PageHeader.vue'
-import { batchTasksApi, type BatchTaskRow } from '@/api/batchOps'
+import { batchTaskReportCsvApi, batchTasksApi, type BatchTaskRow } from '@/api/batchOps'
+import { saveBlob } from '@/utils/download'
 
 const loading = ref(false)
 const rows = ref<BatchTaskRow[]>([])
@@ -49,6 +50,14 @@ function statusType(value: string) {
   if (value === 'PARTIAL_SUCCESS') return 'warning'
   if (value === 'RUNNING') return 'primary'
   return 'info'
+}
+
+async function downloadReport(row: BatchTaskRow) {
+  try {
+    saveBlob(await batchTaskReportCsvApi(row.id), `batch-task-${row.id}-report.csv`)
+  } catch (error) {
+    ElMessage.error(resolveErrorMessage(error, '批量任务报告下载失败'))
+  }
 }
 
 function resolveErrorMessage(error: unknown, fallback: string) {
@@ -103,6 +112,11 @@ function resolveErrorMessage(error: unknown, fallback: string) {
       <el-table-column prop="endedAt" label="结束时间" width="190" />
       <el-table-column prop="failureDetail" label="失败明细/报告摘要" min-width="260" show-overflow-tooltip />
       <el-table-column prop="reportPath" label="报告路径" min-width="180" show-overflow-tooltip />
+      <el-table-column label="报告" width="100" fixed="right">
+        <template #default="{ row }">
+          <el-button type="primary" link @click="downloadReport(row)">下载</el-button>
+        </template>
+      </el-table-column>
     </el-table>
 
     <el-pagination

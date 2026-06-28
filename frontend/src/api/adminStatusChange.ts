@@ -53,10 +53,21 @@ export function adminStatusChangeAttachmentsApi(applicationId: number) {
   return http.get<never, ApiResponse<AdminStatusChangeAttachment[]>>(`/admin/status-changes/${applicationId}/attachments`)
 }
 
-export function adminStatusChangeAttachmentPreviewUrl(applicationId: number, attachmentId: number) {
-  return `/api/admin/status-changes/${applicationId}/attachments/${attachmentId}/preview`
+export function adminStatusChangeAttachmentPreviewApi(applicationId: number, attachmentId: number) {
+  return http.get<never, Blob>(`/admin/status-changes/${applicationId}/attachments/${attachmentId}/preview`, {
+    responseType: 'blob',
+  })
 }
 
-export function adminStatusChangeAttachmentDownloadUrl(applicationId: number, attachmentId: number) {
-  return `/api/admin/status-changes/${applicationId}/attachments/${attachmentId}/download`
+export function adminStatusChangeAttachmentDownloadApi(applicationId: number, attachmentId: number) {
+  return http.get<never, Blob>(`/admin/status-changes/${applicationId}/attachments/${attachmentId}/download`, {
+    responseType: 'blob',
+  })
+}
+
+export function batchReviewStatusChangesApi(payload: { ids: number[]; decision: ReviewDecision; comment: string }) {
+  return http.post<never, ApiResponse<{ taskId: number; successCount: number; failureCount: number; items: Array<{ id: number; success: boolean; reason: string }> }>>(
+    '/admin/status-changes/batch-review',
+    payload,
+  )
 }

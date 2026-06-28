@@ -82,10 +82,12 @@ public interface CourseSelectionReadMapper {
             join course_offering co on co.id = cs.offering_id
             join course c on c.id = co.course_id
             where u.username = #{username}
+              and (#{term} is null or co.term = #{term})
             order by cs.selected_at desc
             limit #{size} offset #{offset}
             """)
     List<CourseSelectionRow> findSelectedCourses(@Param("username") String username,
+                                                @Param("term") String term,
                                                 @Param("size") int size, @Param("offset") int offset);
 
     /**
@@ -97,7 +99,9 @@ public interface CourseSelectionReadMapper {
             from course_selection cs
             join student s on s.id = cs.student_id
             join sys_user u on u.id = s.user_id
+            join course_offering co on co.id = cs.offering_id
             where u.username = #{username}
+              and (#{term} is null or co.term = #{term})
             """)
-    long countSelectedCourses(@Param("username") String username);
+    long countSelectedCourses(@Param("username") String username, @Param("term") String term);
 }

@@ -298,7 +298,7 @@ class SystemInteroperabilityIntegrationTests {
                 .orElseThrow()
                 .id();
 
-        adminFileController.delete(attachmentId);
+        adminFileController.delete(attachmentId, adminAuth());
 
         assertThat(attachmentController.list(auth(username, "ROLE_STUDENT"), application.id()).data()).noneMatch(row -> row.id().equals(attachmentId));
     }

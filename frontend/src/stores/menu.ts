@@ -121,11 +121,16 @@ function fallbackMenus(roles: string[]): MenuItem[] {
       item('admin-audit-logs', '操作审计', '/admin/audit-logs', 'ScrollText'),
       item('admin-batch-tasks', '批量任务中心', '/admin/batch-tasks', 'ListChecks'),
       item('admin-data-archive', '数据归档清理', '/admin/data-archive', 'Archive'),
+      item('admin-system-health', '系统健康中心', '/admin/system-health', 'Activity'),
       item('admin-redis-monitor', 'Redis状态监控', '/admin/redis-monitor', 'DatabaseZap'),
+      item('admin-course-selection-consistency', '选课一致性报告', '/admin/course-selection-consistency', 'ListChecks'),
+      item('admin-data-dictionary', '数据字典', '/admin/data-dictionary', 'BookMarked'),
+      item('admin-sensitive-words', '敏感词与安全审查', '/admin/sensitive-words', 'ShieldAlert'),
       item('admin-load-test-reports', '压测历史报告', '/admin/load-test-reports', 'ChartColumnBig'),
       item('admin-database-browser', '数据库只读浏览', '/admin/database-browser', 'TableProperties'),
       item('admin-ai-sql', '自然语言查库', '/admin/ai-sql', 'Sparkles'),
       item('admin-ai-logs', 'AI调用日志', '/admin/ai-logs', 'ScrollText'),
+      item('admin-ai-models', 'AI模型与联网搜索', '/admin/ai-models', 'BrainCircuit'),
     ]),
   ]
 

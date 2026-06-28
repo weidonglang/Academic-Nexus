@@ -81,3 +81,10 @@ export function reviewRegistrationApplicationApi(id: number, payload: ReviewRegi
     payload,
   )
 }
+
+export function batchReviewRegistrationApplicationsApi(payload: { ids: number[]; decision: 'APPROVE' | 'REJECT'; comment: string }) {
+  return http.post<never, ApiResponse<{ taskId: number; successCount: number; failureCount: number; items: Array<{ id: number; success: boolean; reason: string }> }>>(
+    '/admin/registration-applications/batch-review',
+    payload,
+  )
+}

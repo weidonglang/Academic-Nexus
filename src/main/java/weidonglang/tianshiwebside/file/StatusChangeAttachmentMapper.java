@@ -17,6 +17,16 @@ public interface StatusChangeAttachmentMapper {
             """)
     int countOwnedApplication(@Param("applicationId") Long applicationId, @Param("username") String username);
 
+    @Select("""
+            select a.status
+            from student_status_change_application a
+            join student s on s.id = a.student_id
+            join sys_user u on u.id = s.user_id
+            where a.id = #{applicationId}
+              and u.username = #{username}
+            """)
+    String findOwnedApplicationStatus(@Param("applicationId") Long applicationId, @Param("username") String username);
+
     @Insert("""
             insert into status_change_attachment
               (application_id, original_filename, stored_path, content_type, size_bytes, uploaded_at)

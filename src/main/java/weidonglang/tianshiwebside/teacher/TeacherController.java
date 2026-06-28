@@ -17,6 +17,7 @@ import weidonglang.tianshiwebside.common.error.BusinessException;
 import weidonglang.tianshiwebside.common.error.ErrorCode;
 import weidonglang.tianshiwebside.common.trace.TraceIdHolder;
 import weidonglang.tianshiwebside.evaluation.mapper.EvaluationSummaryRow;
+import weidonglang.tianshiwebside.notice.NotificationService;
 import weidonglang.tianshiwebside.teacher.mapper.TeacherMapper;
 import weidonglang.tianshiwebside.teacher.mapper.TeacherMapper.HomeroomClassRow;
 import weidonglang.tianshiwebside.teacher.mapper.TeacherMapper.HomeroomClassStudentRow;
@@ -42,11 +43,18 @@ public class TeacherController {
     private final TeacherMapper teacherMapper;
     private final QueryCacheService queryCacheService;
     private final AuditLogService auditLogService;
+    private final NotificationService notificationService;
 
-    public TeacherController(TeacherMapper teacherMapper, QueryCacheService queryCacheService, AuditLogService auditLogService) {
+    public TeacherController(
+            TeacherMapper teacherMapper,
+            QueryCacheService queryCacheService,
+            AuditLogService auditLogService,
+            NotificationService notificationService
+    ) {
         this.teacherMapper = teacherMapper;
         this.queryCacheService = queryCacheService;
         this.auditLogService = auditLogService;
+        this.notificationService = notificationService;
     }
 
     /**
@@ -227,6 +235,9 @@ public class TeacherController {
         ensureOwnedOffering(teacherName, request.offeringId());
         AcademicAdminMapper.ExamCommand command = toExamCommand(null, request);
         teacherMapper.insertExam(command);
+        notificationService.notifyUsers(teacherMapper.findSelectedUserIdsByOfferingId(teacherName, request.offeringId()),
+                "考试安排通知", "你有新的考试安排：" + request.examTime() + " " + request.room(),
+                "EXAM", "EXAM", command.getId());
         auditLogService.record(authentication.getName(), "CREATE_EXAM", "EXAM", command.getId(),
                 "offeringId=" + request.offeringId(), TraceIdHolder.get());
         evictTeacherAcademicCaches();
@@ -239,6 +250,9 @@ public class TeacherController {
         ensureOwnedExam(teacherName, examId);
         ensureOwnedOffering(teacherName, request.offeringId());
         teacherMapper.updateExam(toExamCommand(examId, request));
+        notificationService.notifyUsers(teacherMapper.findSelectedUserIdsByOfferingId(teacherName, request.offeringId()),
+                "考试安排变更", "考试安排已更新：" + request.examTime() + " " + request.room(),
+                "EXAM", "EXAM", examId);
         auditLogService.record(authentication.getName(), "UPDATE_EXAM", "EXAM", examId,
                 "offeringId=" + request.offeringId(), TraceIdHolder.get());
         evictTeacherAcademicCaches();
@@ -249,7 +263,13 @@ public class TeacherController {
     public ApiResponse<Void> deleteExam(Authentication authentication, @PathVariable Long examId) {
         String teacherName = teacherName(authentication);
         ensureOwnedExam(teacherName, examId);
+        Long offeringId = teacherMapper.findOwnedExamOfferingId(teacherName, examId);
         teacherMapper.deleteExam(examId);
+        if (offeringId != null) {
+            notificationService.notifyUsers(teacherMapper.findSelectedUserIdsByOfferingId(teacherName, offeringId),
+                    "考试安排取消", "一条考试安排已取消，请以最新考试安排为准。",
+                    "EXAM", "EXAM", examId);
+        }
         auditLogService.record(authentication.getName(), "DELETE_EXAM", "EXAM", examId, null, TraceIdHolder.get());
         evictTeacherAcademicCaches();
         return ApiResponse.success();
@@ -307,6 +327,7 @@ public class TeacherController {
         queryCacheService.evictByPrefix("query:grades:");
         queryCacheService.evictByPrefix("query:exams:");
         queryCacheService.evictByPrefix("query:dashboard:");
+        queryCacheService.evictByPrefix("query:notifications:");
     }
 
     private AcademicAdminMapper.ExamCommand toExamCommand(Long id, TeacherExamRequest request) {

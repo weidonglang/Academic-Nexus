@@ -17,6 +17,7 @@ import weidonglang.tianshiwebside.common.cache.QueryCacheService;
 import weidonglang.tianshiwebside.common.error.BusinessException;
 import weidonglang.tianshiwebside.common.error.ErrorCode;
 import weidonglang.tianshiwebside.notice.NotificationService;
+import weidonglang.tianshiwebside.common.trace.TraceIdHolder;
 
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
@@ -93,16 +94,25 @@ public class AcademicAdminController {
      * 体现成绩发布后的数据保护。
      */
     public ApiResponse<Void> updateGrade(Authentication authentication, @PathVariable Long gradeId, @Valid @RequestBody GradeRequest request) {
-        if (mapper.countLockedGrade(gradeId) > 0 && !Boolean.FALSE.equals(request.locked())) {
-            throw new BusinessException(ErrorCode.CONFLICT, "成绩已锁定，不能修改");
+        GradeAdminRow old = mapper.findGradeById(gradeId);
+        if (old == null) {
+            throw new BusinessException(ErrorCode.NOT_FOUND, "成绩不存在");
         }
         Long studentId = mapper.findStudentIdByStudentNo(request.studentNo().trim());
         if (studentId == null) {
             throw new BusinessException(ErrorCode.NOT_FOUND, "学生不存在");
         }
         mapper.updateGrade(toGradeCommand(gradeId, studentId, request));
-        auditLogService.record(authentication.getName(), "UPDATE_GRADE", "GRADE", gradeId,
-                "score=" + request.score() + ", status=" + request.gradeStatus(), null);
+        mapper.insertGradeChangeLog(gradeId, old.score(), request.score(), "管理员修改成绩",
+                authentication.getName(), "ADMIN", TraceIdHolder.get());
+        String detail = "oldScore=" + old.score() + ", newScore=" + request.score()
+                + ", oldStatus=" + old.gradeStatus() + ", newStatus=" + request.gradeStatus()
+                + ", reason=管理员修改成绩";
+        auditLogService.record(authentication.getName(), Boolean.TRUE.equals(old.locked()) ? "HIGH_RISK_GRADE_UPDATE" : "UPDATE_GRADE",
+                "GRADE", gradeId, detail, TraceIdHolder.get());
+        notificationService.notifyStudent(studentId, "成绩变更通知",
+                old.courseName() + " 成绩已更新：" + old.score() + " -> " + request.score(),
+                "GRADE", "GRADE", gradeId);
         evictAcademicCaches();
         return ApiResponse.success();
     }
@@ -224,7 +234,13 @@ public class AcademicAdminController {
     @DeleteMapping("/exams/{examId}")
     @PreAuthorize("hasAuthority('EXAM_WRITE')")
     public ApiResponse<Void> deleteExam(Authentication authentication, @PathVariable Long examId) {
+        Long offeringId = mapper.findOfferingIdByExamId(examId);
         mapper.deleteExam(examId);
+        if (offeringId != null) {
+            notificationService.notifyUsers(mapper.findSelectedUserIdsByOfferingId(offeringId),
+                    "考试安排取消", "一条考试安排已取消，请以最新考试安排为准。",
+                    "EXAM", "EXAM", examId);
+        }
         auditLogService.record(authentication.getName(), "DELETE_EXAM", "EXAM", examId, null, null);
         evictAcademicCaches();
         return ApiResponse.success();
@@ -260,7 +276,8 @@ public class AcademicAdminController {
     }
 
     public record GradeRequest(@NotBlank String studentNo, @NotNull Long courseId, @NotBlank String term,
-                               @NotNull @Min(0) @Max(100) Integer score, @NotNull BigDecimal gradePoint,
+                               @NotNull @Min(0) @Max(100) Integer score,
+                               @NotNull @DecimalMin("0.00") @DecimalMax("5.00") BigDecimal gradePoint,
                                @NotBlank String examType, @NotBlank String gradeStatus, @NotNull Boolean locked) {
     }
 

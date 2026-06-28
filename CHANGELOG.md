@@ -1,5 +1,57 @@
 # Changelog
 
+## v2.0.0 - Stable Complete Edition - 2026-06-28
+
+### Final stabilization
+
+- Fixed Redis stock rebuild after course drop by rebuilding `selection:offering:{offeringId}:remaining` from database capacity and selected count.
+- Added final three-role visibility assertions for batch user import and batch course offering import.
+- Added AI model safe delete workflow with soft deletion, default-model protection, enabled-model protection, audit records, and regression tests.
+- Added web search configuration templates, safety review templates, and observable configuration test results.
+- Fixed dashboard statistics to be role-scoped for students, teachers, and admins.
+- Added complete Docker deployment guide and v2.0.0 stable release QA report.
+
+### Deployment
+
+- Clarified Docker host ports versus container ports.
+- Documented Maven mirror troubleshooting for Docker builds, including `bad_record_mac` network failures.
+- Added reproducible Docker startup checklist for Windows, Linux, and macOS.
+
+### Stable closure
+
+- Completed #76-#104.
+- Completed #106-#108.
+- Promoted the project to v2.0.0 Stable Complete Edition.
+
+## v1.4.1-final-closure - 2026-06-28
+
+- Added real CSV preview/commit flows for batch user import, including student profile/class data, batch tasks, audit records, and regression tests.
+- Added real CSV preview/commit flows for course and offering import, including teacher/schedule/window validation, batch tasks, audit records, and Redis stock prewarm.
+- Added batch review APIs and UI for status-change and registration applications with partial-success details, skipped processed rows, notifications, cache eviction, batch tasks, and audit.
+- Added targeted notice preview/publish for role, grade, major, class, and offering scopes with zero-recipient protection and targeted audit.
+- Added teacher read-only awareness APIs for homeroom class applications and course-related registration summaries.
+- Enhanced admin grade updates with old/new audit details, high-risk locked-grade audit, traceability, and student notifications.
+- Hardened Docker reproducible builds with BuildKit cache, Maven `dependency:go-offline`, mirror settings, and build scripts.
+- Made Docker host ports configurable with non-conflicting defaults and fixed a Nacos startup race by waiting for Nacos health and disabling discovery fail-fast in Compose.
+- Added final closure QA reports for batch import, three-role flow, notifications, grade audit, Docker build, and Docker ports.
+
+## v1.4.1-open-issues-closure - 2026-06-27
+
+- Propagated the selected AI chat model from frontend session calls through the main system to ai-service, and recorded selected model, actual model, fallback flag, and fallback reason in AI call logs.
+- Hardened sensitive-word and moderation-log admin pages against partial backend failures.
+- Fixed `course_grab_panel.py` backend API parsing for both array and paged response shapes, with term filtering and diagnostics.
+- Added authenticated blob download/preview flows for status-change attachments, database CSV export, data archive CSV export, and batch task reports.
+- Added refresh-token rotation, logout revocation, disabled-user token rejection, and token revocation when admins disable or lock users.
+- Added upload-after-review protection and audit records for status-change attachment upload, download, preview, and delete.
+- Added configurable current-term resolution and removed hardcoded course-selection term assumptions.
+- Added schedule parsing validation so abnormal schedule text is surfaced without breaking the timetable grid.
+- Tightened grade locking so locked grades cannot be modified by changing the request payload, and added grade-point range validation.
+- Added student notifications for teacher/admin exam create, update, and delete flows.
+- Enhanced system health with runtime profile/port, Nacos discovery config, demo-data completeness, and release-package checks.
+- Added Redis stock prewarm audit records and batch-task CSV report download.
+- Expanded database-browser masking and isolated partial schema/index/foreign-key loading failures.
+- Completed frontend fallback menu entries for system health, data dictionary, sensitive words, consistency checks, and AI model administration.
+
 ## v1.4.0-final-polish - 2026-06-27
 
 - Changed Docker demo backend host port to `8088` by default while keeping the container and local IDEA port on `8080`; `MAIN_HOST_PORT` can override it.

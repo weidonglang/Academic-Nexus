@@ -41,6 +41,10 @@ public class AiInternalController {
 
     @PostMapping("/internal/ai/chat")
     public AiDtos.ChatResponse chat(@Valid @RequestBody AiDtos.ChatRequest request) {
+        String selectedModel = cleanModelName(request.modelName());
+        if (selectedModel.isBlank()) {
+            selectedModel = chatModel;
+        }
         String prompt = """
                 你是“天师教务系统”的 AI 聊天助手。请用中文回答。
                 如果用户说“咱们系统”“这个系统”“项目”，默认指天师教务系统。
@@ -53,10 +57,35 @@ public class AiInternalController {
                 用户消息：
                 %s
                 """.formatted(systemOverview(), request.message());
-        String answer = ollamaClient.generate(chatModel, prompt)
-                .orElseGet(() -> fallbackChatAnswer(request.message()));
-        String mode = answer.startsWith("AI 聊天当前") ? "ai-service-fallback" : "ollama:" + chatModel;
-        return new AiDtos.ChatResponse(answer, mode, chatModel, false, List.of(), "ai-service 不直接执行联网搜索");
+        var generated = ollamaClient.generate(selectedModel, prompt);
+        String actualModel = selectedModel;
+        String fallbackReason = "";
+        if (generated.isEmpty() && !selectedModel.equals(chatModel)) {
+            fallbackReason = "selected model unavailable; " + ollamaClient.lastError();
+            generated = ollamaClient.generate(chatModel, prompt);
+            actualModel = chatModel;
+        }
+        boolean fallback = generated.isEmpty();
+        String answer = generated.orElseGet(() -> fallbackChatAnswer(request.message()));
+        if (fallback && fallbackReason.isBlank()) {
+            fallbackReason = ollamaClient.enabled()
+                    ? "ollama generation failed; " + ollamaClient.lastError()
+                    : "ollama disabled";
+        }
+        String mode = fallback ? "ai-service-fallback" : "ollama:" + actualModel;
+        return new AiDtos.ChatResponse(
+                answer,
+                mode,
+                actualModel,
+                false,
+                List.of(),
+                "ai-service 不直接执行联网搜索",
+                request.modelId(),
+                selectedModel,
+                actualModel,
+                fallback || !actualModel.equals(selectedModel),
+                fallbackReason.isBlank() ? null : fallbackReason
+        );
     }
 
     @GetMapping("/internal/ai/status")
@@ -161,6 +190,10 @@ public class AiInternalController {
                     """;
         }
         return "AI 聊天当前处于本地兜底模式。涉及正式教务问题时，请使用智能教务助手并查看引用来源；如果需要介绍系统，可以问“介绍一下咱们系统”。";
+    }
+
+    private String cleanModelName(String modelName) {
+        return modelName == null ? "" : modelName.trim();
     }
 
     private String ragPrompt(String question, List<AiDtos.SourceDocument> sources) {

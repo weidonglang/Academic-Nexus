@@ -17,14 +17,14 @@ import {
   databaseConnectionApi,
   databaseDashboardApi,
   databaseErGraphApi,
-  databaseExportCsvUrl,
+  databaseExportCsvApi,
   databaseForeignKeysApi,
   databaseHistoryApi,
   databaseIndexesApi,
   databasePreviewApi,
   databaseRunTemplateApi,
   databaseTablesApi,
-  databaseTemplateExportCsvUrl,
+  databaseTemplateExportCsvApi,
   databaseTemplatesApi,
   databaseTreeApi,
   type DatabaseConnectionInfo,
@@ -39,6 +39,7 @@ import {
   type DatabaseTableInfo,
   type DatabaseTree,
 } from '@/api/databaseBrowser'
+import { saveBlob } from '@/utils/download'
 
 interface DbTreeNode {
   id: string
@@ -168,7 +169,7 @@ const importQualityOption = computed<EChartsOption>(() => ({
 }))
 
 onMounted(async () => {
-  await Promise.all([
+  await Promise.allSettled([
     loadConnection(),
     loadDashboard(),
     loadTables(),
@@ -251,19 +252,38 @@ async function loadDetail() {
   loadingDetail.value = true
 
   try {
-    const [columnResponse, indexResponse, foreignKeyResponse] = await Promise.all([
+    const [columnResponse, indexResponse, foreignKeyResponse] = await Promise.allSettled([
       databaseColumnsApi(selectedTable.value),
       databaseIndexesApi(selectedTable.value),
       databaseForeignKeysApi(selectedTable.value),
     ])
 
-    columns.value = columnResponse.data
-    indexes.value = indexResponse.data
-    foreignKeys.value = foreignKeyResponse.data
+    if (columnResponse.status === 'fulfilled') {
+      columns.value = columnResponse.value.data
+    } else {
+      columns.value = []
+      ElMessage.error(resolveErrorMessage(columnResponse.reason, '字段结构加载失败'))
+    }
+
+    if (indexResponse.status === 'fulfilled') {
+      indexes.value = indexResponse.value.data
+    } else {
+      indexes.value = []
+      ElMessage.error(resolveErrorMessage(indexResponse.reason, '索引信息加载失败'))
+    }
+
+    if (foreignKeyResponse.status === 'fulfilled') {
+      foreignKeys.value = foreignKeyResponse.value.data
+    } else {
+      foreignKeys.value = []
+      ElMessage.error(resolveErrorMessage(foreignKeyResponse.reason, '外键关系加载失败'))
+    }
 
     await loadPreview()
   } catch (error) {
-    ElMessage.error(resolveErrorMessage(error, '数据库信息加载失败'))
+    previewRows.value = []
+    previewTotal.value = 0
+    ElMessage.error(resolveErrorMessage(error, '数据预览加载失败'))
   } finally {
     loadingDetail.value = false
   }
@@ -319,13 +339,18 @@ async function refreshAll() {
   }
 }
 
-function exportTemplateCsv() {
+async function exportTemplateCsv() {
   if (!selectedTemplate.value) return
 
-  window.open(databaseTemplateExportCsvUrl(selectedTemplate.value, {
-    keyword: templateKeyword.value.trim() || undefined,
-    term: templateTerm.value.trim() || undefined,
-  }), '_blank')
+  try {
+    const blob = await databaseTemplateExportCsvApi(selectedTemplate.value, {
+      keyword: templateKeyword.value.trim() || undefined,
+      term: templateTerm.value.trim() || undefined,
+    })
+    saveBlob(blob, `database-template-${selectedTemplate.value}.csv`)
+  } catch (error) {
+    ElMessage.error(resolveErrorMessage(error, '模板查询结果导出失败'))
+  }
 }
 
 async function loadHistory() {
@@ -359,14 +384,19 @@ function sortPreview({ prop, order }: { prop: string; order: string | null }) {
   loadPreview()
 }
 
-function exportCsv() {
+async function exportCsv() {
   if (!selectedTable.value) return
 
-  window.open(databaseExportCsvUrl(selectedTable.value, {
-    keyword: previewKeyword.value.trim() || undefined,
-    sortBy: previewSortBy.value || undefined,
-    sortDir: previewSortDir.value,
-  }), '_blank')
+  try {
+    const blob = await databaseExportCsvApi(selectedTable.value, {
+      keyword: previewKeyword.value.trim() || undefined,
+      sortBy: previewSortBy.value || undefined,
+      sortDir: previewSortDir.value,
+    })
+    saveBlob(blob, `${selectedTable.value}.csv`)
+  } catch (error) {
+    ElMessage.error(resolveErrorMessage(error, '数据表导出失败'))
+  }
 }
 
 function handleTreeNodeClick(node: DbTreeNode) {

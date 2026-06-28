@@ -36,6 +36,30 @@ export interface UpdateUserPayload {
   status: UserStatus
 }
 
+export interface ImportIssue {
+  rowNumber: number
+  column: string
+  reason: string
+  suggestion: string
+}
+
+export interface ImportPreview {
+  totalRows: number
+  validRows: number
+  errorRows: number
+  duplicateAccounts: number
+  missingFields: number
+  formatErrors: number
+  errors: ImportIssue[]
+}
+
+export interface ImportCommitResult {
+  taskId: number
+  successCount: number
+  failureCount: number
+  items: ImportIssue[]
+}
+
 // 功能：分页查询用户账号。
 // 说明：管理端用户页面按关键字、页码和每页条数查询，避免一次性加载全部账号。
 export function adminUsersApi(params?: { keyword?: string; page?: number; size?: number }) {
@@ -78,4 +102,12 @@ export function resetAdminUserPasswordApi(userId: number, password: string) {
 // 说明：后端会校验业务数据关联，避免删除仍有学生档案或历史数据的账号。
 export function deleteAdminUserApi(userId: number) {
   return http.delete<never, ApiResponse<void>>(`/admin/users/${userId}`)
+}
+
+export function previewAdminUsersImportApi(content: string) {
+  return http.post<never, ApiResponse<ImportPreview>>('/admin/users/import-preview', { content })
+}
+
+export function commitAdminUsersImportApi(content: string) {
+  return http.post<never, ApiResponse<ImportCommitResult>>('/admin/users/import-commit', { content })
 }

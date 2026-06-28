@@ -26,6 +26,11 @@ public class SqlSchemaService {
             "thesis_grade",
             "teaching_evaluation"
     );
+    private static final List<String> SENSITIVE_KEYWORDS = List.of(
+            "password", "passwd", "pwd", "token", "secret", "api_key", "apikey", "access_key", "private_key",
+            "hash", "salt", "phone", "mobile", "email", "address", "id_card", "identity", "idnumber",
+            "id_number", "emergency_contact", "parent_phone"
+    );
 
     private final JdbcTemplate jdbcTemplate;
 
@@ -70,7 +75,7 @@ public class SqlSchemaService {
 
     public boolean isSensitiveColumn(String columnName) {
         String lower = columnName.toLowerCase(java.util.Locale.ROOT);
-        return lower.contains("password") || lower.contains("token") || lower.contains("hash");
+        return SENSITIVE_KEYWORDS.stream().anyMatch(lower::contains);
     }
 
     private record ColumnSchema(String tableName, String columnName, String dataType) {

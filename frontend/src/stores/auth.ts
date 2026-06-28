@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { loginApi, logoutApi, type UserSession } from '@/api/auth'
+import { loginApi, logoutApi, refreshTokenApi, type LoginResponse, type UserSession } from '@/api/auth'
 
 interface AuthState {
   accessToken: string
@@ -26,12 +26,23 @@ export const useAuthStore = defineStore('auth', {
     // 后续路由守卫、菜单加载和 Axios 请求头都会依赖这里保存的登录状态。
     async login(username: string, password: string) {
       const response = await loginApi({ username, password })
-      this.accessToken = response.data.accessToken
-      this.refreshToken = response.data.refreshToken
-      this.user = response.data.user
+      this.applySession(response.data)
+    },
+    applySession(session: LoginResponse) {
+      this.accessToken = session.accessToken
+      this.refreshToken = session.refreshToken
+      this.user = session.user
       localStorage.setItem(ACCESS_TOKEN_KEY, this.accessToken)
       localStorage.setItem(REFRESH_TOKEN_KEY, this.refreshToken)
       localStorage.setItem(USER_KEY, JSON.stringify(this.user))
+    },
+    async refreshSession() {
+      if (!this.refreshToken) {
+        throw new Error('Refresh token is missing')
+      }
+      const response = await refreshTokenApi(this.refreshToken)
+      this.applySession(response.data)
+      return this.accessToken
     },
     // 功能：退出登录。
     // 说明：先尽量通知后端退出，再清空本地 token、用户信息和菜单相关状态，
@@ -39,7 +50,7 @@ export const useAuthStore = defineStore('auth', {
     async logout() {
       if (this.accessToken) {
         try {
-          await logoutApi()
+          await logoutApi(this.refreshToken)
         } catch {
           // The local session should still be cleared if the server token is already invalid.
         }

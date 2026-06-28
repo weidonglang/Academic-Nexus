@@ -10,6 +10,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 import weidonglang.tianshiwebside.auth.AuthTokenStore;
+import weidonglang.tianshiwebside.user.UserStatus;
 import weidonglang.tianshiwebside.user.mapper.UserAccountMapper;
 
 import java.io.IOException;
@@ -35,6 +36,7 @@ public class BearerTokenAuthenticationFilter extends OncePerRequestFilter {
         if (token != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             tokenStore.findAccessTokenOwner(token)
                     .flatMap(username -> Optional.ofNullable(userAccountMapper.findByUsername(username)))
+                    .filter(user -> user.status() == UserStatus.ACTIVE)
                     .ifPresent(user -> {
                         var authorities = new java.util.ArrayList<SimpleGrantedAuthority>();
                         authorities.addAll(userAccountMapper.findRoleCodesByUserId(user.id()).stream()

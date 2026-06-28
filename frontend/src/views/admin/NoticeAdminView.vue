@@ -4,12 +4,13 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import PageHeader from '@/components/PageHeader.vue'
-import { adminNoticeStatsApi, homeNoticesApi, publishNoticeApi, type Notice, type NoticeStat } from '@/api/notice'
+import { adminNoticeStatsApi, homeNoticesApi, noticeTargetPreviewApi, publishNoticeApi, type Notice, type NoticeStat, type NoticeTargetPreview } from '@/api/notice'
 
 const loading = ref(false)
 const saving = ref(false)
 const rows = ref<Notice[]>([])
 const stats = ref<NoticeStat[]>([])
+const targetPreview = ref<NoticeTargetPreview>()
 const noticePage = ref(1)
 const noticeSize = ref(10)
 const noticeTotal = ref(0)
@@ -21,6 +22,8 @@ const form = reactive({
   category: 'GENERAL',
   pinned: false,
   roleCode: 'ALL',
+  targetType: 'ALL',
+  targetValue: '',
 })
 
 const totalTargets = computed(() => stats.value.reduce((sum, item) => sum + Number(item.targetTotal || 0), 0))
@@ -67,17 +70,50 @@ function handleStatSizeChange() {
 // 说明：管理员填写标题、内容、类别和接收角色后调用后端接口，
 // 后端保存公告并为目标用户生成通知记录。
 async function publish() {
+  if (!['ALL', 'ROLE'].includes(form.targetType) && !form.targetValue.trim()) {
+    ElMessage.warning('请填写目标值后再发布')
+    return
+  }
+  if (!targetPreview.value) {
+    await previewTarget()
+  }
+  if (!targetPreview.value) {
+    return
+  }
+  if (targetPreview.value && targetPreview.value.receiverCount <= 0) {
+    ElMessage.warning('接收人数为 0，不能发布')
+    return
+  }
   saving.value = true
   try {
-    const roleCode = form.roleCode === 'ALL' ? undefined : form.roleCode
-    await publishNoticeApi({ ...form, roleCode })
+    const roleCode = form.targetType === 'ROLE' && form.roleCode !== 'ALL' ? form.roleCode : undefined
+    await publishNoticeApi({ ...form, roleCode, targetValue: form.targetValue.trim() || undefined })
     ElMessage.success('通知已发布')
-    Object.assign(form, { title: '', content: '', category: 'GENERAL', pinned: false, roleCode: 'ALL' })
+    Object.assign(form, { title: '', content: '', category: 'GENERAL', pinned: false, roleCode: 'ALL', targetType: 'ALL', targetValue: '' })
+    targetPreview.value = undefined
     await loadData()
   } catch (error) {
     ElMessage.error(resolveErrorMessage(error, '发布失败'))
   } finally {
     saving.value = false
+  }
+}
+
+async function previewTarget() {
+  targetPreview.value = undefined
+  if (!['ALL', 'ROLE'].includes(form.targetType) && !form.targetValue.trim()) {
+    ElMessage.warning('请填写目标值后再预览')
+    return
+  }
+  try {
+    const roleCode = form.targetType === 'ROLE' && form.roleCode !== 'ALL' ? form.roleCode : undefined
+    targetPreview.value = (await noticeTargetPreviewApi({
+      targetType: form.targetType,
+      targetValue: form.targetValue.trim() || undefined,
+      roleCode,
+    })).data
+  } catch (error) {
+    ElMessage.error(resolveErrorMessage(error, '接收范围预览失败'))
   }
 }
 
@@ -126,19 +162,36 @@ function resolveErrorMessage(error: unknown, fallback: string) {
             <el-option label="审核通知" value="STATUS" />
           </el-select>
         </el-form-item>
-        <el-form-item label="接收角色">
-          <el-select v-model="form.roleCode" class="full-field">
+        <el-form-item label="目标范围">
+          <el-select v-model="form.targetType" class="full-field" @change="targetPreview = undefined">
+            <el-option label="全部" value="ALL" />
+            <el-option label="角色" value="ROLE" />
+            <el-option label="年级" value="GRADE" />
+            <el-option label="专业" value="MAJOR" />
+            <el-option label="班级" value="CLASS" />
+            <el-option label="教学班" value="OFFERING" />
+          </el-select>
+        </el-form-item>
+        <el-form-item v-if="form.targetType === 'ROLE'" label="接收角色">
+          <el-select v-model="form.roleCode" class="full-field" @change="targetPreview = undefined">
             <el-option label="全部用户" value="ALL" />
             <el-option label="学生 STUDENT" value="STUDENT" />
             <el-option label="教师 TEACHER" value="TEACHER" />
             <el-option label="管理员 ADMIN" value="ADMIN" />
           </el-select>
         </el-form-item>
+        <el-form-item v-if="!['ALL', 'ROLE'].includes(form.targetType)" label="目标值">
+          <el-input v-model="form.targetValue" placeholder="年级/专业/班级名/教学班 ID" @input="targetPreview = undefined" />
+        </el-form-item>
+        <el-form-item label="接收预览">
+          <el-button @click="previewTarget">预览人数</el-button>
+          <span v-if="targetPreview" class="preview-text">{{ targetPreview.summary }}，预计 {{ targetPreview.receiverCount }} 人</span>
+        </el-form-item>
         <el-form-item label="置顶"><el-switch v-model="form.pinned" /></el-form-item>
         <el-form-item label="内容">
           <el-input v-model="form.content" type="textarea" :rows="8" maxlength="1000" show-word-limit />
         </el-form-item>
-        <el-form-item><el-button type="primary" :loading="saving" @click="publish">发布</el-button></el-form-item>
+        <el-form-item><el-button type="primary" :loading="saving" :disabled="targetPreview?.receiverCount === 0" @click="publish">发布</el-button></el-form-item>
       </el-form>
     </article>
 
@@ -192,3 +245,10 @@ function resolveErrorMessage(error: unknown, fallback: string) {
     />
   </section>
 </template>
+
+<style scoped>
+.preview-text {
+  margin-left: 12px;
+  color: var(--el-text-color-secondary);
+}
+</style>

@@ -1,11 +1,14 @@
 package weidonglang.tianshiwebside.course;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import com.fasterxml.jackson.core.type.TypeReference;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import weidonglang.tianshiwebside.audit.AuditLogService;
+import weidonglang.tianshiwebside.academic.TermService;
 import weidonglang.tianshiwebside.common.cache.QueryCacheService;
 import weidonglang.tianshiwebside.common.api.ApiResponse;
 import weidonglang.tianshiwebside.common.error.BusinessException;
@@ -26,26 +29,30 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/course-selection")
 public class CourseSelectionController {
-    private static final String CURRENT_TERM = "2025-2026-2";
-
     private final CourseGrabPort courseGrabPort;
     private final CourseSelectionReadMapper selectionReadMapper;
     private final CourseSelectionWriteMapper selectionWriteMapper;
     private final QueryCacheService queryCacheService;
     private final AuditLogService auditLogService;
+    private final TermService termService;
+    private final CourseSelectionStockService stockService;
 
     public CourseSelectionController(
             CourseGrabPort courseGrabPort,
             CourseSelectionReadMapper selectionReadMapper,
             CourseSelectionWriteMapper selectionWriteMapper,
             QueryCacheService queryCacheService,
-            AuditLogService auditLogService
+            AuditLogService auditLogService,
+            TermService termService,
+            CourseSelectionStockService stockService
     ) {
         this.courseGrabPort = courseGrabPort;
         this.selectionReadMapper = selectionReadMapper;
         this.selectionWriteMapper = selectionWriteMapper;
         this.queryCacheService = queryCacheService;
         this.auditLogService = auditLogService;
+        this.termService = termService;
+        this.stockService = stockService;
     }
 
     @GetMapping("/offerings")
@@ -56,24 +63,26 @@ public class CourseSelectionController {
      */
     public ApiResponse<PageResponse<CourseOfferingResponse>> offerings(
             Authentication authentication,
+            @RequestParam(required = false) String term,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
         String username = authenticatedUsername(authentication);
+        String resolvedTerm = termService.resolveTerm(term);
         int safePage = Math.max(page, 1);
         int safeSize = Math.max(10, Math.min(size, 100));
         int offset = (safePage - 1) * safeSize;
-        String cacheKey = "query:course-selection:offerings:" + username + ":" + CURRENT_TERM + ":" + safePage + ":" + safeSize;
+        String cacheKey = "query:course-selection:offerings:" + username + ":" + resolvedTerm + ":" + safePage + ":" + safeSize;
         PageResponse<CourseOfferingResponse> response = queryCacheService.get(
                 cacheKey,
                 Duration.ofSeconds(20),
                 new TypeReference<PageResponse<CourseOfferingResponse>>() {
                 },
                 () -> {
-                    List<CourseOfferingResponse> records = selectionReadMapper.findOfferings(username, CURRENT_TERM, safeSize, offset).stream()
+                    List<CourseOfferingResponse> records = selectionReadMapper.findOfferings(username, resolvedTerm, safeSize, offset).stream()
                             .map(this::toOfferingResponse)
                             .toList();
-                    return new PageResponse<>(records, safePage, safeSize, selectionReadMapper.countOfferings(CURRENT_TERM));
+                    return new PageResponse<>(records, safePage, safeSize, selectionReadMapper.countOfferings(resolvedTerm));
                 }
         );
         return ApiResponse.success(response);
@@ -87,24 +96,26 @@ public class CourseSelectionController {
      */
     public ApiResponse<PageResponse<CourseSelectionResponse>> selected(
             Authentication authentication,
+            @RequestParam(required = false) String term,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
         String username = authenticatedUsername(authentication);
+        String resolvedTerm = termService.resolveTerm(term);
         int safePage = Math.max(page, 1);
         int safeSize = Math.max(5, Math.min(size, 100));
         int offset = (safePage - 1) * safeSize;
-        String cacheKey = "query:course-selection:selected:" + username + ":" + safePage + ":" + safeSize;
+        String cacheKey = "query:course-selection:selected:" + username + ":" + resolvedTerm + ":" + safePage + ":" + safeSize;
         PageResponse<CourseSelectionResponse> response = queryCacheService.get(
                 cacheKey,
                 Duration.ofSeconds(20),
                 new TypeReference<PageResponse<CourseSelectionResponse>>() {
                 },
                 () -> {
-                    List<CourseSelectionResponse> records = selectionReadMapper.findSelectedCourses(username, safeSize, offset).stream()
+                    List<CourseSelectionResponse> records = selectionReadMapper.findSelectedCourses(username, resolvedTerm, safeSize, offset).stream()
                             .map(this::toSelectionResponse)
                             .toList();
-                    return new PageResponse<>(records, safePage, safeSize, selectionReadMapper.countSelectedCourses(username));
+                    return new PageResponse<>(records, safePage, safeSize, selectionReadMapper.countSelectedCourses(username, resolvedTerm));
                 }
         );
         return ApiResponse.success(response);
@@ -147,6 +158,7 @@ public class CourseSelectionController {
         }
         if (offeringId != null) {
             queryCacheService.evict("selection:offering:" + offeringId + ":remaining");
+            stockService.rebuildFromDatabase(offeringId, authentication.getName(), "REBUILD_STOCK_AFTER_DROP");
         }
         auditLogService.record(authentication.getName(), "DROP_COURSE", "COURSE_SELECTION", selectionId,
                 "offeringId=" + offeringId, TraceIdHolder.get());
@@ -301,8 +313,10 @@ public class CourseSelectionController {
     }
 
     public record CourseGrabRequest(
-            Long offeringId,
-            @Size(max = 80) String requestId
+            @NotNull(message = "offeringId 不能为空") Long offeringId,
+            @Size(max = 80, message = "requestId 不能超过 80 个字符")
+            @Pattern(regexp = "^[A-Za-z0-9._:-]*$", message = "requestId 只能包含字母、数字、点、下划线、冒号或短横线")
+            String requestId
     ) {
     }
 
