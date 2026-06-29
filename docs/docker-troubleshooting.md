@@ -1,6 +1,6 @@
-# Docker Troubleshooting
+# EduNexus AI Docker Troubleshooting
 
-This guide focuses on reproducible Academic-Nexus Docker builds.
+This guide focuses on reproducible EduNexus AI Docker builds. Historical service names such as `academic-main` and `academic-ai-service` are kept for compatibility.
 
 ## Maven `bad_record_mac` Or Central Download Failures
 
@@ -49,7 +49,7 @@ If your network requires a proxy, configure Docker Desktop proxy settings or exp
 
 ## Host Port Conflicts
 
-Academic-Nexus keeps container-internal ports stable and maps host ports through `.env`.
+EduNexus AI keeps container-internal ports stable and maps host ports through `.env`.
 
 Default host ports:
 

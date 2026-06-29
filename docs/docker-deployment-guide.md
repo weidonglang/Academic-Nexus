@@ -1,8 +1,8 @@
-# Academic-Nexus Docker Deployment Guide
+# EduNexus AI Docker Deployment Guide
 
 Updated: 2026-06-29
 
-This guide is the v2.0.0 Docker deployment entrypoint for Academic-Nexus.
+This guide is the Docker deployment entrypoint for **EduNexus AI**, an AI-powered academic management platform. Historical container names such as `academic-main` and `academic-ai-service` are kept for compatibility with existing scripts and Docker Compose service definitions.
 
 v2.0.1 adds explicit SearXNG network and Ollama enablement notes. These notes are deployment-only changes; they do not require publishing a new release tag by Codex.
 
@@ -54,6 +54,8 @@ Windows PowerShell:
 git clone https://github.com/weidonglang/Academic-Nexus.git
 cd Academic-Nexus
 ```
+
+The public display name is **EduNexus AI**. The repository path may still use `Academic-Nexus` for compatibility.
 
 ## 4. Configure `.env`
 

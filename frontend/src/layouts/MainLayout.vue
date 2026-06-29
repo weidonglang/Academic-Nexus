@@ -112,7 +112,7 @@ function submitSearch() {
         <div class="zf-logo">
           <UserRound :size="24" />
         </div>
-        <span>教学综合信息服务平台</span>
+        <span>EduNexus AI</span>
       </div>
       <div class="zf-user">
         <span>{{ auth.user?.displayName ?? '未登录用户' }}</span>
@@ -159,7 +159,7 @@ function submitSearch() {
     </main>
 
     <footer class="zf-footer">
-      版权所有 Copyright 2004-2026 魏语石　教学综合信息服务平台　版本 V-9.0
+      EduNexus AI · AI-powered Academic Management Platform · v2.0.1
     </footer>
   </div>
 </template>
