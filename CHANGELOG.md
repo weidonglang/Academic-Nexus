@@ -9,6 +9,25 @@
 - Updated README, frontend title, login page, shell footer, Docker docs, AI search docs, AI prompts and release notes draft to use EduNexus AI.
 - Kept internal Java package names, API paths, historical Docker service names and repository path unchanged for compatibility.
 
+### Fixed
+
+- Clarified SearXNG real search Docker network configuration.
+- Clarified Ollama enablement for Docker ai-service deployment.
+- Fixed web-search grounding so local model answers use returned references.
+- Fixed AI model registry default/deleted/enabled state constraints.
+- Fixed top global search interaction.
+- Fixed dashboard quick-app settings interaction.
+- Fixed AI Chat Markdown rendering for numbered lists, bold text, inline code, links and code blocks.
+
+### Improved
+
+- Improved AI Chat frontend state, loading, retry, copy, error and reference feedback.
+- Added AI thinking mode switch: Auto / On / Off.
+- Added `thinkingMode` propagation from frontend to main service and ai-service.
+- Added branch cleanup report.
+- Added local and Docker run verification.
+- Added v2.0.1 QA report.
+
 ## v2.0.0 - Stable Complete Edition - 2026-06-28
 
 ### Final stabilization

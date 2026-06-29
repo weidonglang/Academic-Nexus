@@ -45,6 +45,7 @@ public class AiInternalController {
         if (selectedModel.isBlank()) {
             selectedModel = chatModel;
         }
+        String thinkingMode = normalizeThinkingMode(request.thinkingMode());
         String prompt = """
                 你是 EduNexus AI 的 AI 教务助手。请用中文回答。
                 EduNexus AI 是一个面向高校教务场景的 AI 驱动教务管理平台，中文名为“智教中枢”。
@@ -57,7 +58,7 @@ public class AiInternalController {
 
                 用户消息：
                 %s
-                """.formatted(systemOverview(), request.message());
+                """.formatted(systemOverview(), applyThinkingMode(request.message(), thinkingMode, selectedModel));
         var generated = ollamaClient.generate(selectedModel, prompt);
         String actualModel = selectedModel;
         String fallbackReason = "";
@@ -85,7 +86,8 @@ public class AiInternalController {
                 selectedModel,
                 actualModel,
                 fallback || !actualModel.equals(selectedModel),
-                fallbackReason.isBlank() ? null : fallbackReason
+                fallbackReason.isBlank() ? null : fallbackReason,
+                thinkingMode
         );
     }
 
@@ -195,6 +197,37 @@ public class AiInternalController {
 
     private String cleanModelName(String modelName) {
         return modelName == null ? "" : modelName.trim();
+    }
+
+    String applyThinkingMode(String userMessage, String mode, String modelName) {
+        String message = userMessage == null ? "" : userMessage;
+        String normalized = normalizeThinkingMode(mode);
+        if ("AUTO".equals(normalized) || hasExplicitThinkingDirective(message) || !supportsThinkingMode(modelName)) {
+            return message;
+        }
+        return switch (normalized) {
+            case "ON" -> "/think\n" + message;
+            case "OFF" -> "/no_think\n" + message;
+            default -> message;
+        };
+    }
+
+    private boolean hasExplicitThinkingDirective(String message) {
+        String trimmed = message == null ? "" : message.stripLeading().toLowerCase(Locale.ROOT);
+        return trimmed.startsWith("/think") || trimmed.startsWith("/no_think");
+    }
+
+    private boolean supportsThinkingMode(String modelName) {
+        String normalized = modelName == null ? "" : modelName.toLowerCase(Locale.ROOT);
+        return normalized.contains("qwen3") || normalized.contains("deepseek-r1") || normalized.contains("reason");
+    }
+
+    private String normalizeThinkingMode(String mode) {
+        String normalized = mode == null ? "AUTO" : mode.trim().toUpperCase(Locale.ROOT);
+        return switch (normalized) {
+            case "ON", "OFF" -> normalized;
+            default -> "AUTO";
+        };
     }
 
     private String ragPrompt(String question, List<AiDtos.SourceDocument> sources) {
