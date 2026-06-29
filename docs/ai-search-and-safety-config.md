@@ -1,8 +1,8 @@
-# AI Search And Safety Configuration
+# EduNexus AI Search And Safety Configuration
 
-Updated: 2026-06-28
+Updated: 2026-06-29
 
-This document explains the v2.0.0 AI web search and safety review configuration workflow.
+This document explains the EduNexus AI web search and safety review configuration workflow.
 
 ## Web Search
 
@@ -50,12 +50,32 @@ Example:
 
 ```json
 {
-  "query": "Academic-Nexus Docker deployment",
+  "query": "EduNexus AI Docker deployment",
   "scene": "ADMIN_TEST"
 }
 ```
 
 Successful local demo tests return sample results. Failed tests return a readable message, provider, latency, and empty results.
+
+## SearXNG In Docker
+
+When EduNexus AI runs in Docker, the search Base URL is resolved from the backend container, not from the browser. A browser-accessible `http://localhost:8080` SearXNG URL does not guarantee that `academic-main` can access the same endpoint.
+
+Recommended Docker network approach:
+
+```powershell
+docker inspect academic-main --format='{{range $k,$v := .NetworkSettings.Networks}}{{println $k}}{{end}}'
+docker network connect --alias searxng tianshiwebside_default searxng-core
+docker exec academic-main wget -S -O- "http://searxng:8080/search?q=OpenAI&format=json"
+```
+
+Recommended EduNexus AI search configuration:
+
+```text
+Search provider: SearXNG
+Base URL: http://searxng:8080/search?q={query}&format=json
+API Key environment variable: blank
+```
 
 ## Custom Search API Shape
 
@@ -121,7 +141,7 @@ The response tells the operator whether the content passed, was blocked, or was 
 | --- | --- | --- |
 | 401 Unauthorized | API key invalid or missing | Check `SEARCH_API_KEY` and endpoint auth mode |
 | 403 Forbidden | Provider denied access | Check provider account, region, or permission |
-| Timeout | Endpoint unreachable | Check DNS, proxy, firewall, and timeout |
+| Timeout | Endpoint unreachable | Check DNS, proxy, firewall, Docker network, and timeout |
 | Empty results | Response field mismatch | Confirm response has `results[]` |
 | CORS error in browser | Direct browser request | Use backend test endpoint, not frontend direct fetch |
 | Sensitive query blocked | Safety pre-check matched personal data | Use non-personal query or log-only mode for diagnostics |
