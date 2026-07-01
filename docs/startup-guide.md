@@ -204,8 +204,9 @@ docker compose ps
 - Nacos 控制台 `http://localhost:18848/nacos` 服务列表应出现 `academic-main`、`academic-ai-service`、`edunexus-gateway`。
 - Gateway 入口：`http://localhost:9000/api/cloud-proof/feign/ai-status`，返回体里应包含 `transport=OpenFeign` 和 AI 服务状态。
 - Sentinel 登录限流：连续快速请求 `POST http://localhost:9000/api/auth/login` 超过 3 QPS 后，返回 `登录请求过于频繁，请稍后再试`。
-- Seata 提交证明：`http://localhost:9000/api/cloud-proof/seata/commit` 返回 `mainExists=true`、`aiExists=true`。
-- Seata 回滚证明：`http://localhost:9000/api/cloud-proof/seata/rollback` 返回 `mainExists=false`、`aiExists=false`。
+- Sentinel 动态规则：`GET http://localhost:9000/api/cloud-proof/sentinel/login-rule` 查看当前规则；`POST http://localhost:9000/api/cloud-proof/sentinel/login-rule?qps=1` 可现场调低登录 QPS。
+- Seata 提交证明：`POST http://localhost:9000/api/cloud-proof/seata/commit` 返回 `mainExists=true`、`aiExists=true`。
+- Seata 回滚证明：`POST http://localhost:9000/api/cloud-proof/seata/rollback` 返回 `mainExists=false`、`aiExists=false`。
 
 本地 IDEA 开发仍可只启动主系统 `localhost:8080`。不需要 Seata 时设置：
 

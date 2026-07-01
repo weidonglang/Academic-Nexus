@@ -57,8 +57,10 @@ Minimal cloud proof checks after startup:
 
 ```powershell
 curl http://localhost:9000/api/cloud-proof/feign/ai-status
-curl http://localhost:9000/api/cloud-proof/seata/commit
-curl http://localhost:9000/api/cloud-proof/seata/rollback
+curl -X POST http://localhost:9000/api/cloud-proof/seata/commit
+curl -X POST http://localhost:9000/api/cloud-proof/seata/rollback
+curl http://localhost:9000/api/cloud-proof/sentinel/login-rule
+curl -X POST "http://localhost:9000/api/cloud-proof/sentinel/login-rule?qps=1"
 ```
 
 Expected Seata evidence:

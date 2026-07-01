@@ -10,6 +10,7 @@ Included:
 - Spring Cloud Gateway service on host port `9000`.
 - Gateway route `/api/** -> lb://academic-main`.
 - Sentinel flow control on the real login endpoint `/api/auth/login`, default QPS `3`.
+- Dynamic Sentinel login QPS update endpoints for live classroom demonstration.
 - OpenFeign proof endpoint calling `academic-ai-service`.
 - Seata proof transaction using demo-only tables `cloud_tx_demo_main` and `cloud_tx_demo_ai`.
 
@@ -37,6 +38,14 @@ Important host URLs:
 | AI service | `http://localhost:18090/internal/ai/status` |
 | Nacos | `http://localhost:18848/nacos` |
 | Seata console | `http://localhost:7091` |
+
+## Three-Person Demo Split
+
+| Presenter | Spring Cloud content | Live operation |
+| --- | --- | --- |
+| Student 1 | Nacos + Gateway | Show `academic-main`, `academic-ai-service`, and `edunexus-gateway` in Nacos, then call `GET http://localhost:9000/api/auth/login` and explain the main-service `401` response. |
+| Student 2 | Sentinel | Call `POST /api/cloud-proof/sentinel/login-rule?qps=1`, rapidly call login until `429`, then call `POST /api/cloud-proof/sentinel/login-rule?qps=10` to show the rule can be changed live. |
+| Student 3 | OpenFeign + Seata | Call `GET /api/cloud-proof/feign/ai-status`, `POST /api/cloud-proof/seata/commit`, and `POST /api/cloud-proof/seata/rollback`. |
 
 ## Nacos Screenshot
 
@@ -71,6 +80,18 @@ This proves the host calls Gateway `9000`, Gateway routes to `academic-main`, an
 
 ## Sentinel Login Flow Control Proof
 
+View current login flow rule:
+
+```powershell
+curl http://localhost:9000/api/cloud-proof/sentinel/login-rule
+```
+
+Lower the rule to QPS 1 for an obvious live demo:
+
+```powershell
+curl -X POST "http://localhost:9000/api/cloud-proof/sentinel/login-rule?qps=1"
+```
+
 PowerShell example:
 
 ```powershell
@@ -87,11 +108,57 @@ Expected evidence after the QPS threshold is exceeded:
 登录请求过于频繁，请稍后再试
 ```
 
-The protected resource is the real login method, not a fake demo endpoint. QPS can be adjusted with:
+Relax the rule to QPS 10 after the demonstration:
+
+```powershell
+curl -X POST "http://localhost:9000/api/cloud-proof/sentinel/login-rule?qps=10"
+```
+
+The protected resource is the real login method, not a fake demo endpoint. The startup default can be adjusted with:
 
 ```env
 SENTINEL_LOGIN_ENABLED=true
 SENTINEL_LOGIN_QPS=3
+```
+
+The runtime rule can be adjusted without restarting by the `/api/cloud-proof/sentinel/login-rule` endpoint.
+
+## Apipost Collection
+
+Create an Apipost project named:
+
+```text
+EduNexus-AI Spring Cloud Final Demo
+```
+
+Suggested environment variables:
+
+```text
+gateway_base = http://localhost:9000
+nacos_base = http://localhost:18848
+```
+
+Add these requests:
+
+| Name | Method | URL | Expected evidence |
+| --- | --- | --- | --- |
+| Gateway route main service | GET | `{{gateway_base}}/api/auth/login` | HTTP `401`, proving Gateway forwarded to main auth logic |
+| Nacos service list | GET | `{{nacos_base}}/nacos/v1/ns/service/list?pageNo=1&pageSize=100` | `academic-main`, `academic-ai-service`, `edunexus-gateway` |
+| Sentinel current rule | GET | `{{gateway_base}}/api/cloud-proof/sentinel/login-rule` | `resource=authLogin`, current QPS |
+| Sentinel set QPS 1 | POST | `{{gateway_base}}/api/cloud-proof/sentinel/login-rule?qps=1` | `qps=1.0` |
+| Login repeated | POST | `{{gateway_base}}/api/auth/login` | HTTP `429` after rapid repeated sends |
+| Sentinel set QPS 10 | POST | `{{gateway_base}}/api/cloud-proof/sentinel/login-rule?qps=10` | `qps=10.0` |
+| OpenFeign AI status | GET | `{{gateway_base}}/api/cloud-proof/feign/ai-status` | `transport=OpenFeign`, `targetService=academic-ai-service` |
+| Seata commit | POST | `{{gateway_base}}/api/cloud-proof/seata/commit` | `mainExists=true`, `aiExists=true` |
+| Seata rollback | POST | `{{gateway_base}}/api/cloud-proof/seata/rollback` | `mainExists=false`, `aiExists=false` |
+
+Login repeated request body:
+
+```json
+{
+  "username": "sentinel-test",
+  "password": "wrong-password-123"
+}
 ```
 
 ## Seata Distributed Transaction Proof
